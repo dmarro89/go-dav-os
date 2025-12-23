@@ -5,7 +5,11 @@ import (
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
-func DebugChar(c byte) // asm
+func DebugChar(c byte)
+func inb(port uint16) byte
+func outb(port uint16, val byte)
+func EnableInterrupts()
+func DisableInterrupts()
 
 func Main() {
 	terminal.Init()

@@ -26,6 +26,7 @@ MODPATH          := github.com/dmarro89/go-dav-os
 TERMINAL_IMPORT  := $(MODPATH)/terminal
 KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 
+KERNEL_SRCS := $(wildcard kernel/*.go)
 KERNEL_SRC   := kernel/kernel.go kernel/idt.go
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRC := keyboard/keyboard.go keyboard/layout.go
@@ -86,10 +87,10 @@ $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(KEYBOARD_OBJ) $(KEYBOARD_GOX)
 
 # --- 7. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRC) $(TERMINAL_GOX) $(KEYBOARD_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
-		-c $(KERNEL_SRC) -o $(KERNEL_OBJ)
+		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
 
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf

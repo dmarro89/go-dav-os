@@ -157,6 +157,19 @@ runtime.goPanicSliceB:
 	jmp 5b
 .size runtime.goPanicSliceB, . - runtime.goPanicSliceB
 
+# bool runtime.panicdivide(...)
+# For now we just return 0 (not equal) to satisfy the linker.
+.global runtime.panicdivide
+.type   runtime.panicdivide, @function
+
+runtime.panicdivide:
+	cli
+
+6:
+	hlt
+	jmp 5b
+.size runtime.panicdivide, . - runtime.panicdivide
+
 # bool runtime.memequal(...)
 # For now we just return 0 (not equal) to satisfy the linker.
 .global runtime.memequal
@@ -343,6 +356,72 @@ go_0kernel.DebugChar:
 	mov  4(%esp), %eax       # al = arg (byte), prendiamo dal low8
 	outb %al, $0xe9
 	ret
+
+# uint8  go_0kernel.inb(uint16 port)
+.global go_0kernel.inb
+.type   go_0kernel.inb, @function
+go_0kernel.inb:
+    mov 4(%esp), %dx
+    xor %eax, %eax
+    inb %dx, %al
+    ret
+.size go_0kernel.inb, . - go_0kernel.inb
+
+# void go_0kernel.outb(uint16 port, uint8 val)
+.global go_0kernel.outb
+.type   go_0kernel.outb, @function
+go_0kernel.outb:
+    mov 4(%esp), %dx
+    mov 8(%esp), %al
+    outb %al, %dx
+    ret
+.size go_0kernel.outb, . - go_0kernel.outb
+
+.global go_0kernel.EnableInterrupts
+.type   go_0kernel.EnableInterrupts, @function
+go_0kernel.EnableInterrupts:
+    sti
+    ret
+.size go_0kernel.EnableInterrupts, . - go_0kernel.EnableInterrupts
+
+.global go_0kernel.DisableInterrupts
+.type   go_0kernel.DisableInterrupts, @function
+go_0kernel.DisableInterrupts:
+    cli
+    ret
+.size go_0kernel.DisableInterrupts, . - go_0kernel.DisableInterrupts
+
+.global go_0kernel.IRQ0Stub
+.type   go_0kernel.IRQ0Stub, @function
+go_0kernel.IRQ0Stub:
+    pusha
+    call go_0kernel.IRQ0Handler
+    popa
+    iret
+.size go_0kernel.IRQ0Stub, . - go_0kernel.IRQ0Stub
+
+.global go_0kernel.getIRQ0StubAddr
+.type   go_0kernel.getIRQ0StubAddr, @function
+go_0kernel.getIRQ0StubAddr:
+    mov $go_0kernel.IRQ0Stub, %eax
+    ret
+.size go_0kernel.getIRQ0StubAddr, . - go_0kernel.getIRQ0StubAddr
+
+.global go_0kernel.IRQ1Stub
+.type   go_0kernel.IRQ1Stub, @function
+go_0kernel.IRQ1Stub:
+    pusha
+    call go_0kernel.IRQ1Handler
+    popa
+    iret
+.size go_0kernel.IRQ1Stub, . - go_0kernel.IRQ1Stub
+
+.global go_0kernel.getIRQ1StubAddr
+.type   go_0kernel.getIRQ1StubAddr, @function
+go_0kernel.getIRQ1StubAddr:
+    mov $go_0kernel.IRQ1Stub, %eax
+    ret
+.size go_0kernel.getIRQ1StubAddr, . - go_0kernel.getIRQ1StubAddr
 
 // --- Data section: global variable runtime.writeBarrier (bool) ---
 .section .data
