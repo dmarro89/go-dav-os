@@ -27,9 +27,7 @@ TERMINAL_IMPORT  := $(MODPATH)/terminal
 KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 
 KERNEL_SRCS := $(wildcard kernel/*.go)
-KERNEL_SRC   := kernel/kernel.go kernel/idt.go
 TERMINAL_SRC := terminal/terminal.go
-KEYBOARD_SRC := keyboard/keyboard.go keyboard/layout.go
 KEYBOARD_SRCS := $(wildcard keyboard/*.go)
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
@@ -80,7 +78,7 @@ $(TERMINAL_GOX): $(TERMINAL_OBJ) | $(BUILD_DIR)
 $(KEYBOARD_OBJ): $(KEYBOARD_SRCS) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-fgo-pkgpath=$(KEYBOARD_IMPORT) \
-		-c $(KEYBOARD_SRC) -o $(KEYBOARD_OBJ)
+		-c $(KEYBOARD_SRCS) -o $(KEYBOARD_OBJ)
 
 # --- 5. Extract .go_export into keyboard.gox ---
 $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
