@@ -15,6 +15,6 @@ func IRQ1Handler() {
 	// Read & buffer scancode -> rune (no terminal printing here!)
 	keyboard.IRQHandler()
 
-	// Tell PIC we're done with IRQ1, otherwise it won't fire again.
+	// Tell PIC we're done with IRQ1, otherwise it won't fire again
 	PICEOI(1)
 }
