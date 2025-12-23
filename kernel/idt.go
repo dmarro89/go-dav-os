@@ -30,6 +30,8 @@ func getDFaultStubAddr() uint32
 func Int80Stub()
 func TriggerInt80()
 func GetCS() uint16
+func getIRQ0StubAddr() uint32
+func getIRQ1StubAddr() uint32
 
 func Int80Handler() {
 	terminal.Print("INT 0x80 fired!\n")
@@ -73,6 +75,10 @@ func InitIDT() {
 	// Install emergency handlers first
 	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateFlags)  // #DF
 	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateFlags) // #GP
+
+	// Install IRQ handlers
+	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateFlags) // IRQ0
+	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateFlags) // IRQ1
 
 	// Install 0x80 test handler stub
 	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateFlags)
