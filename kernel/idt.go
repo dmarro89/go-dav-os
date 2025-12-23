@@ -77,8 +77,8 @@ func InitIDT() {
 	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateFlags) // #GP
 
 	// Install IRQ handlers
-	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateFlags)
-	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateFlags)
+	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateFlags) // IRQ0
+	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateFlags) // IRQ1
 
 	// Install 0x80 test handler stub
 	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateFlags)

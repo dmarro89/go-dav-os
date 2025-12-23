@@ -30,6 +30,7 @@ KERNEL_SRCS := $(wildcard kernel/*.go)
 KERNEL_SRC   := kernel/kernel.go kernel/idt.go
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRC := keyboard/keyboard.go keyboard/layout.go
+KEYBOARD_SRCS := $(wildcard keyboard/*.go)
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
@@ -76,7 +77,7 @@ $(TERMINAL_GOX): $(TERMINAL_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(TERMINAL_OBJ) $(TERMINAL_GOX)
 
 # --- 4. Compile keyboard.go and layout.go (package keyboard) with gccgo ---
-$(KEYBOARD_OBJ): $(KEYBOARD_SRC) | $(BUILD_DIR)
+$(KEYBOARD_OBJ): $(KEYBOARD_SRCS) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-fgo-pkgpath=$(KEYBOARD_IMPORT) \
 		-c $(KEYBOARD_SRC) -o $(KEYBOARD_OBJ)

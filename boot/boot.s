@@ -391,6 +391,13 @@ go_0kernel.DisableInterrupts:
     ret
 .size go_0kernel.DisableInterrupts, . - go_0kernel.DisableInterrupts
 
+.global go_0kernel.Halt
+.type   go_0kernel.Halt, @function
+go_0kernel.Halt:
+	hlt
+	ret
+.size go_0kernel.Halt, . - go_0kernel.Halt
+
 .global go_0kernel.IRQ0Stub
 .type   go_0kernel.IRQ0Stub, @function
 go_0kernel.IRQ0Stub:

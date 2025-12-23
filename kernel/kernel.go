@@ -10,24 +10,30 @@ func inb(port uint16) byte
 func outb(port uint16, val byte)
 func EnableInterrupts()
 func DisableInterrupts()
+func Halt()
 
 func Main() {
+	DisableInterrupts()
 	terminal.Init()
 	terminal.Clear()
 
 	InitIDT()
-	TriggerInt80()
-	terminal.Print("Back from int 0x80\n")
+
+	PICRemap(0x20, 0x28)
+	PICSetMask(0xFC, 0xFF)
+
+	PITInit(100)
+
+	EnableInterrupts()
 
 	for {
-		terminal.Print("\n> ")
-
-		var line [80]rune
-		n := readLine(line[:])
-
-		handleCommand(line[:n], n)
+		r, ok := keyboard.TryRead()
+		if !ok {
+			Halt()
+			continue
+		}
+		terminal.PutRune(r)
 	}
-
 }
 
 func readLine(buf []rune) int {
