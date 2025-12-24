@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"github.com/dmarro89/go-dav-os/keyboard"
+	"github.com/dmarro89/go-dav-os/shell"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -24,8 +25,10 @@ func Main() {
 
 	PITInit(100)
 
+	shell.SetTickProvider(GetTicks)
 	EnableInterrupts()
 
+	shell.Init()
 	for {
 		DisableInterrupts()
 		r, ok := keyboard.TryRead()
@@ -34,6 +37,6 @@ func Main() {
 			Halt()
 			continue
 		}
-		terminal.PutRune(r)
+		shell.FeedRune(r)
 	}
 }

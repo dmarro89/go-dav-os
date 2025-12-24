@@ -25,10 +25,12 @@ LINKER_SCRIPT := boot/linker.ld
 MODPATH          := github.com/dmarro89/go-dav-os
 TERMINAL_IMPORT  := $(MODPATH)/terminal
 KEYBOARD_IMPORT  := $(MODPATH)/keyboard
+SHELL_IMPORT     := $(MODPATH)/shell
 
 KERNEL_SRCS := $(wildcard kernel/*.go)
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRCS := $(wildcard keyboard/*.go)
+SHELL_SRCS := $(wildcard shell/*.go)
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
@@ -36,6 +38,8 @@ TERMINAL_OBJ := $(BUILD_DIR)/terminal.o
 TERMINAL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/terminal.gox
 KEYBOARD_OBJ   := $(BUILD_DIR)/keyboard.o
 KEYBOARD_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/keyboard.gox
+SHELL_OBJ   := $(BUILD_DIR)/shell.o
+SHELL_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/shell.gox
 
 .PHONY: all kernel iso run clean docker-build docker-shell docker-run
 
@@ -85,8 +89,20 @@ $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(KEYBOARD_GOX))
 	$(OBJCOPY) -j .go_export $(KEYBOARD_OBJ) $(KEYBOARD_GOX)
 
+# --- 6. Compile shell.go (package shell) with gccgo ---
+$(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) | $(BUILD_DIR)
+	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-I $(BUILD_DIR) \
+		-fgo-pkgpath=$(SHELL_IMPORT) \
+		-c $(SHELL_SRCS) -o $(SHELL_OBJ)
+
+# --- 7. Extract .go_export into shell.gox ---
+$(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(SHELL_GOX))
+	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
+
 # --- 7. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
@@ -94,10 +110,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) | $(BUILD_DIR)
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
