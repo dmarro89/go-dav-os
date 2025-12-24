@@ -27,8 +27,8 @@ func Main() {
 
 	shell.SetTickProvider(GetTicks)
 	EnableInterrupts()
-
 	shell.Init()
+
 	for {
 		DisableInterrupts()
 		r, ok := keyboard.TryRead()
