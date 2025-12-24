@@ -101,7 +101,7 @@ $(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(SHELL_GOX))
 	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
 
-# --- 7. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
+# --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
 $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
