@@ -26,11 +26,13 @@ MODPATH          := github.com/dmarro89/go-dav-os
 TERMINAL_IMPORT  := $(MODPATH)/terminal
 KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 SHELL_IMPORT     := $(MODPATH)/shell
+MEM_IMPORT     := $(MODPATH)/mem
 
 KERNEL_SRCS := $(wildcard kernel/*.go)
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRCS := $(wildcard keyboard/*.go)
 SHELL_SRCS := $(wildcard shell/*.go)
+MEM_SRCS       := $(wildcard mem/*.go)
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
@@ -40,6 +42,8 @@ KEYBOARD_OBJ   := $(BUILD_DIR)/keyboard.o
 KEYBOARD_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/keyboard.gox
 SHELL_OBJ   := $(BUILD_DIR)/shell.o
 SHELL_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/shell.gox
+MEM_OBJ   := $(BUILD_DIR)/mem.o
+MEM_GOX        := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/mem.gox
 
 .PHONY: all kernel iso run clean docker-build docker-shell docker-run
 
@@ -89,8 +93,17 @@ $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(KEYBOARD_GOX))
 	$(OBJCOPY) -j .go_export $(KEYBOARD_OBJ) $(KEYBOARD_GOX)
 
+$(MEM_OBJ): $(MEM_SRCS) | $(BUILD_DIR)
+	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(MEM_IMPORT) \
+		-c $(MEM_SRCS) -o $(MEM_OBJ)
+
+$(MEM_GOX): $(MEM_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(MEM_GOX))
+	$(OBJCOPY) -j .go_export $(MEM_OBJ) $(MEM_GOX)
+
 # --- 6. Compile shell.go (package shell) with gccgo ---
-$(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) | $(BUILD_DIR)
+$(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) $(MEM_GOX) | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(SHELL_IMPORT) \
@@ -102,7 +115,7 @@ $(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
 
 # --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) ${MEM_GOX} | $(BUILD_DIR)
 	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
@@ -110,10 +123,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) | $(B
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) ${MEM_OBJ} $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) ${MEM_OBJ} $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
