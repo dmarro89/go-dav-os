@@ -55,7 +55,16 @@ _start:
 
 # initialize ESP to the top of our 16 KB stack in .bss
 mov  $stack_top, %esp
+
+# Multiboot v1: EBX contains the address of the multiboot_info structure.
+# Pass it as the first argument to kernel.Main(uint32).
+pushl %ebx
+
 call go_0kernel.Main
+
+# If Main ever returns, restore the stack.
+add  $4, %esp
+
 cli
 
 .Lhang:

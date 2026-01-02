@@ -3,6 +3,7 @@ package shell
 import (
 	"unsafe"
 
+	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -131,6 +132,84 @@ func execute() {
 		}
 
 		dumpMemory(addr, length)
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "mmap") {
+		n := mem.MMapCount()
+		for i := 0; i < n; i++ {
+			bLo, bHi, lLo, lHi, typ := mem.MMapEntry(i)
+
+			terminal.Print("base=0x")
+			printHex64(bHi, bLo)
+			terminal.Print(" len=0x")
+			printHex64(lHi, lLo)
+			terminal.Print(" type=")
+			printUint(uint64(typ))
+			terminal.PutRune('\n')
+		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "pfa") {
+		if !mem.PFAReady() {
+			terminal.Print("pfa: not ready\n")
+			return
+		}
+
+		terminal.Print("pages total=")
+		printUint(uint64(mem.TotalPages()))
+		terminal.Print(" used=")
+		printUint(uint64(mem.UsedPages()))
+		terminal.Print(" free=")
+		printUint(uint64(mem.FreePages()))
+		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "alloc") {
+		// Allocate one 4KB page and print its physical address.
+		if !mem.PFAReady() {
+			terminal.Print("alloc: pfa not ready\n")
+			return
+		}
+
+		addr := mem.AllocPage()
+		if addr == 0 {
+			terminal.Print("alloc: failed\n")
+			return
+		}
+
+		terminal.Print("0x")
+		printHex32(addr)
+		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "free") {
+		// free a previously allocated 4KB page
+		if !mem.PFAReady() {
+			terminal.Print("free: pfa not ready\n")
+			return
+		}
+
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: free <hex_addr>\n")
+			return
+		}
+
+		addr, ok := parseHex32(a1s, a1e)
+		if !ok {
+			terminal.Print("free: invalid hex address\n")
+			return
+		}
+
+		if mem.FreePage(addr) {
+			terminal.Print("ok\n")
+		} else {
+			terminal.Print("free: failed\n")
+		}
 		return
 	}
 
@@ -309,6 +388,11 @@ func printHex32(v uint32) {
 		n := byte((v >> (uint(i) * 4)) & 0xF)
 		terminal.PutRune(rune(hexDigits[n]))
 	}
+}
+
+func printHex64(hi, lo uint32) {
+	printHex32(hi)
+	printHex32(lo)
 }
 
 func printHex8(b byte) {

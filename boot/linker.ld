@@ -43,4 +43,6 @@ SECTIONS
         *(.bss)
         *(.bootstrap_stack)
     }
+
+  __kernel_end = .;
 }

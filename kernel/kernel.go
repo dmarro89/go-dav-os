@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"github.com/dmarro89/go-dav-os/keyboard"
+	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/shell"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
@@ -13,7 +14,7 @@ func EnableInterrupts()
 func DisableInterrupts()
 func Halt()
 
-func Main() {
+func Main(multibootInfoAddr uint32) {
 	DisableInterrupts()
 	terminal.Init()
 	terminal.Clear()
@@ -26,6 +27,10 @@ func Main() {
 	PITInit(100)
 
 	shell.SetTickProvider(GetTicks)
+
+	mem.InitMultiboot(multibootInfoAddr)
+	mem.InitPFA()
+
 	EnableInterrupts()
 	shell.Init()
 
