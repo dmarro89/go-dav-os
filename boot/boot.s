@@ -189,6 +189,13 @@ runtime.memequal:
 	ret
 .size runtime.memequal, . - runtime.memequal
 
+.global runtime.panicmem
+runtime.panicmem:
+    cli
+1:
+    hlt
+    jmp 1b
+	
 # void runtime.registerGCRoots()
 .global runtime.registerGCRoots
 .type   runtime.registerGCRoots, @function

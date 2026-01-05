@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"github.com/dmarro89/go-dav-os/fs"
 	"github.com/dmarro89/go-dav-os/keyboard"
 	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/shell"
@@ -30,6 +31,8 @@ func Main(multibootInfoAddr uint32) {
 
 	mem.InitMultiboot(multibootInfoAddr)
 	mem.InitPFA()
+
+	fs.Init()
 
 	EnableInterrupts()
 	shell.Init()

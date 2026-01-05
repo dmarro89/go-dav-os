@@ -3,6 +3,7 @@ package shell
 import (
 	"unsafe"
 
+	"github.com/dmarro89/go-dav-os/fs"
 	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
@@ -16,6 +17,8 @@ var (
 	lineBuf  [maxLine]byte
 	lineLen  int
 	getTicks func() uint64
+	tmpName  [16]byte
+	tmpData  [4096]byte
 )
 
 func SetTickProvider(fn func() uint64) { getTicks = fn }
@@ -69,7 +72,7 @@ func execute() {
 	cmdStart, cmdEnd := firstToken(start, end)
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat\n")
 		return
 	}
 
@@ -168,7 +171,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "alloc") {
-		// Allocate one 4KB page and print its physical address.
+		// allocate one 4KB page and print its physical address
 		if !mem.PFAReady() {
 			terminal.Print("alloc: pfa not ready\n")
 			return
@@ -210,6 +213,124 @@ func execute() {
 		} else {
 			terminal.Print("free: failed\n")
 		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "ls") {
+		for i := 0; i < fs.MaxFiles(); i++ {
+			used, name, nameLen, size, page := fs.Entry(i)
+			if !used {
+				continue
+			}
+
+			printName(name, nameLen)
+			terminal.Print("  size=")
+			printUint(uint64(size))
+			terminal.Print("  page=0x")
+			printHex32(page)
+			terminal.PutRune('\n')
+		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "write") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: write <name> <text...>\n")
+			return
+		}
+
+		nameLen, ok := copyNameFromRange(a1s, a1e)
+		if !ok {
+			terminal.Print("write: invalid name\n")
+			return
+		}
+
+		msgStart := trimLeft(a1e, end)
+		dataLen := copyDataFromRange(msgStart, end)
+
+		if !fs.Write(&tmpName, nameLen, (*byte)(unsafe.Pointer(&tmpData[0])), dataLen) {
+			terminal.Print("write: failed\n")
+			return
+		}
+
+		terminal.Print("ok\n")
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "cat") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: cat <name>\n")
+			return
+		}
+
+		nameLen, ok := copyNameFromRange(a1s, a1e)
+		if !ok {
+			terminal.Print("cat: invalid name\n")
+			return
+		}
+
+		page, size, ok := fs.Lookup(&tmpName, nameLen)
+		if !ok {
+			terminal.Print("cat: not found\n")
+			return
+		}
+
+		p := uintptr(page)
+		for i := uint32(0); i < size; i++ {
+			b := *(*byte)(unsafe.Pointer(p + uintptr(i)))
+			terminal.PutRune(rune(b))
+		}
+		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "rm") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: rm <name>\n")
+			return
+		}
+
+		nameLen, ok := copyNameFromRange(a1s, a1e)
+		if !ok {
+			terminal.Print("rm: invalid name\n")
+			return
+		}
+
+		if fs.Remove(&tmpName, nameLen) {
+			terminal.Print("ok\n")
+		} else {
+			terminal.Print("rm: not found\n")
+		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "stat") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: stat <name>\n")
+			return
+		}
+
+		nameLen, ok := copyNameFromRange(a1s, a1e)
+		if !ok {
+			terminal.Print("stat: invalid name\n")
+			return
+		}
+
+		page, size, ok := fs.Lookup(&tmpName, nameLen)
+		if !ok {
+			terminal.Print("stat: not found\n")
+			return
+		}
+
+		terminal.Print("page=0x")
+		printHex32(page)
+		terminal.Print(" size=")
+		printUint(uint64(size))
+		terminal.PutRune('\n')
 		return
 	}
 
@@ -399,4 +520,41 @@ func printHex8(b byte) {
 	hexDigits := "0123456789ABCDEF"
 	terminal.PutRune(rune(hexDigits[(b>>4)&0xF]))
 	terminal.PutRune(rune(hexDigits[b&0xF]))
+}
+
+func printName(name *[16]byte, nameLen int) {
+	for i := 0; i < nameLen; i++ {
+		terminal.PutRune(rune(name[i]))
+	}
+}
+
+func copyNameFromRange(start, end int) (int, bool) {
+	n := end - start
+	if n <= 0 || n > 16 {
+		return 0, false
+	}
+	for i := 0; i < 16; i++ {
+		tmpName[i] = 0
+	}
+	for i := 0; i < n; i++ {
+		tmpName[i] = lineBuf[start+i]
+	}
+	return n, true
+}
+
+func copyDataFromRange(start, end int) uint32 {
+	if end < start {
+		return 0
+	}
+	n := end - start
+	if n < 0 {
+		return 0
+	}
+	if n > 4096 {
+		n = 4096
+	}
+	for i := 0; i < n; i++ {
+		tmpData[i] = lineBuf[start+i]
+	}
+	return uint32(n)
 }

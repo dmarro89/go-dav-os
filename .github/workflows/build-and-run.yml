@@ -1,4 +1,4 @@
-name: Build & QEMU smoke test
+name: Build
 
 on:
   push:
