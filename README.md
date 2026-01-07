@@ -84,11 +84,13 @@ To force cross binaries: `make CROSS=i686-elf`
 - `build/`: build output (ISO + ELF)
 
 ## Contributing
-Contributions are welcome 👊  
-The project is still early-stage and intentionally minimal, so small PRs are the best way to help.
 
-If you want to contribute, start here: **CONTRIBUTING.md**  
-You can also check Issues labeled `good first issue` / `help wanted`, or open a Discussion if you want to propose something.
+Contributions are welcome! This project is still early-stage and intentionally minimal, so **small PRs** are the best way to help.
+
+- Review [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
+- Check issues labeled [`good first issue`](../../labels/good%20first%20issue) or [`help wanted`](../../labels/help%20wanted)
+- Open a [Discussion](../../discussions) to propose an idea or ask a question
+  
 
 ## Final note
 
