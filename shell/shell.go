@@ -9,8 +9,10 @@ import (
 )
 
 const (
-	prompt  = "> "
-	maxLine = 128
+	prompt    = "> "
+	maxLine   = 128
+	osName    = "DavOS"
+	osVersion = "0.1.0"
 )
 
 var (
@@ -72,7 +74,7 @@ func execute() {
 	cmdStart, cmdEnd := firstToken(start, end)
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version\n")
 		return
 	}
 
@@ -331,6 +333,11 @@ func execute() {
 		terminal.Print(" size=")
 		printUint(uint64(size))
 		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "version") {
+		terminal.Print(osName + " " + osVersion + "\n")
 		return
 	}
 
