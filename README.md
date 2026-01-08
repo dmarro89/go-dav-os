@@ -76,6 +76,7 @@ To force cross binaries: `make CROSS=i686-elf`
 - `mmap` (Multiboot memory map)
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
 - `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (filesystem)
+- `version` (OS name and version)
 
 ## Other folder layout
 
