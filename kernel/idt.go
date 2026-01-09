@@ -73,13 +73,14 @@ func Int80Handler(tf *TrapFrame) {
 }
 
 func sysWrite(fd, buf, n uint32) uint32 {
-	if fd != 1 || n == 0 {
-		return 0
+	if fd != 1 {
+		return ^uint32(0)
 	}
 
-	p := (*[1 << 20]byte)(unsafe.Pointer(uintptr(buf)))[:n:n]
-
-	terminal.Print(string(p))
+	for i := uint32(0); i < n; i++ {
+		b := *(*byte)(unsafe.Pointer(uintptr(buf) + uintptr(i)))
+		terminal.PutRune(rune(b))
+	}
 	return n
 }
 

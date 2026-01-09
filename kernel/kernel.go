@@ -15,9 +15,12 @@ func EnableInterrupts()
 func DisableInterrupts()
 func Halt()
 
+var syscallMsg = [...]byte{
+	'h','e','l','l','o',' ','v','i','a',' ','s','y','s','c','a','l','l',' ','w','r','i','t','e','\n',
+}
+
 func SyscallTest() {
-	msg := []byte("hello via syscall write\n")
-	TriggerSysWrite(&msg[0], uint32(len(msg)))
+	TriggerSysWrite(&syscallMsg[0], uint32(len(syscallMsg)))
 }
 
 func Main(multibootInfoAddr uint32) {
