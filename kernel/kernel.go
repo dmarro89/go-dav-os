@@ -15,12 +15,19 @@ func EnableInterrupts()
 func DisableInterrupts()
 func Halt()
 
+func SyscallTest() {
+	msg := []byte("hello via syscall write\n")
+	TriggerSysWrite(&msg[0], uint32(len(msg)))
+}
+
 func Main(multibootInfoAddr uint32) {
 	DisableInterrupts()
 	terminal.Init()
 	terminal.Clear()
 
 	InitIDT()
+
+	SyscallTest()
 
 	PICRemap(0x20, 0x28)
 	PICSetMask(0xFC, 0xFF)

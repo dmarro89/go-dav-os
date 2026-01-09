@@ -281,11 +281,29 @@ go_0kernel.StoreIDT:
 .type   go_0kernel.Int80Stub, @function
 
 go_0kernel.Int80Stub:
-	pusha
-	call  go_0kernel.Int80Handler
-	popa
-	iret
-	.size go_0kernel.Int80Stub, . - go_0kernel.Int80Stub
+    pusha
+
+    # push argument: pointer to TrapFrame (current ESP)
+    pushl %esp
+    call  go_0kernel.Int80Handler
+    add   $4, %esp
+
+    popa
+    iret
+.size go_0kernel.Int80Stub, . - go_0kernel.Int80Stub
+
+# void go_0kernel.TriggerSysWrite(uint32 buf, uint32 n)
+.global go_0kernel.TriggerSysWrite
+.type   go_0kernel.TriggerSysWrite, @function
+
+go_0kernel.TriggerSysWrite:
+    mov  4(%esp), %ecx   # buf
+    mov  8(%esp), %edx   # n
+    mov  $1, %eax        # SYS_WRITE
+    mov  $1, %ebx        # fd=1
+    int  $0x80
+    ret
+.size go_0kernel.TriggerSysWrite, . - go_0kernel.TriggerSysWrite
 
 # uint32 go_0kernel.getInt80StubAddr()
 .global go_0kernel.getInt80StubAddr

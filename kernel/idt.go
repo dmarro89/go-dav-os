@@ -6,7 +6,30 @@ import (
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
-const idtSize = 256
+const (
+	idtSize            = 256
+	intGateKernelFlags = 0x8E // P=1, DPL=0, interrupt gate
+	intGateUserFlags   = 0xEE // P=1, DPL=3, interrupt gate (syscall)
+)
+
+const (
+	SYS_WRITE = 1
+	// SYS_EXIT  = 2 // Not implemented
+)
+
+type TrapFrame struct {
+	EDI    uint32
+	ESI    uint32
+	EBP    uint32
+	ESP    uint32
+	EBX    uint32
+	EDX    uint32
+	ECX    uint32
+	EAX    uint32
+	EIP    uint32
+	CS     uint32
+	EFLAGS uint32
+}
 
 // 8 byte
 type idtEntry struct {
@@ -33,13 +56,32 @@ func GetCS() uint16
 func getIRQ0StubAddr() uint32
 func getIRQ1StubAddr() uint32
 
-func Int80Handler() {
-	terminal.Print("INT 0x80 fired!\n")
+// syscalls
+func TriggerSysWrite(buf *byte, n uint32)
+
+func Int80Handler(tf *TrapFrame) {
+	switch tf.EAX {
+	case SYS_WRITE:
+		fd := tf.EBX
+		buf := tf.ECX
+		n := tf.EDX
+		tf.EAX = sysWrite(fd, buf, n)
+	default:
+		terminal.Print("unknown syscall\n")
+		tf.EAX = ^uint32(0) // return -1
+	}
 }
 
-const (
-	intGateFlags = 0x8E
-)
+func sysWrite(fd, buf, n uint32) uint32 {
+	if fd != 1 || n == 0 {
+		return 0
+	}
+
+	p := (*[1 << 20]byte)(unsafe.Pointer(uintptr(buf)))[:n:n]
+
+	terminal.Print(string(p))
+	return n
+}
 
 func packIDTR(limit uint16, base uint32, out *[6]byte) {
 	out[0] = byte(limit)
@@ -73,15 +115,15 @@ func InitIDT() {
 	cs := GetCS()
 
 	// Install emergency handlers first
-	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateFlags)  // #DF
-	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateFlags) // #GP
+	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateKernelFlags)  // #DF
+	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateKernelFlags) // #GP
 
 	// Install IRQ handlers
-	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateFlags) // IRQ0
-	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateFlags) // IRQ1
+	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateKernelFlags) // IRQ0
+	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateKernelFlags) // IRQ1
 
-	// Install 0x80 test handler stub
-	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateFlags)
+	// Install 0x80 syscall handler
+	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateUserFlags)
 
 	// Build IDTR (packed 6 bytes)
 	base := uint32(uintptr(unsafe.Pointer(&idt[0])))
