@@ -6,12 +6,15 @@ This document outlines the steps required to migrate `go-dav-os` from 32-bit pro
 Current state: Boots via Multiboot 1 (32-bit protected mode).
 Goal: Reach 64-bit Long Mode.
 
+**Note**: Multiboot v1 is 32-bit only. We should switch to **Multiboot2** to support modern 64-bit loading properly, or use a trampoline. This plan assumes moving to Multiboot2.
+
 ### Steps:
 1.  **Paging Setup**:
     *   Create a Page Map Level 4 (PML4) table.
     *   Create a Page Directory Pointer Table (PDPT).
     *   Create a Page Directory (PD).
     *   Identity map the first 1GB (or enough for kernel + boot structures) using huge pages (2MB) for simplicity.
+    *   Update `boot.s` header to use **Multiboot2** tags.
     *   Load clean CR3 with the address of PML4.
 
 2.  **Enable Long Mode**:
@@ -34,6 +37,7 @@ Goal: `GOARCH=amd64`
 1.  **Compiler Target**:
     *   Update `Makefile` to set `GOARCH=amd64` for `gccgo`.
     *   Ensure cross-compiler `x86_64-elf-gcc` / `x86_64-elf-gccgo` is used.
+    *   Update `linker.ld` to output `elf64-x86-64` and handle 64-bit sections.
 
 2.  **Entry Point**:
     *   Update `boot.s` to pass Multiboot info pointer in a 64-bit register (e.g., `rdi` for C ABI or stack depending on Go ABI).
@@ -53,8 +57,8 @@ Goal: `GOARCH=amd64`
     *   **Handlers**: Assembly interrupt stubs (`boot/boot.s`) must use `iretq` (64-bit return) and save/restore 64-bit registers (`rax`, `rbx`... `r15`).
 
 5.  **Syscalls**:
-    *   If using software interrupts (`int 0x80`), update handler.
-    *   Consider switching to `syscall`/`sysret` instructions for faster system calls in 64-bit mode tasks later.
+    *   (Future Work): Once the kernel is stable in 64-bit, switch system calls to use `syscall`/`sysret` instructions instead of `int 0x80`.
+    *   This will require updating the userspace/kernel boundary ABI.
 
 ## 3. Architecture Independent Parts (No Change Needed)
 The following components are largely high-level and should remain mostly untouched, assuming `int` / `uint` behave as expected (Go `int` becomes 64-bit on amd64):
@@ -67,8 +71,9 @@ The following components are largely high-level and should remain mostly untouch
 ## 4. Minimal Roadmap Checklist
 
 - [ ] **Phase 1: Toolchain & Build**
-    - [ ] Update `Makefile` variables for `x86_64` toolchain.
-    - [ ] Update `Dockerfile` to include `x86_64-elf-gcc` and `qemu-system-x86_64`.
+    *   [ ] Update `Makefile` variables for `x86_64` toolchain.
+    *   [ ] Update `Dockerfile` to include `x86_64-elf-gcc` and `qemu-system-x86_64`.
+    *   [ ] Update `linker.ld` for 64-bit output.
 
 - [ ] **Phase 2: Bootloader**
     - [ ] Modify `boot.s` to implement paging and long mode switch.
