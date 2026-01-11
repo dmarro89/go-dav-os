@@ -36,12 +36,16 @@ def main():
     ]
     
     # Start QEMU process
+    # We must NOT use subprocess.PIPE for stdout/stderr if we want to interact with stdio monitor
+    # But to capture errors, we need a way.
+    # Approach: Use a pipe for stderr to capture errors, leave stdout/stdin for monitor interaction.
+    
     process = subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, # Capture stdout (monitor output) to avoid clutter
-        stderr=subprocess.PIPE,
-        start_new_session=True # Detach group
+        stdout=subprocess.DEVNULL, # We don't need stdout as we check the log file
+        stderr=subprocess.PIPE,    # Capture errors
+        text=True                  # Use text mode for easier reading
     )
     
     try:
@@ -49,6 +53,15 @@ def main():
         print("Waiting for boot prompt...")
         if not check_log_for("DavOS", log_file, timeout=10):
             print("ERROR: Timeout waiting for DavOS prompt.")
+            
+            # Check if QEMU crashed
+            if process.poll() is not None:
+                print(f"QEMU process exited early with code {process.returncode}")
+                stderr_out = process.stderr.read()
+                print("--- QEMU stderr ---")
+                print(stderr_out)
+                print("-------------------")
+            
             print("--- qemu.log content ---")
             if os.path.exists(log_file):
                 with open(log_file, 'r', errors='ignore') as f:
@@ -60,28 +73,34 @@ def main():
         print("Boot successful.")
         
         # 2. Test Shell Command "help"
-        # Since we are using -monitor stdio, writing to stdin interacts with the QEMU monitor, NOT the guest OS serial/keyboard.
-        # To send keys to the guest, we use the monitor command 'sendkey'.
+        # Since we are using -monitor stdio, writing to stdin interacts with the QEMU monitor.
         
         print("Sending 'help' command via QEMU monitor...")
-        # Send keys: h, e, l, p, ret
         keys = ['h', 'e', 'l', 'p', 'ret']
         for k in keys:
             cmd_str = f"sendkey {k}\n"
-            process.stdin.write(cmd_str.encode())
-            process.stdin.flush()
-            time.sleep(0.1) # Debounce
-            
+            try:
+                process.stdin.write(cmd_str)
+                process.stdin.flush()
+            except BrokenPipeError:
+                 print("Error: QEMU closed stdin (crashed?)")
+                 break
+            time.sleep(0.1) 
+
         # 3. Wait for Command Output "Commands:"
         print("Waiting for help output...")
         if not check_log_for("Commands:", log_file, timeout=5):
             print("ERROR: Timeout waiting for help command text.")
+            if process.poll() is not None:
+                print(f"QEMU exited with {process.returncode}")
+                print("Stderr:", process.stderr.read())
             sys.exit(1)
             
         print("Test Passed: 'help' command executed successfully.")
         
     finally:
-        process.kill()
+        if process.poll() is None:
+            process.terminate()
 
 if __name__ == "__main__":
     main()
