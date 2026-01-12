@@ -34,8 +34,6 @@ func Main(multibootInfoAddr uint32) {
 	mem.InitPFA()
 
 	scheduler.Init()
-	scheduler.NewTask(taskA)
-	scheduler.NewTask(taskB)
 
 	fs.Init()
 
