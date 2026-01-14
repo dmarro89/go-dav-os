@@ -23,7 +23,7 @@ SECTIONS
 
   .text BLOCK(4K) : ALIGN(4K)
     {
-        *(.multiboot)
+        *(.multiboot2)
         *(.text)
     }
 
@@ -42,8 +42,15 @@ SECTIONS
   /* Zero-initialized data and common symbols; stays zeroed at load time */
     .bss BLOCK(4K) : ALIGN(4K)
     {
+        __bss_start = .;
         *(COMMON)
         *(.bss)
+        __bss_end = .;
+    }
+
+  /* Keep bootstrap stack/tables out of BSS clear */
+  .bootstrap_stack BLOCK(4K) : ALIGN(4K)
+    {
         *(.bootstrap_stack)
     }
 
