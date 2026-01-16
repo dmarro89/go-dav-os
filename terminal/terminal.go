@@ -13,10 +13,10 @@ const (
 	vgaCursorDataPort  uint16 = 0x3D5
 )
 
-const videoMemoryAddr = 0xB8000
+const videoMemoryAddr uintptr = 0xB8000
 
 func getVidMem() *[VGAHeight][VGAWidth][2]byte {
-	return (*[VGAHeight][VGAWidth][2]byte)(unsafe.Pointer(uintptr(videoMemoryAddr)))
+	return (*[VGAHeight][VGAWidth][2]byte)(unsafe.Pointer(videoMemoryAddr))
 }
 
 const (

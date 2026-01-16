@@ -16,41 +16,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+      - name: Build toolchain image (local)
+        uses: docker/build-push-action@v6
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Try pulling toolchain image
-        id: pullimg
-        continue-on-error: true
-        run: docker pull ghcr.io/dmarro89/go-dav-os-toolchain:latest
-
-      - name: Build toolchain image if missing/changed (cached)
-        if: steps.pullimg.outcome != 'success'
-        run: |
-          docker buildx build --platform=linux/amd64 \
-            --cache-from type=gha --cache-to type=gha,mode=max \
-            -t ghcr.io/dmarro89/go-dav-os-toolchain:latest \
-            --load \
-            .
-      
-      - name: Push image
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        run: docker push ghcr.io/dmarro89/go-dav-os-toolchain:latest
+          context: .
+          load: true
+          tags: go-dav-os-toolchain:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build ISO
         run: |
           docker run --rm --platform=linux/amd64 \
             -v "$PWD":/work -w /work \
-            ghcr.io/dmarro89/go-dav-os-toolchain:latest \
+            go-dav-os-toolchain:ci \
             make -j$(nproc)
 
       - name: Upload ISO artifact

@@ -17,22 +17,28 @@ def check_log_for(target, log_file, timeout=5):
 def main():
     iso_path = "build/dav-go-os.iso"
     log_file = "qemu.log"
-    
+
+    if not os.path.exists(iso_path):
+        print(f"ERROR: ISO not found at {iso_path}. Build it first.")
+        sys.exit(1)
+
     if os.path.exists(log_file):
         os.remove(log_file)
         
     print(f"Starting QEMU verification for {iso_path}...")
     print(f"Log file: {log_file}")
     
-    # Run QEMU with debugcon logging to file and monitor on stdio
-    # CRITIAL: We use 'file:qemu.log' to capture 0xE9 port output. 
+    # Run QEMU with debugcon logging to file and monitor on stdio.
+    # CRITICAL: We use 'file:qemu.log' to capture 0xE9 port output.
     cmd = [
-        "qemu-system-i386",
+        "qemu-system-x86_64",
         "-cdrom", iso_path,
         "-debugcon", f"file:{log_file}",
         "-serial", "none",
         "-monitor", "stdio",
-        "-display", "none"
+        "-display", "none",
+        "-no-reboot",
+        "-no-shutdown",
     ]
     
     # Start QEMU process
@@ -49,9 +55,9 @@ def main():
     )
     
     try:
-        # 1. Wait for Boot Prompt "DavOS"
+        # 1. Wait for Boot Prompt "Welcome to DavOS"
         print("Waiting for boot prompt...")
-        if not check_log_for("DavOS", log_file, timeout=10):
+        if not check_log_for("Welcome to DavOS", log_file, timeout=10):
             print("ERROR: Timeout waiting for DavOS prompt.")
             
             # Check if QEMU crashed
@@ -71,7 +77,7 @@ def main():
             print("------------------------")
             sys.exit(1)
         print("Boot successful.")
-        
+
         # 2. Test Shell Command "help"
         # Since we are using -monitor stdio, writing to stdin interacts with the QEMU monitor.
         
@@ -97,6 +103,33 @@ def main():
             sys.exit(1)
             
         print("Test Passed: 'help' command executed successfully.")
+
+        # 4. Test Shell Command "version" and confirm 64-bit marker.
+        print("Sending 'version' command via QEMU monitor...")
+        keys = ['v', 'e', 'r', 's', 'i', 'o', 'n', 'ret']
+        for k in keys:
+            cmd_str = f"sendkey {k}\n"
+            try:
+                process.stdin.write(cmd_str)
+                process.stdin.flush()
+            except BrokenPipeError:
+                print("Error: QEMU closed stdin (crashed?)")
+                break
+            time.sleep(0.1)
+
+        print("Waiting for version output...")
+        if not check_log_for("DavOS 0.1.0", log_file, timeout=5):
+            print("ERROR: Timeout waiting for version output.")
+            if process.poll() is not None:
+                print(f"QEMU exited with {process.returncode}")
+                print("Stderr:", process.stderr.read())
+            sys.exit(1)
+
+        print("Checking for 64-bit marker in version output...")
+        if not check_log_for("DavOS 0.1.0 (64bit)", log_file, timeout=5):
+            print("ERROR: 64-bit marker not found in version output.")
+            sys.exit(1)
+        print("64-bit marker detected in version output.")
         
     finally:
         if process.poll() is None:

@@ -1,31 +1,25 @@
+.code64
+.section .text
 .global memcmp
+.type memcmp, @function
 memcmp:
-    pushl %ebp
-    movl  %esp, %ebp
-
-    movl  8(%ebp), %esi
-    movl 12(%ebp), %edi
-    movl 16(%ebp), %ecx
-
-    testl %ecx, %ecx
-    je    .memcmp_equal
+	test %rdx, %rdx
+	je .memcmp_equal
 
 .memcmp_loop:
-    movzbl (%esi), %eax
-    movzbl (%edi), %edx
-    cmpl  %edx, %eax
-    jne   .memcmp_diff
-    incl  %esi
-    incl  %edi
-    decl  %ecx
-    jne   .memcmp_loop
+	movzbl (%rdi), %eax
+	movzbl (%rsi), %ecx
+	cmp %ecx, %eax
+	jne .memcmp_diff
+	inc %rdi
+	inc %rsi
+	dec %rdx
+	jne .memcmp_loop
 
 .memcmp_equal:
-    xorl  %eax, %eax
-    popl  %ebp
-    ret
+	xorl %eax, %eax
+	ret
 
 .memcmp_diff:
-    subl  %edx, %eax
-    popl  %ebp
-    ret
+	subl %ecx, %eax
+	ret
