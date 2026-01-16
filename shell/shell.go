@@ -75,7 +75,7 @@ func execute() {
 	cmdStart, cmdEnd := firstToken(start, end)
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, mmapmax, pfa, alloc, free, ls, write, cat, rm, stat, version\n")
 		return
 	}
 
@@ -154,6 +154,28 @@ func execute() {
 			printUint(uint64(typ))
 			terminal.PutRune('\n')
 		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "mmapmax") {
+		var maxEnd uint64
+		n := mem.MMapCount()
+		for i := 0; i < n; i++ {
+			bLo, bHi, lLo, lHi, typ := mem.MMapEntry(i)
+			if typ != 1 {
+				continue
+			}
+			base := (uint64(bHi) << 32) | uint64(bLo)
+			l := (uint64(lHi) << 32) | uint64(lLo)
+			end := base + l
+			if end > maxEnd {
+				maxEnd = end
+			}
+		}
+
+		terminal.Print("mmap max end=0x")
+		printHexU64(maxEnd)
+		terminal.PutRune('\n')
 		return
 	}
 
