@@ -30,13 +30,13 @@ MEM_IMPORT     := $(MODPATH)/mem
 FS_IMPORT := $(MODPATH)/fs
 SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 
-KERNEL_SRCS := $(wildcard kernel/*.go)
+KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
 TERMINAL_SRC := terminal/terminal.go
-KEYBOARD_SRCS := $(wildcard keyboard/*.go)
-SHELL_SRCS := $(wildcard shell/*.go)
-MEM_SRCS       := $(wildcard mem/*.go)
-FS_SRCS   := $(wildcard fs/*.go)
-SCHEDULER_SRCS := $(wildcard kernel/scheduler/*.go)
+KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
+SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
+MEM_SRCS       := $(filter-out %_test.go, $(wildcard mem/*.go))
+FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
+SCHEDULER_SRCS := $(filter-out %_test.go, $(wildcard kernel/scheduler/*.go))
 SCH_SWITCH_SRC := kernel/scheduler/switch.s
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
