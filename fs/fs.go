@@ -12,24 +12,6 @@ const (
 	pageSize = 4096
 )
 
-// Memory operations vars to allow mocking in tests
-var (
-	memAlloc    = mem.AllocPage
-	memFree     = mem.FreePage
-	memPFAReady = mem.PFAReady
-	// memWrite writes data to a physical page.
-	// We abstract this to allow tests on 64-bit hosts where casting physical
-	// addresses (uint32) to pointers (uintptr) would otherwise crash or be invalid.
-	memWrite = func(pagePhys uint32, data *byte, len uint32) {
-		dstBase := uintptr(pagePhys)
-		srcBase := uintptr(unsafe.Pointer(data))
-		for i := uint32(0); i < len; i++ {
-			*(*byte)(unsafe.Pointer(dstBase + uintptr(i))) =
-				*(*byte)(unsafe.Pointer(srcBase + uintptr(i)))
-		}
-	}
-)
-
 type fileEntry struct {
 	used    bool
 	nameLen uint8
@@ -94,10 +76,10 @@ func Write(name *[maxName]byte, nameLen int, data *byte, dataLen uint32) bool {
 
 	// allocate a page if this is a new file
 	if !e.used {
-		if !memPFAReady() {
+		if !mem.PFAReady() {
 			return false
 		}
-		p := memAlloc()
+		p := mem.AllocPage()
 		if p == 0 {
 			return false
 		}
@@ -107,7 +89,12 @@ func Write(name *[maxName]byte, nameLen int, data *byte, dataLen uint32) bool {
 	}
 
 	// copy data into the backing page (physical memory)
-	memWrite(e.page, data, dataLen)
+	dstBase := uintptr(e.page)
+	srcBase := uintptr(unsafe.Pointer(data))
+	for i := uint32(0); i < dataLen; i++ {
+		*(*byte)(unsafe.Pointer(dstBase + uintptr(i))) =
+			*(*byte)(unsafe.Pointer(srcBase + uintptr(i)))
+	}
 	e.size = dataLen
 	return true
 }
@@ -121,7 +108,7 @@ func Remove(name *[maxName]byte, nameLen int) bool {
 
 	e := &files[idx]
 	if e.used && e.page != 0 {
-		memFree(e.page)
+		mem.FreePage(e.page)
 	}
 
 	e.used = false

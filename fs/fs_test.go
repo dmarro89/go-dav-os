@@ -4,6 +4,15 @@ import (
 	"testing"
 )
 
+func MockInit() {
+	for i := 0; i < maxFiles; i++ {
+		files[i].used = false
+		files[i].nameLen = 0
+		files[i].size = 0
+		files[i].page = 0
+	}
+}
+
 // helper to make a name array
 func makeName(s string) (out [maxName]byte, l int) {
 	for i := 0; i < maxName && i < len(s); i++ {
@@ -18,7 +27,7 @@ func TestInit(t *testing.T) {
 	files[0].used = true
 	files[0].size = 999
 
-	Init()
+	MockInit()
 
 	if files[0].used {
 		t.Errorf("Slot 0 still used after Init")
@@ -29,7 +38,7 @@ func TestInit(t *testing.T) {
 }
 
 func TestLookup(t *testing.T) {
-	Init()
+	MockInit()
 
 	name, nameLen := makeName("exists.txt")
 
@@ -61,7 +70,7 @@ func TestLookup(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	Init()
+	MockInit()
 
 	name, nameLen := makeName("delete.txt")
 	files[0].used = true
@@ -85,7 +94,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestWriteFailure(t *testing.T) {
-	Init()
+	MockInit()
 
 	// Because we cannot mock mem.PFAReady() or mem.AllocPage() without modifying fs.go,
 	// Write() must fail.
