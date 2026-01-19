@@ -24,6 +24,10 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 
 - Filesystem: `fs/`
   - Minimal in-memory FS backed by allocated pages (`ls/write/cat/rm/stat`)
+  
+## Architecture
+
+![DavOS Architecture](docs/architecture.png)
 
 ## Project status
 

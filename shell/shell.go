@@ -21,7 +21,20 @@ var (
 	getTicks func() uint64
 	tmpName  [16]byte
 	tmpData  [4096]byte
+
+	// History ring buffer
+	// historyBuf stores the content of the commands
+	historyBuf [32][maxLine]byte
+	// historyLen stores the length of each command in the buffer
+	historyLen [32]int
+	// historyHead points to the next free slot in the ring buffer
+	historyHead int
+	// historyCount tracks the total number of items currently stored (max 32)
+	historyCount int
 )
+
+// maxHistory defines the maximum size of the history ring buffer
+const maxHistory = 32
 
 func SetTickProvider(fn func() uint64) { getTicks = fn }
 
@@ -72,10 +85,72 @@ func execute() {
 		return
 	}
 
+	// Add to history
+	// We only add non-empty commands to history.
+	// We also avoid adding duplicate consecutive commands.
+	// The buffer is implemented as a standard ring buffer, overwriting old entries
+	// when the buffer is full.
+	histLen := end - start
+	if histLen > 0 {
+		// duplicate check
+		isDuplicate := false
+		if historyCount > 0 {
+			lastIdx := (historyHead - 1 + maxHistory) % maxHistory
+			if historyLen[lastIdx] == histLen {
+				match := true
+				for i := 0; i < histLen; i++ {
+					if historyBuf[lastIdx][i] != lineBuf[start+i] {
+						match = false
+						break
+					}
+				}
+				if match {
+					isDuplicate = true
+				}
+			}
+		}
+
+		if !isDuplicate {
+			idx := historyHead
+			for i := 0; i < histLen; i++ {
+				historyBuf[idx][i] = lineBuf[start+i]
+			}
+			historyLen[idx] = histLen
+
+			historyHead = (historyHead + 1) % maxHistory
+			if historyCount < maxHistory {
+				historyCount++
+			}
+		}
+	}
+
 	cmdStart, cmdEnd := firstToken(start, end)
 
+	if matchLiteral(cmdStart, cmdEnd, "history") {
+		// Print history
+		// We iterate from 0 to historyCount-1.
+		// To print chronologically (oldest first), we calculate the starting index
+		// in the ring buffer: (head - count + size) % size.
+		startIdx := (historyHead - historyCount + maxHistory) % maxHistory
+		for i := 0; i < historyCount; i++ {
+			idx := (startIdx + i) % maxHistory
+
+			// Print index (1-based for user friendliness)
+			printUint(uint64(i + 1))
+			terminal.Print(" ")
+
+			// Print command content
+			l := historyLen[idx]
+			for k := 0; k < l; k++ {
+				terminal.PutRune(rune(historyBuf[idx][k]))
+			}
+			terminal.PutRune('\n')
+		}
+		return
+	}
+
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, mmapmax, pfa, alloc, free, ls, write, cat, rm, stat, version\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history\n")
 		return
 	}
 
