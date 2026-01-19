@@ -72,21 +72,21 @@ The following components are largely high-level and should remain mostly untouch
 
 ## 4. Minimal Roadmap Checklist
 
-- [ ] **Phase 1: Toolchain & Build**
-    *   [ ] Update `Makefile` variables for `x86_64` toolchain.
-    *   [ ] Update `Dockerfile` to include `x86_64-elf-gcc` and `qemu-system-x86_64`.
-    *   [ ] Update `linker.ld` for 64-bit output.
+- [x] **Phase 1: Toolchain & Build**
+    *   [x] Update `Makefile` variables for `x86_64` toolchain.
+    *   [x] Update `Dockerfile` to include `x86_64-elf-gcc` and `qemu-system-x86_64`.
+    *   [x] Update `linker.ld` for 64-bit output.
 
 - [ ] **Phase 2: Bootloader**
-    - [ ] Modify `boot.s` to implement paging and long mode switch.
+    - [x] Modify `boot.s` to implement paging and long mode switch.
     - [ ] Stub out the Go kernel entry for a simple "Hello 64-bit" asm check.
 
-- [ ] **Phase 3: Kernel Port**
-    - [ ] Update `kernel.Main` and `allocator` to 64-bit.
-    - [ ] Fix assembly stubs (`inb`, `outb`, `lidt`, `lgdt`) for 64-bit registers.
-    - [ ] Get "Hello World" from Go kernel on screen.
+- [x] **Phase 3: Kernel Port**
+    - [x] Update `kernel.Main` and `allocator` to 64-bit.
+    - [x] Fix assembly stubs (`inb`, `outb`, `lidt`, `lgdt`) for 64-bit registers.
+    - [x] Get "Hello World" from Go kernel on screen.
 
-- [ ] **Phase 4: Interrupts & Input**
-    - [ ] Implement 64-bit IDT.
-    - [ ] Port PIT and Keyboard drivers.
-    - [ ] Verify Shell works.
+- [x] **Phase 4: Interrupts & Input**
+    - [x] Implement 64-bit IDT.
+    - [x] Port PIT and Keyboard drivers.
+    - [x] Verify Shell works.

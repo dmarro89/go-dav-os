@@ -15,7 +15,7 @@ const (
 
 type Task struct {
 	ID    int
-	ESP   uint32
+	ESP   uint64
 	State TaskState
 	Stack [StackSize]byte
 }
@@ -31,7 +31,7 @@ var (
 )
 
 // CpuSwitch is defined in switch.s
-func CpuSwitch(oldESP *uint32, newESP uint32)
+func CpuSwitch(oldESP *uint64, newESP uint64)
 
 func Init() {
 	taskCount = 0
@@ -63,12 +63,12 @@ func NewTask(entry func()) *Task {
 	sp = sp & ^uintptr(15)
 
 	// Store return addr (entry) and register placeholders
-	sp -= 4
+	sp -= 8
 	*(*uintptr)(unsafe.Pointer(sp)) = *(*uintptr)(unsafe.Pointer(&entry))
 
-	sp -= 16 // 4 * 4 bytes for EBP, EBX, ESI, EDI
+	sp -= 32 // 4 * 8 bytes for RBP, RBX, RSI, RDI
 
-	t.ESP = uint32(sp)
+	t.ESP = uint64(sp)
 
 	tasks[idx] = t
 	taskCount++
@@ -92,7 +92,7 @@ func Schedule() {
 		}
 	}
 
-	// Round robin
+	// Round-robin
 	for i := 1; i < taskCount; i++ {
 		idx := (currentIndex + i) % taskCount
 		if tasks[idx].State == TaskRunnable {

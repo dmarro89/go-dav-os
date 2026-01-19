@@ -8,30 +8,32 @@ import (
 
 const idtSize = 256
 
-// 8 byte
+// 16 bytes (x86_64 IDT entry)
 type idtEntry struct {
 	offsetLow  uint16
 	selector   uint16
-	zero       uint8
+	ist        uint8
 	flags      uint8
-	offsetHigh uint16
+	offsetMid  uint16
+	offsetHigh uint32
+	zero       uint32
 }
 
 var idt [idtSize]idtEntry
-var idtr [6]byte
+var idtr [10]byte
 
-// Assembly hooks (boot.s)
-func LoadIDT(p *[6]byte)
-func StoreIDT(p *[6]byte)
+// Assembly hooks (boot/stubs_amd64.s)
+func LoadIDT(p *[10]byte)
+func StoreIDT(p *[10]byte)
 
-func getInt80StubAddr() uint32
-func getGPFaultStubAddr() uint32
-func getDFaultStubAddr() uint32
+func getInt80StubAddr() uint64
+func getGPFaultStubAddr() uint64
+func getDFaultStubAddr() uint64
 func Int80Stub()
 func TriggerInt80()
 func GetCS() uint16
-func getIRQ0StubAddr() uint32
-func getIRQ1StubAddr() uint32
+func getIRQ0StubAddr() uint64
+func getIRQ1StubAddr() uint64
 
 func Int80Handler() {
 	terminal.Print("INT 0x80 fired!\n")
@@ -41,13 +43,17 @@ const (
 	intGateFlags = 0x8E
 )
 
-func packIDTR(limit uint16, base uint32, out *[6]byte) {
+func packIDTR(limit uint16, base uint64, out *[10]byte) {
 	out[0] = byte(limit)
 	out[1] = byte(limit >> 8)
 	out[2] = byte(base)
 	out[3] = byte(base >> 8)
 	out[4] = byte(base >> 16)
 	out[5] = byte(base >> 24)
+	out[6] = byte(base >> 32)
+	out[7] = byte(base >> 40)
+	out[8] = byte(base >> 48)
+	out[9] = byte(base >> 56)
 }
 
 // func unpackIDTR(in *[6]byte) (limit uint16, base uint32) {
@@ -59,13 +65,15 @@ func packIDTR(limit uint16, base uint32, out *[6]byte) {
 // 	return
 // }
 
-func setIDTEntry(vec uint8, handler uint32, selector uint16, flags uint8) {
+func setIDTEntry(vec uint8, handler uint64, selector uint16, flags uint8) {
 	e := &idt[vec]
 	e.offsetLow = uint16(handler & 0xFFFF)
 	e.selector = selector
-	e.zero = 0
+	e.ist = 0
 	e.flags = flags
-	e.offsetHigh = uint16((handler >> 16) & 0xFFFF)
+	e.offsetMid = uint16((handler >> 16) & 0xFFFF)
+	e.offsetHigh = uint32((handler >> 32) & 0xFFFFFFFF)
+	e.zero = 0
 }
 
 // InitIDT builds the IDT and loads it into the CPU
@@ -83,9 +91,9 @@ func InitIDT() {
 	// Install 0x80 test handler stub
 	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateFlags)
 
-	// Build IDTR (packed 6 bytes)
-	base := uint32(uintptr(unsafe.Pointer(&idt[0])))
-	limit := uint16(idtSize*8 - 1)
+	// Build IDTR (packed 10 bytes)
+	base := uint64(uintptr(unsafe.Pointer(&idt[0])))
+	limit := uint16(idtSize*16 - 1)
 	packIDTR(limit, base, &idtr)
 
 	LoadIDT(&idtr)

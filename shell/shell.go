@@ -188,7 +188,7 @@ func execute() {
 			return
 		}
 
-		addr, ok := parseHex32(a1s, a1e)
+		addr, ok := parseHex64(a1s, a1e)
 		if !ok {
 			terminal.Print("mem: invalid hex address\n")
 			return
@@ -232,6 +232,28 @@ func execute() {
 		return
 	}
 
+	if matchLiteral(cmdStart, cmdEnd, "mmapmax") {
+		var maxEnd uint64
+		n := mem.MMapCount()
+		for i := 0; i < n; i++ {
+			bLo, bHi, lLo, lHi, typ := mem.MMapEntry(i)
+			if typ != 1 {
+				continue
+			}
+			base := (uint64(bHi) << 32) | uint64(bLo)
+			l := (uint64(lHi) << 32) | uint64(lLo)
+			end := base + l
+			if end > maxEnd {
+				maxEnd = end
+			}
+		}
+
+		terminal.Print("mmap max end=0x")
+		printHexU64(maxEnd)
+		terminal.PutRune('\n')
+		return
+	}
+
 	if matchLiteral(cmdStart, cmdEnd, "pfa") {
 		if !mem.PFAReady() {
 			terminal.Print("pfa: not ready\n")
@@ -239,11 +261,11 @@ func execute() {
 		}
 
 		terminal.Print("pages total=")
-		printUint(uint64(mem.TotalPages()))
+		printUint(mem.TotalPages())
 		terminal.Print(" used=")
-		printUint(uint64(mem.UsedPages()))
+		printUint(mem.UsedPages())
 		terminal.Print(" free=")
-		printUint(uint64(mem.FreePages()))
+		printUint(mem.FreePages())
 		terminal.PutRune('\n')
 		return
 	}
@@ -262,7 +284,7 @@ func execute() {
 		}
 
 		terminal.Print("0x")
-		printHex32(addr)
+		printHexU64(addr)
 		terminal.PutRune('\n')
 		return
 	}
@@ -280,7 +302,7 @@ func execute() {
 			return
 		}
 
-		addr, ok := parseHex32(a1s, a1e)
+		addr, ok := parseHex64(a1s, a1e)
 		if !ok {
 			terminal.Print("free: invalid hex address\n")
 			return
@@ -303,9 +325,9 @@ func execute() {
 
 			printName(name, nameLen)
 			terminal.Print("  size=")
-			printUint(uint64(size))
+			printUint(size)
 			terminal.Print("  page=0x")
-			printHex32(page)
+			printHexU64(page)
 			terminal.PutRune('\n')
 		}
 		return
@@ -356,7 +378,7 @@ func execute() {
 		}
 
 		p := uintptr(page)
-		for i := uint32(0); i < size; i++ {
+		for i := uint64(0); i < size; i++ {
 			b := *(*byte)(unsafe.Pointer(p + uintptr(i)))
 			terminal.PutRune(rune(b))
 		}
@@ -405,15 +427,20 @@ func execute() {
 		}
 
 		terminal.Print("page=0x")
-		printHex32(page)
+		printHexU64(page)
 		terminal.Print(" size=")
-		printUint(uint64(size))
+		printUint(size)
 		terminal.PutRune('\n')
 		return
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "version") {
-		terminal.Print(osName + " " + osVersion + "\n")
+		terminal.Print(osName + " " + osVersion)
+		proof := uint64(0x0123456789ABCDEF)
+		if (proof >> 32) != 0 {
+			terminal.Print(" (64bit)")
+		}
+		terminal.PutRune('\n')
 		return
 	}
 
@@ -479,16 +506,22 @@ func printUint(v uint64) {
 		terminal.PutRune('0')
 		return
 	}
-
-	var buf [20]byte
-	i := 20
-	for v > 0 {
-		i--
-		buf[i] = byte('0' + (v % 10))
-		v /= 10
+	if (v >> 32) != 0 {
+		terminal.Print("0x")
+		printHexU64(v)
+		return
 	}
 
-	for j := i; j < 20; j++ {
+	u := uint32(v)
+	var buf [10]byte
+	i := 10
+	for u > 0 {
+		i--
+		buf[i] = byte('0' + (u % 10))
+		u /= 10
+	}
+
+	for j := i; j < 10; j++ {
 		terminal.PutRune(rune(buf[j]))
 	}
 }
@@ -520,7 +553,7 @@ func parseDec(start, end int) (int, bool) {
 	return n, true
 }
 
-func parseHex32(start, end int) (uint32, bool) {
+func parseHex64(start, end int) (uint64, bool) {
 	if start >= end {
 		return 0, false
 	}
@@ -531,7 +564,7 @@ func parseHex32(start, end int) (uint32, bool) {
 		return 0, false
 	}
 
-	var v uint32
+	var v uint64
 	for i := start; i < end; i++ {
 		c := lineBuf[i]
 		var d byte
@@ -545,15 +578,15 @@ func parseHex32(start, end int) (uint32, bool) {
 		default:
 			return 0, false
 		}
-		v = (v << 4) | uint32(d)
+		v = (v << 4) | uint64(d)
 	}
 	return v, true
 }
 
-func dumpMemory(addr uint32, length int) {
+func dumpMemory(addr uint64, length int) {
 	off := 0
 	for off < length {
-		printHex32(addr + uint32(off))
+		printHexU64(addr + uint64(off))
 		terminal.Print(": ")
 
 		for j := 0; j < 16; j++ {
@@ -597,6 +630,14 @@ func printHex32(v uint32) {
 func printHex64(hi, lo uint32) {
 	printHex32(hi)
 	printHex32(lo)
+}
+
+func printHexU64(v uint64) {
+	const hexDigits = "0123456789ABCDEF"
+	for i := 15; i >= 0; i-- {
+		n := byte((v >> (uint(i) * 4)) & 0xF)
+		terminal.PutRune(rune(hexDigits[n]))
+	}
 }
 
 func printHex8(b byte) {

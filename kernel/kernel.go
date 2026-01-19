@@ -16,7 +16,7 @@ func EnableInterrupts()
 func DisableInterrupts()
 func Halt()
 
-func Main(multibootInfoAddr uint32) {
+func Main(multibootInfoAddr uint64) {
 	DisableInterrupts()
 	terminal.Init()
 	terminal.Clear()
@@ -25,13 +25,13 @@ func Main(multibootInfoAddr uint32) {
 
 	PICRemap(0x20, 0x28)
 	PICSetMask(0xFC, 0xFF)
-
 	PITInit(100)
 
 	shell.SetTickProvider(GetTicks)
 
-	mem.InitMultiboot(multibootInfoAddr)
-	mem.InitPFA()
+	if mem.InitMultiboot(multibootInfoAddr) {
+		mem.InitPFA()
+	}
 
 	scheduler.Init()
 
@@ -49,21 +49,5 @@ func Main(multibootInfoAddr uint32) {
 			continue
 		}
 		shell.FeedRune(r)
-	}
-}
-
-func taskA() {
-	for {
-		terminal.Print("A")
-		for i := 0; i < 1000000; i++ {
-		}
-	}
-}
-
-func taskB() {
-	for {
-		terminal.Print("B")
-		for i := 0; i < 1000000; i++ {
-		}
 	}
 }
