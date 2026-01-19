@@ -1,12 +1,12 @@
 # go-dav-os
 
-Hobby project to dig deeper into how an OS works by writing the bare essentials of a kernel in Go. Only the kernel lives here (gccgo, 32-bit protected mode); BIOS and bootloader are handled by battle-tested tools (GRUB with a Multiboot header). No reinvention of those pieces.
+Hobby project to dig deeper into how an OS works by writing the bare essentials of a kernel in Go. Only the kernel lives here (gccgo, x86_64 long mode); BIOS and bootloader are handled by battle-tested tools (GRUB with a Multiboot2 header). No reinvention of those pieces.
 
 ## What’s inside
 
-- Boot: `boot/boot.s` exposes the Multiboot header and `_start`, sets up a 16 KB stack, disables interrupts, and jumps into `kernel.Main`
-  - The Multiboot info pointer (GRUB `EBX`) is passed to `kernel.Main(...)` so the kernel can read boot-time memory info
-  - A couple of freestanding helpers live in `boot/` as well (minimal stubs + `memcpy` to keep the build libc-free)
+- Boot: `boot/boot.s` exposes the Multiboot2 header and `_start`, sets up a 16 KB stack, enables long mode, and jumps into `kernel.Main`
+  - The Multiboot2 info pointer is passed to `kernel.Main(...)` in `RDI`
+  - Freestanding helpers live in `boot/` as well (minimal stubs + `memcmp` to keep the build libc-free)
 
 - Kernel: `kernel/` in Go, freestanding build with gccgo
   - IDT + PIC remap + PIT init
@@ -19,8 +19,8 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 - Tiny shell: interactive prompt + basic line editing, commands are mostly for debugging
 
 - Memory: `mem/`
-  - Multiboot v1 memory map parsing (`mmap` command)
-  - A minimal 4KB page frame allocator backed by a bitmap placed right after the kernel image (`pfa/alloc/free`)
+  - Multiboot2 memory map parsing (`mmap` and `mmapmax` commands)
+  - A minimal 4KB page frame allocator backed by a bitmap placed inside usable memory (`pfa/alloc/free`)
 
 - Filesystem: `fs/`
   - Minimal in-memory FS backed by allocated pages (`ls/write/cat/rm/stat`)
@@ -32,14 +32,14 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 ## Project status
 
 - Experimental, single-core
-- No paging, no scheduler, no real storage drivers yet
-- Runs in 32-bit protected mode, meant for QEMU/GRUB, no UEFI
+- Basic paging (identity map), no real storage drivers yet
+- Runs in x86_64 long mode, meant for QEMU/GRUB, no UEFI
 - Go runtime pared down: freestanding build (no standard library) with just the stubs the toolchain ends up expecting
 
 ## Dependencies
 
 - Via Docker (recommended): Docker with `--platform=linux/amd64`
-- Native (if you want to do it manually): cross toolchain `i686-elf-{binutils,gccgo}`, `grub-mkrescue`, `xorriso`, `mtools`, `qemu-system-i386`
+- Native (if you want to do it manually): cross toolchain `x86_64-elf-{binutils,gccgo}`, `grub-mkrescue`, `xorriso`, `mtools`, `qemu-system-x86_64`
 
 ## Build and run (Docker)
 
@@ -57,14 +57,14 @@ Quick targets from the Makefile
 
 ## Build natively
 
-Assuming an `i686-elf-*` toolchain is installed
+Assuming an `x86_64-elf-*` toolchain is installed
 
 ```bash
 make
-qemu-system-i386 -cdrom build/dav-go-os.iso
+qemu-system-x86_64 -cdrom build/dav-go-os.iso
 ```
 
-To force cross binaries: `make CROSS=i686-elf`
+To force cross binaries: `make CROSS=x86_64-elf`
 
 ## What you’ll see on screen
 
@@ -77,7 +77,7 @@ To force cross binaries: `make CROSS=i686-elf`
 - `help`, `clear`, `about`, `echo`
 - `ticks` (PIT tick counter)
 - `mem <hex_addr> [len]` (hexdump)
-- `mmap` (Multiboot memory map)
+- `mmap`, `mmapmax` (Multiboot memory map and highest usable end)
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
 - `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (filesystem)
 - `version` (OS name and version)
