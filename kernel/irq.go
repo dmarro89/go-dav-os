@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/keyboard"
 )
 
@@ -9,6 +10,7 @@ var ticks uint64
 func IRQ0Handler() {
 	ticks++
 	PICEOI(0)
+	scheduler.Schedule()
 }
 
 func IRQ1Handler() {

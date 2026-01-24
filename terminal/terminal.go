@@ -3,6 +3,7 @@ package terminal
 import "unsafe"
 
 func outb(port uint16, value byte)
+func debugChar(c byte)
 
 const (
 	VGAWidth  = 80
@@ -12,10 +13,10 @@ const (
 	vgaCursorDataPort  uint16 = 0x3D5
 )
 
-const videoMemoryAddr = 0xB8000
+const videoMemoryAddr uintptr = 0xB8000
 
 func getVidMem() *[VGAHeight][VGAWidth][2]byte {
-	return (*[VGAHeight][VGAWidth][2]byte)(unsafe.Pointer(uintptr(videoMemoryAddr)))
+	return (*[VGAHeight][VGAWidth][2]byte)(unsafe.Pointer(videoMemoryAddr))
 }
 
 const (
@@ -77,6 +78,8 @@ func putRune(ch rune) {
 
 	vidMem[row][column][0] = byte(ch)
 	vidMem[row][column][1] = color
+
+	debugChar(byte(ch))
 
 	column++
 	if column >= VGAWidth {

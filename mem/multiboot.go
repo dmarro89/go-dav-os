@@ -4,7 +4,7 @@ import "unsafe"
 
 const maxMMapEntries = 64
 
-// mmapEntry is a normalized copy of one Multiboot v1 memory map entry
+// mmapEntry is a normalized copy of one Multiboot2 memory map entry
 type mmapEntry struct {
 	baseLo uint32
 	baseHi uint32
@@ -19,68 +19,83 @@ var (
 	mmapCount   int
 )
 
+const (
+	multiboot2TagTypeEnd  = 0
+	multiboot2TagTypeMmap = 6
+)
+
 // readU32 reads a 32-bit value from memory at the given address
 func readU32(addr uintptr) uint32 {
 	return *(*uint32)(unsafe.Pointer(addr))
 }
 
+// readU64 reads a 64-bit value from memory at the given address
+func readU64(addr uintptr) uint64 {
+	return *(*uint64)(unsafe.Pointer(addr))
+}
+
+func alignUp8(p uintptr) uintptr {
+	return (p + 7) &^ 7
+}
+
 // InitMultiboot initializes the memory map from the Multiboot info structure
 // Returns true if the memory map is valid, false otherwise
-func InitMultiboot(mbInfoAddr uint32) bool {
+func InitMultiboot(mbInfoAddr uint64) bool {
 	// reset the memory map counter
 	mmapCount = 0
-
-	flags := readU32(uintptr(mbInfoAddr) + 0)
-
-	// check if the memory map is valid
-	// Multiboot v1: bit 6 -> mmap_* valid
-	if (flags & (1 << 6)) == 0 {
+	if mbInfoAddr == 0 {
 		return false
 	}
 
-	// get the length and address of the memory map
-	// offset 44: mmap_length
-	// offset 48: mmap_addr
-	mmapLen := readU32(uintptr(mbInfoAddr) + 44)
-	mmapAddr := readU32(uintptr(mbInfoAddr) + 48)
-
-	// iterate over the memory map
-	p := uintptr(mmapAddr)
-	end := p + uintptr(mmapLen)
-
-	for p < end && mmapCount < maxMMapEntries {
-		// get the size of the entry
-		// offset 0: size
-		size := readU32(p)
-		// get the base of the entry
-		// offset 4: base_lo
-		baseLo := readU32(p + 4)
-		baseHi := readU32(p + 8)
-		// get the length of the entry
-		// offset 12: len_lo
-		lenLo := readU32(p + 12)
-		// get the length of the entry
-		// offset 16: len_hi
-		lenHi := readU32(p + 16)
-		// get the type of the entry
-		// offset 20: type
-		typ := readU32(p + 20)
-
-		// store the entry in the memory map
-		mmapEntries[mmapCount] = mmapEntry{
-			baseLo: baseLo, baseHi: baseHi,
-			lenLo: lenLo, lenHi: lenHi,
-			typ: typ,
-		}
-		// increment the memory map counter
-		mmapCount++
-
-		// increment the pointer by the size of the entry and 4 bytes (padding)
-		p += uintptr(size) + 4
+	info := uintptr(mbInfoAddr)
+	totalSize := readU32(info)
+	if totalSize < 16 {
+		return false
 	}
 
-	// return true if the memory map is valid
-	return true
+	foundMmap := false
+	p := info + 8
+	end := info + uintptr(totalSize)
+
+	for p+8 <= end {
+		tagType := readU32(p)
+		tagSize := readU32(p + 4)
+
+		if tagType == multiboot2TagTypeEnd {
+			break
+		}
+		if tagSize < 8 || p+uintptr(tagSize) > end {
+			break
+		}
+
+		if tagType == multiboot2TagTypeMmap {
+			if tagSize >= 16 {
+				entrySize := readU32(p + 8)
+				_ = readU32(p + 12) // entry_version
+				if entrySize >= 24 {
+					entriesStart := p + 16
+					entriesEnd := p + uintptr(tagSize)
+					for ep := entriesStart; ep+uintptr(entrySize) <= entriesEnd && mmapCount < maxMMapEntries; ep += uintptr(entrySize) {
+						base := readU64(ep)
+						length := readU64(ep + 8)
+						typ := readU32(ep + 16)
+
+						mmapEntries[mmapCount] = mmapEntry{
+							baseLo: uint32(base), baseHi: uint32(base >> 32),
+							lenLo: uint32(length), lenHi: uint32(length >> 32),
+							typ: typ,
+						}
+						mmapCount++
+					}
+					foundMmap = mmapCount > 0
+				}
+			}
+		}
+
+		p = alignUp8(p + uintptr(tagSize))
+	}
+
+	return foundMmap
 }
 
 // MMapCount returns the number of memory map entries

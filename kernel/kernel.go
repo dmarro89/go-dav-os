@@ -2,6 +2,7 @@ package kernel
 
 import (
 	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/keyboard"
 	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/shell"
@@ -23,7 +24,7 @@ func SyscallTest() {
 	TriggerSysWrite(&syscallMsg[0], uint32(len(syscallMsg)))
 }
 
-func Main(multibootInfoAddr uint32) {
+func Main(multibootInfoAddr uint64) {
 	DisableInterrupts()
 	terminal.Init()
 	terminal.Clear()
@@ -34,13 +35,15 @@ func Main(multibootInfoAddr uint32) {
 
 	PICRemap(0x20, 0x28)
 	PICSetMask(0xFC, 0xFF)
-
 	PITInit(100)
 
 	shell.SetTickProvider(GetTicks)
 
-	mem.InitMultiboot(multibootInfoAddr)
-	mem.InitPFA()
+	if mem.InitMultiboot(multibootInfoAddr) {
+		mem.InitPFA()
+	}
+
+	scheduler.Init()
 
 	fs.Init()
 

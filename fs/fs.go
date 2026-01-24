@@ -16,8 +16,8 @@ type fileEntry struct {
 	used    bool
 	nameLen uint8
 	name    [maxName]byte
-	size    uint32
-	page    uint32 // physical address of the page
+	size    uint64
+	page    uint64 // physical address of the page
 }
 
 var files [maxFiles]fileEntry
@@ -36,7 +36,7 @@ func MaxFiles() int { return maxFiles }
 
 // Entry returns metadata for the i-th slot
 // iterate i=0..MaxFiles()-1 and check if used
-func Entry(i int) (used bool, name *[maxName]byte, nameLen int, size uint32, page uint32) {
+func Entry(i int) (used bool, name *[maxName]byte, nameLen int, size uint64, page uint64) {
 	if i < 0 || i >= maxFiles {
 		return false, nil, 0, 0, 0
 	}
@@ -45,7 +45,7 @@ func Entry(i int) (used bool, name *[maxName]byte, nameLen int, size uint32, pag
 }
 
 // Lookup finds a file by name and returns its backing page + size.
-func Lookup(name *[maxName]byte, nameLen int) (page uint32, size uint32, ok bool) {
+func Lookup(name *[maxName]byte, nameLen int) (page uint64, size uint64, ok bool) {
 	idx := findByName(name, nameLen)
 	if idx < 0 {
 		return 0, 0, false
@@ -95,7 +95,7 @@ func Write(name *[maxName]byte, nameLen int, data *byte, dataLen uint32) bool {
 		*(*byte)(unsafe.Pointer(dstBase + uintptr(i))) =
 			*(*byte)(unsafe.Pointer(srcBase + uintptr(i)))
 	}
-	e.size = dataLen
+	e.size = uint64(dataLen)
 	return true
 }
 

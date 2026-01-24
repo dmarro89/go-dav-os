@@ -28,8 +28,11 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
+.idea
 # .vscode/
 
 #build directory
 build/
+
+# Project files
+qemu.log

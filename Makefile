@@ -1,13 +1,14 @@
-CROSS    ?= i686-elf
+CROSS    ?= x86_64-elf
 
 AS       := $(CROSS)-as
 GCC      := $(CROSS)-gcc
 GCCGO    := $(CROSS)-gccgo
 OBJCOPY  := $(CROSS)-objcopy
+GCCGOFLAGS := -m64
 GRUB_CFG      := iso/grub/grub.cfg
 
 GRUBMKRESCUE  := grub-mkrescue
-QEMU          := qemu-system-i386
+QEMU          := qemu-system-x86_64
 
 DOCKER_PLATFORM := linux/amd64
 DOCKER_IMAGE    := go-dav-os-toolchain
@@ -28,13 +29,16 @@ KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 SHELL_IMPORT     := $(MODPATH)/shell
 MEM_IMPORT     := $(MODPATH)/mem
 FS_IMPORT := $(MODPATH)/fs
+SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 
-KERNEL_SRCS := $(wildcard kernel/*.go)
+KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
 TERMINAL_SRC := terminal/terminal.go
-KEYBOARD_SRCS := $(wildcard keyboard/*.go)
-SHELL_SRCS := $(wildcard shell/*.go)
-MEM_SRCS       := $(wildcard mem/*.go)
-FS_SRCS   := $(wildcard fs/*.go)
+KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
+SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
+MEM_SRCS       := $(filter-out %_test.go, $(wildcard mem/*.go))
+FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
+SCHEDULER_SRCS := $(filter-out %_test.go, $(wildcard kernel/scheduler/*.go))
+SCH_SWITCH_SRC := kernel/scheduler/switch.s
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
@@ -48,6 +52,9 @@ MEM_OBJ   := $(BUILD_DIR)/mem.o
 MEM_GOX        := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/mem.gox
 FS_OBJ    := $(BUILD_DIR)/fs.o
 FS_GOX    := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/fs.gox
+SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
+SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
+SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
 
 .PHONY: all kernel iso run clean docker-build docker-shell docker-run
 
@@ -77,7 +84,7 @@ $(BOOT_OBJ): $(BOOT_SRCS) | $(BUILD_DIR)
 
 # --- 2. Compile terminal.go (package terminal) with gccgo ---
 $(TERMINAL_OBJ): $(TERMINAL_SRC) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-fgo-pkgpath=$(TERMINAL_IMPORT) \
 		-c $(TERMINAL_SRC) -o $(TERMINAL_OBJ)
 
@@ -88,7 +95,7 @@ $(TERMINAL_GOX): $(TERMINAL_OBJ) | $(BUILD_DIR)
 
 # --- 4. Compile keyboard.go and layout.go (package keyboard) with gccgo ---
 $(KEYBOARD_OBJ): $(KEYBOARD_SRCS) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-fgo-pkgpath=$(KEYBOARD_IMPORT) \
 		-c $(KEYBOARD_SRCS) -o $(KEYBOARD_OBJ)
 
@@ -98,7 +105,7 @@ $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(KEYBOARD_OBJ) $(KEYBOARD_GOX)
 
 $(MEM_OBJ): $(MEM_SRCS) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-fgo-pkgpath=$(MEM_IMPORT) \
 		-c $(MEM_SRCS) -o $(MEM_OBJ)
 
@@ -107,7 +114,7 @@ $(MEM_GOX): $(MEM_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(MEM_OBJ) $(MEM_GOX)
 
 $(FS_OBJ): $(FS_SRCS) $(MEM_GOX) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(FS_IMPORT) \
 		-c $(FS_SRCS) -o $(FS_OBJ)
@@ -118,7 +125,7 @@ $(FS_GOX): $(FS_OBJ) | $(BUILD_DIR)
 
 # --- 6. Compile shell.go (package shell) with gccgo ---
 $(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(SHELL_IMPORT) \
 		-c $(SHELL_SRCS) -o $(SHELL_OBJ)
@@ -128,19 +135,32 @@ $(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(SHELL_GOX))
 	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
 
+# --- Scheduler ---
+$(SCHEDULER_OBJ): $(SCHEDULER_SRCS) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(SCHEDULER_IMPORT) \
+		-c $(SCHEDULER_SRCS) -o $(SCHEDULER_OBJ)
+
+$(SCHEDULER_GOX): $(SCHEDULER_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(SCHEDULER_GOX))
+	$(OBJCOPY) -j .go_export $(SCHEDULER_OBJ) $(SCHEDULER_GOX)
+
+$(SCH_SWITCH_OBJ): $(SCH_SWITCH_SRC) | $(BUILD_DIR)
+	$(AS) $(SCH_SWITCH_SRC) -o $(SCH_SWITCH_OBJ)
+
 # --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) ${MEM_GOX} $(FS_GOX) | $(BUILD_DIR)
-	$(GCCGO) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
 
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) ${MEM_OBJ} ${FS_OBJ} $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) ${MEM_OBJ} ${FS_OBJ} $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
