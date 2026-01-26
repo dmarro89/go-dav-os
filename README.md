@@ -104,7 +104,7 @@ Personal, open-source, work-in-progress. Iâ€™m building pieces as I learn themâ€
 
 ## Contribution
 Thanks to:
-@metacatdud for taking care of the entire migration from 32 to 64 bit architecture - really amazing work!
-@ranjan42 for the useful documentation added and the implementation of the scheduled and the command history
-@jgafnea for improving the shell and documenting the contributing section
-@soorya38 for taking care of a missing part of the project - the unit tests!
+[@metacatdud](https://github.com/metacatdud)for taking care of the entire migration from 32 to 64 bit architecture - really amazing work!
+[@ranjan42](https://github.com/ranjan42)for the useful documentation added and the implementation of the scheduled and the command history
+[@jgafnea](https://github.com/jgafnea) for improving the shell and documenting the contributing section
+[@soorya38](https://github.com/soorya38)for taking care of a missing part of the project - the unit tests!
