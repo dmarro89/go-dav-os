@@ -32,6 +32,7 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 ## Project status
 
 - Experimental, single-core
+- 64-bit only (x86_64 long mode); 32-bit is no longer supported
 - Basic paging (identity map), no real storage drivers yet
 - Runs in x86_64 long mode, meant for QEMU/GRUB, no UEFI
 - Go runtime pared down: freestanding build (no standard library) with just the stubs the toolchain ends up expecting
@@ -48,7 +49,7 @@ docker build --platform=linux/amd64 -t go-dav-os-toolchain .
 docker run --rm --platform=linux/amd64 \
   -v "$PWD":/work -w /work go-dav-os-toolchain \
   make            # builds build/dav-go-os.iso
-qemu-system-i386 -cdrom build/dav-go-os.iso
+qemu-system-x86_64 -cdrom build/dav-go-os.iso
 ```
 
 Quick targets from the Makefile
@@ -100,3 +101,10 @@ Contributions are welcome! This project is still early-stage and intentionally m
 ## Final note
 
 Personal, open-source, work-in-progress. I’m building pieces as I learn them—the goal is understanding, not chasing modern-OS feature lists
+
+## Contribution
+Thanks to:
+[@metacatdud](https://github.com/metacatdud)for taking care of the entire migration from 32 to 64 bit architecture - really amazing work!<br/>
+[@ranjan42](https://github.com/ranjan42)for the useful documentation added and the implementation of the scheduled and the command history<br/>
+[@jgafnea](https://github.com/jgafnea) for improving the shell and documenting the contributing section<br/>
+[@soorya38](https://github.com/soorya38)for taking care of a missing part of the project - the unit tests!<br/>
