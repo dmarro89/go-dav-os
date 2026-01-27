@@ -18,17 +18,24 @@ const (
 )
 
 type TrapFrame struct {
-	EDI    uint32
-	ESI    uint32
-	EBP    uint32
-	ESP    uint32
-	EBX    uint32
-	EDX    uint32
-	ECX    uint32
-	EAX    uint32
-	EIP    uint32
-	CS     uint32
-	EFLAGS uint32
+	R15    uint64
+	R14    uint64
+	R13    uint64
+	R12    uint64
+	R11    uint64
+	R10    uint64
+	R9     uint64
+	R8     uint64
+	RDI    uint64
+	RSI    uint64
+	RBP    uint64
+	RBX    uint64
+	RDX    uint64
+	RCX    uint64
+	RAX    uint64
+	RIP    uint64
+	CS     uint64
+	RFLAGS uint64
 }
 
 // 16 bytes (x86_64 IDT entry)
@@ -62,25 +69,25 @@ func getIRQ1StubAddr() uint64
 func TriggerSysWrite(buf *byte, n uint32)
 
 func Int80Handler(tf *TrapFrame) {
-	switch tf.EAX {
+	switch uint32(tf.RAX) {
 	case SYS_WRITE:
-		fd := tf.EBX
-		buf := tf.ECX
-		n := tf.EDX
-		tf.EAX = sysWrite(fd, buf, n)
+		fd := tf.RBX
+		buf := uintptr(tf.RCX)
+		n := tf.RDX
+		tf.RAX = sysWrite(fd, buf, n)
 	default:
 		terminal.Print("unknown syscall\n")
-		tf.EAX = ^uint32(0) // return -1
+		tf.RAX = ^uint64(0) // return -1
 	}
 }
 
-func sysWrite(fd, buf, n uint32) uint32 {
+func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
 	if fd != 1 {
-		return ^uint32(0)
+		return ^uint64(0)
 	}
 
-	for i := uint32(0); i < n; i++ {
-		b := *(*byte)(unsafe.Pointer(uintptr(buf) + uintptr(i)))
+	for i := uint64(0); i < n; i++ {
+		b := *(*byte)(unsafe.Pointer(buf + uintptr(i)))
 		terminal.PutRune(rune(b))
 	}
 	return n

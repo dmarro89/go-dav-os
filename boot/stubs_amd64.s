@@ -259,6 +259,7 @@ go_0kernel.Int80Stub:
 	mov %rsp, %rbp
 	andq $-16, %rsp
 	subq $8, %rsp
+	mov %rbp, %rdi
 	call  go_0kernel.Int80Handler
 	mov %rbp, %rsp
 	POP_REGS
