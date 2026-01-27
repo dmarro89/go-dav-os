@@ -269,7 +269,7 @@ long_mode_entry:
 	hlt
 	jmp .Lhang64
 
-# void go_0kernel.TriggerSysWrite(uint32 buf, uint32 n)
+# void go_0kernel.TriggerSysWrite(uint64 buf, uint64ß n)
 .global go_0kernel.TriggerSysWrite
 .type   go_0kernel.TriggerSysWrite, @function
 
