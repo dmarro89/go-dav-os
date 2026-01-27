@@ -17,7 +17,7 @@ func DisableInterrupts()
 func Halt()
 
 var syscallMsg = [...]byte{
-	'h','e','l','l','o',' ','v','i','a',' ','s','y','s','c','a','l','l',' ','w','r','i','t','e','\n',
+	'W', 'e', 'l', 'c', 'o', 'm', 'e', ' ', 'T', 'o', ' ', 'O', 'S', ' ', 'D', 'a', 'v', '\n',
 }
 
 func SyscallTest() {
