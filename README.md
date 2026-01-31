@@ -24,6 +24,11 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 
 - Filesystem: `fs/`
   - Minimal in-memory FS backed by allocated pages (`ls/write/cat/rm/stat`)
+
+- Persistent Storage: `drivers/ata` + `fs/fat16`
+  - ATA PIO driver for disk I/O
+  - FAT16 filesystem with file create/read/list operations
+  - Data persists across reboots on a 20MB disk image
   
 ## Architecture
 
@@ -33,7 +38,7 @@ Hobby project to dig deeper into how an OS works by writing the bare essentials 
 
 - Experimental, single-core
 - 64-bit only (x86_64 long mode); 32-bit is no longer supported
-- Basic paging (identity map), no real storage drivers yet
+- Basic paging (identity map), FAT16 persistent storage driver
 - Runs in x86_64 long mode, meant for QEMU/GRUB, no UEFI
 - Go runtime pared down: freestanding build (no standard library) with just the stubs the toolchain ends up expecting
 
@@ -80,8 +85,27 @@ To force cross binaries: `make CROSS=x86_64-elf`
 - `mem <hex_addr> [len]` (hexdump)
 - `mmap`, `mmapmax` (Multiboot memory map and highest usable end)
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
-- `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (filesystem)
+- `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (in-memory filesystem)
 - `version` (OS name and version)
+
+### Persistent Storage (FAT16)
+
+- `fatformat` - Initialize disk with FAT16 structure
+- `fatinit` - Mount the filesystem
+- `fatinfo` - Show filesystem layout
+- `fatls` - List files in root directory
+- `fatcreate <name> <content>` - Create a file
+- `fatread <name>` - Read a file  
+- `disk read|write <lba>` - Raw sector access
+
+**Example:**
+```bash
+fatformat
+fatinit
+fatcreate hello Hello World
+fatls
+fatread hello
+```
 
 ## Other folder layout
 
