@@ -12,7 +12,7 @@ const (
 	prompt    = "> "
 	maxLine   = 128
 	osName    = "DavOS"
-	osVersion = "0.1.0"
+	osVersion = "0.2.0"
 )
 
 var (
