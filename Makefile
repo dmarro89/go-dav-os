@@ -156,12 +156,13 @@ $(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(SHELL_GOX))
 	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
 
-$(FAT16_OBJ): $(FAT16_SRCS) $(ATA_GOX) | $(BUILD_DIR)
+$(FAT16_OBJ): $(FAT16_SRCS) $(ATA_GOX) $(TERMINAL_GOX) | $(BUILD_DIR)
 	mkdir -p $(dir $(FAT16_OBJ))
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(FAT16_IMPORT) \
 		-c $(FAT16_SRCS) -o $(FAT16_OBJ)
+
 
 $(FAT16_GOX): $(FAT16_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(FAT16_GOX))
