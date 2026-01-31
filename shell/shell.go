@@ -464,7 +464,7 @@ func execute() {
 	if suggestionCount > 0 {
 		terminal.Print("Did you mean '")
 		for i := 0; i < suggestionCount; i++ {
-			if i > 0 { // To ensure formating; the first time we print we do not add a space in-front of the suggestion
+			if i > 0 { // To ensure formatting; the first time we print we do not add a space in-front of the suggestion
 				terminal.Print(" ")
 			}
 			terminal.Print(suggestionBuf[i])
