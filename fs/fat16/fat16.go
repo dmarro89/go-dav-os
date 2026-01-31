@@ -151,3 +151,272 @@ func printU32(v uint32) {
 		terminal.PutRune(rune(hex[(v>>uint(i))&0xF]))
 	}
 }
+
+// ListDir lists files in the root directory
+func ListDir() {
+	if !initialized {
+		terminal.Print("FAT16: Not initialized\n")
+		return
+	}
+
+	terminal.Print("Root Directory:\n")
+	entriesPerSector := 512 / DirEntrySize // 16
+
+	for sec := uint32(0); sec < rootSectors; sec++ {
+		if !ata.ReadSector(rootStart+sec, &fatBuf) {
+			terminal.Print("FAT16: Read error\n")
+			return
+		}
+
+		for i := 0; i < entriesPerSector; i++ {
+			off := i * DirEntrySize
+			firstByte := fatBuf[off]
+
+			if firstByte == 0x00 {
+				return // No more entries
+			}
+			if firstByte == 0xE5 {
+				continue // Deleted entry
+			}
+			if fatBuf[off+11]&0x08 != 0 {
+				continue // Volume label
+			}
+
+			// Print filename (8 chars) + ext (3 chars)
+			terminal.Print("  ")
+			for j := 0; j < 8; j++ {
+				c := fatBuf[off+j]
+				if c != ' ' {
+					terminal.PutRune(rune(c))
+				}
+			}
+			if fatBuf[off+8] != ' ' {
+				terminal.PutRune('.')
+				for j := 8; j < 11; j++ {
+					c := fatBuf[off+j]
+					if c != ' ' {
+						terminal.PutRune(rune(c))
+					}
+				}
+			}
+
+			// Size (bytes 28-31, little endian)
+			size := uint32(fatBuf[off+28]) | uint32(fatBuf[off+29])<<8 |
+				uint32(fatBuf[off+30])<<16 | uint32(fatBuf[off+31])<<24
+			terminal.Print("  ")
+			printU32(size)
+			terminal.Print(" bytes\n")
+		}
+	}
+}
+
+// CreateFile creates a file in the root directory
+func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bool {
+	if !initialized {
+		terminal.Print("FAT16: Not initialized\n")
+		return false
+	}
+
+	// Find free cluster in FAT
+	cluster := findFreeCluster()
+	if cluster == 0 {
+		terminal.Print("FAT16: No free clusters\n")
+		return false
+	}
+
+	// Mark cluster as end-of-chain in FAT
+	if !setFATEntry(cluster, 0xFFFF) {
+		terminal.Print("FAT16: FAT write error\n")
+		return false
+	}
+
+	// Find free directory entry
+	entryFound := false
+	var dirSec uint32
+	var dirOff int
+
+	for sec := uint32(0); sec < rootSectors && !entryFound; sec++ {
+		if !ata.ReadSector(rootStart+sec, &fatBuf) {
+			return false
+		}
+
+		for i := 0; i < 16; i++ {
+			off := i * DirEntrySize
+			firstByte := fatBuf[off]
+			if firstByte == 0x00 || firstByte == 0xE5 {
+				dirSec = sec
+				dirOff = off
+				entryFound = true
+				break
+			}
+		}
+	}
+
+	if !entryFound {
+		terminal.Print("FAT16: Root directory full\n")
+		return false
+	}
+
+	// Re-read sector for modification
+	if !ata.ReadSector(rootStart+dirSec, &fatBuf) {
+		return false
+	}
+
+	// Write directory entry
+	// Filename (8 bytes, space padded)
+	for i := 0; i < 8; i++ {
+		fatBuf[dirOff+i] = name[i]
+	}
+	// Extension (3 bytes, space padded)
+	for i := 0; i < 3; i++ {
+		fatBuf[dirOff+8+i] = ext[i]
+	}
+	// Attributes (0x00 = normal file)
+	fatBuf[dirOff+11] = 0x00
+	// Reserved bytes
+	for i := 12; i < 26; i++ {
+		fatBuf[dirOff+i] = 0
+	}
+	// First cluster (bytes 26-27, little endian)
+	fatBuf[dirOff+26] = byte(cluster & 0xFF)
+	fatBuf[dirOff+27] = byte((cluster >> 8) & 0xFF)
+	// File size (bytes 28-31, little endian)
+	fatBuf[dirOff+28] = byte(dataLen & 0xFF)
+	fatBuf[dirOff+29] = byte((dataLen >> 8) & 0xFF)
+	fatBuf[dirOff+30] = byte((dataLen >> 16) & 0xFF)
+	fatBuf[dirOff+31] = byte((dataLen >> 24) & 0xFF)
+
+	if !ata.WriteSector(rootStart+dirSec, &fatBuf) {
+		return false
+	}
+
+	// Write data to cluster
+	dataSector := clusterToSector(cluster)
+	// Copy data to fatBuf
+	for i := 0; i < 512; i++ {
+		if uint32(i) < dataLen {
+			fatBuf[i] = data[i]
+		} else {
+			fatBuf[i] = 0
+		}
+	}
+	if !ata.WriteSector(dataSector, &fatBuf) {
+		return false
+	}
+
+	return true
+}
+
+// ReadFile reads a file by name into the provided buffer
+func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
+	if !initialized {
+		return 0, false
+	}
+
+	// Find file in root directory
+	for sec := uint32(0); sec < rootSectors; sec++ {
+		if !ata.ReadSector(rootStart+sec, &fatBuf) {
+			return 0, false
+		}
+
+		for i := 0; i < 16; i++ {
+			off := i * DirEntrySize
+			firstByte := fatBuf[off]
+
+			if firstByte == 0x00 {
+				return 0, false // End of directory
+			}
+			if firstByte == 0xE5 {
+				continue
+			}
+
+			// Compare name
+			match := true
+			for j := 0; j < 8; j++ {
+				if fatBuf[off+j] != name[j] {
+					match = false
+					break
+				}
+			}
+			if match {
+				for j := 0; j < 3; j++ {
+					if fatBuf[off+8+j] != ext[j] {
+						match = false
+						break
+					}
+				}
+			}
+
+			if match {
+				// Found! Get cluster and size
+				cluster := uint16(fatBuf[off+26]) | uint16(fatBuf[off+27])<<8
+				size := uint32(fatBuf[off+28]) | uint32(fatBuf[off+29])<<8 |
+					uint32(fatBuf[off+30])<<16 | uint32(fatBuf[off+31])<<24
+
+				// Read data from cluster
+				dataSector := clusterToSector(cluster)
+				if !ata.ReadSector(dataSector, outBuf) {
+					return 0, false
+				}
+				return size, true
+			}
+		}
+	}
+
+	return 0, false
+}
+
+// findFreeCluster finds a free cluster in the FAT (returns 0 if none)
+func findFreeCluster() uint16 {
+	// FAT16: each entry is 2 bytes
+	// Clusters 0 and 1 are reserved, start at 2
+	entriesPerSector := 256 // 512 / 2
+
+	for sec := uint32(0); sec < uint32(FatSz16); sec++ {
+		if !ata.ReadSector(fatStart+sec, &fatBuf) {
+			return 0
+		}
+
+		for i := 0; i < entriesPerSector; i++ {
+			cluster := sec*256 + uint32(i)
+			if cluster < 2 {
+				continue // Reserved
+			}
+
+			entry := uint16(fatBuf[i*2]) | uint16(fatBuf[i*2+1])<<8
+			if entry == 0x0000 {
+				return uint16(cluster)
+			}
+		}
+	}
+	return 0
+}
+
+// setFATEntry sets a FAT entry value
+func setFATEntry(cluster uint16, value uint16) bool {
+	// Calculate which sector and offset
+	fatOffset := uint32(cluster) * 2
+	sec := fatOffset / 512
+	off := fatOffset % 512
+
+	if !ata.ReadSector(fatStart+sec, &fatBuf) {
+		return false
+	}
+
+	fatBuf[off] = byte(value & 0xFF)
+	fatBuf[off+1] = byte((value >> 8) & 0xFF)
+
+	// Write to both FATs
+	if !ata.WriteSector(fatStart+sec, &fatBuf) {
+		return false
+	}
+	// FAT2
+	ata.WriteSector(fatStart+uint32(FatSz16)+sec, &fatBuf)
+
+	return true
+}
+
+// clusterToSector converts a cluster number to LBA sector
+func clusterToSector(cluster uint16) uint32 {
+	return dataStart + uint32(cluster-2)*uint32(SecPerClust)
+}

@@ -153,7 +153,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, disk, fatinit, fatformat, fatinfo\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
 		return
 	}
 
@@ -532,6 +532,100 @@ func execute() {
 
 	if matchLiteral(cmdStart, cmdEnd, "fatinfo") {
 		fat16.Info()
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "fatls") {
+		fat16.ListDir()
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "fatcreate") {
+		// Usage: fatcreate <filename> <content>
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: fatcreate <filename> <content>\n")
+			return
+		}
+
+		// Parse filename (max 8 chars, no extension for simplicity)
+		var fname [8]byte
+		var fext [3]byte
+		for i := 0; i < 8; i++ {
+			fname[i] = ' '
+		}
+		for i := 0; i < 3; i++ {
+			fext[i] = ' '
+		}
+
+		nameLen := a1e - a1s
+		if nameLen > 8 {
+			nameLen = 8
+		}
+		for i := 0; i < nameLen; i++ {
+			c := lineBuf[a1s+i]
+			if c >= 'a' && c <= 'z' {
+				c = c - 'a' + 'A' // Uppercase
+			}
+			fname[i] = c
+		}
+
+		// Get content
+		msgStart := trimLeft(a1e, end)
+		var dataBuf [512]byte
+		idx := 0
+		for i := msgStart; i < end && idx < 512; i++ {
+			dataBuf[idx] = lineBuf[i]
+			idx++
+		}
+
+		if fat16.CreateFile(&fname, &fext, &dataBuf, uint32(idx)) {
+			terminal.Print("File created\n")
+		} else {
+			terminal.Print("Failed to create file\n")
+		}
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "fatread") {
+		// Usage: fatread <filename>
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: fatread <filename>\n")
+			return
+		}
+
+		var fname [8]byte
+		var fext [3]byte
+		for i := 0; i < 8; i++ {
+			fname[i] = ' '
+		}
+		for i := 0; i < 3; i++ {
+			fext[i] = ' '
+		}
+
+		nameLen := a1e - a1s
+		if nameLen > 8 {
+			nameLen = 8
+		}
+		for i := 0; i < nameLen; i++ {
+			c := lineBuf[a1s+i]
+			if c >= 'a' && c <= 'z' {
+				c = c - 'a' + 'A'
+			}
+			fname[i] = c
+		}
+
+		size, ok := fat16.ReadFile(&fname, &fext, &diskBuf)
+		if !ok {
+			terminal.Print("File not found\n")
+			return
+		}
+
+		for i := uint32(0); i < size && i < 512; i++ {
+			terminal.PutRune(rune(diskBuf[i]))
+		}
+		terminal.PutRune('\n')
 		return
 	}
 
