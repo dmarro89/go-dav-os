@@ -153,7 +153,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, disk, fat_init, fat_format, fat_info\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, disk, fatinit, fatformat, fatinfo\n")
 		return
 	}
 
@@ -512,7 +512,7 @@ func execute() {
 		}
 	}
 
-	if matchLiteral(cmdStart, cmdEnd, "fat_init") {
+	if matchLiteral(cmdStart, cmdEnd, "fatinit") {
 		if fat16.Init() {
 			terminal.Print("FAT16 Initialized\n")
 		} else {
@@ -521,7 +521,7 @@ func execute() {
 		return
 	}
 
-	if matchLiteral(cmdStart, cmdEnd, "fat_format") {
+	if matchLiteral(cmdStart, cmdEnd, "fatformat") {
 		if fat16.Format() {
 			terminal.Print("FAT16 Formatted\n")
 		} else {
@@ -530,7 +530,7 @@ func execute() {
 		return
 	}
 
-	if matchLiteral(cmdStart, cmdEnd, "fat_info") {
+	if matchLiteral(cmdStart, cmdEnd, "fatinfo") {
 		fat16.Info()
 		return
 	}
