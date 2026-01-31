@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	prompt               = "> "
-	maxLine              = 128
-	osName               = "DavOS"
-	osVersion            = "0.1.0"
+	prompt = "> "
+	maxLine = 128
+	osName = "DavOS"
+	osVersion = "0.1.0"
 	maxDistanceThreshold = 3
 )
 
