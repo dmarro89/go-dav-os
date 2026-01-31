@@ -3,6 +3,7 @@ package kernel
 import (
 	"unsafe"
 
+	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -14,7 +15,7 @@ const (
 
 const (
 	SYS_WRITE = 1
-	// SYS_EXIT  = 2 // Not implemented
+	SYS_EXIT  = 2
 )
 
 type TrapFrame struct {
@@ -75,6 +76,12 @@ func Int80Handler(tf *TrapFrame) {
 		buf := uintptr(tf.RCX)
 		n := tf.RDX
 		tf.RAX = sysWrite(fd, buf, n)
+	case SYS_EXIT:
+		status := int(tf.RBX)
+		terminal.Print("Process exited with status ")
+		printInt(status)
+		terminal.Print("\n")
+		scheduler.Exit()
 	default:
 		terminal.Print("unknown syscall\n")
 		tf.RAX = ^uint64(0) // return -1
@@ -91,6 +98,29 @@ func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
 		terminal.PutRune(rune(b))
 	}
 	return n
+}
+
+func printInt(v int) {
+	if v < 0 {
+		terminal.PutRune('-')
+		v = -v
+	}
+	if v == 0 {
+		terminal.PutRune('0')
+		return
+	}
+	var buf [20]byte
+	i := 0
+	val := uint64(v) // handle int conversion safely
+	for val > 0 {
+		buf[i] = byte('0' + (val % 10))
+		val /= 10
+		i++
+	}
+	for i > 0 {
+		i--
+		terminal.PutRune(rune(buf[i]))
+	}
 }
 
 func packIDTR(limit uint16, base uint64, out *[10]byte) {
