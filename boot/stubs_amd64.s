@@ -430,3 +430,47 @@ go_0kernel.getIRQ1StubAddr:
 runtime.writeBarrier:
 	.long 0
 	.size runtime.writeBarrier, . - runtime.writeBarrier
+
+# github.com/dmarro89/go-dav-os/drivers/ata.inb(port uint16) byte
+.global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.inb
+.type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.inb, @function
+github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.inb:
+	movw %di, %dx
+	xorl %eax, %eax
+	inb %dx, %al
+	ret
+.size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.inb, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.inb
+
+# github.com/dmarro89/go-dav-os/drivers/ata.outb(port uint16, val byte)
+.global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb
+.type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb, @function
+github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb:
+	movw %di, %dx
+	movb %sil, %al
+	outb %al, %dx
+	ret
+.size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb
+
+# github.com/dmarro89/go-dav-os/drivers/ata.insw(port uint16, addr *byte, count int)
+.global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw
+.type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw, @function
+github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw:
+	movw %di, %dx      # port in DX
+	movq %rsi, %rdi    # addr to RDI (destination)
+	movq %rdx, %rcx    # count to RCX
+	cld
+	rep insw
+	ret
+.size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw
+
+# github.com/dmarro89/go-dav-os/drivers/ata.outsw(port uint16, addr *byte, count int)
+.global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
+.type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, @function
+github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw:
+	movw %di, %dx      # port in DX
+	# addr is already in RSI (source)
+	movq %rdx, %rcx    # count to RCX
+	cld
+	rep outsw
+	ret
+.size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw

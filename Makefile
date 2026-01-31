@@ -29,6 +29,8 @@ KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 SHELL_IMPORT     := $(MODPATH)/shell
 MEM_IMPORT     := $(MODPATH)/mem
 FS_IMPORT := $(MODPATH)/fs
+ATA_IMPORT := $(MODPATH)/drivers/ata
+FAT16_IMPORT := $(MODPATH)/fs/fat16
 SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 
 KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
@@ -37,6 +39,8 @@ KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
 SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
 MEM_SRCS       := $(filter-out %_test.go, $(wildcard mem/*.go))
 FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
+ATA_SRCS  := drivers/ata/ata.go
+FAT16_SRCS := fs/fat16/fat16.go
 SCHEDULER_SRCS := $(filter-out %_test.go, $(wildcard kernel/scheduler/*.go))
 SCH_SWITCH_SRC := kernel/scheduler/switch.s
 
@@ -52,6 +56,10 @@ MEM_OBJ   := $(BUILD_DIR)/mem.o
 MEM_GOX        := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/mem.gox
 FS_OBJ    := $(BUILD_DIR)/fs.o
 FS_GOX    := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/fs.gox
+ATA_OBJ   := $(BUILD_DIR)/ata.o
+ATA_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/drivers/ata.gox
+FAT16_OBJ := $(BUILD_DIR)/fat16.o
+FAT16_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/fs/fat16.gox
 SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
 SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
 SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
@@ -64,11 +72,14 @@ kernel: $(KERNEL_ELF)
 
 iso: $(ISO_IMAGE)
 
-run: $(ISO_IMAGE)
-	$(QEMU) -cdrom $(ISO_IMAGE)
+run: $(ISO_IMAGE) disk.img
+	$(QEMU) -cdrom $(ISO_IMAGE) -drive file=disk.img,format=raw
+
+disk.img:
+	dd if=/dev/zero of=disk.img bs=1M count=20
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) disk.img
 
 # -----------------------
 # Build directory
@@ -113,7 +124,17 @@ $(MEM_GOX): $(MEM_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(MEM_GOX))
 	$(OBJCOPY) -j .go_export $(MEM_OBJ) $(MEM_GOX)
 
-$(FS_OBJ): $(FS_SRCS) $(MEM_GOX) | $(BUILD_DIR)
+$(ATA_OBJ): $(ATA_SRCS) | $(BUILD_DIR)
+	mkdir -p $(dir $(ATA_OBJ))
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(ATA_IMPORT) \
+		-c $(ATA_SRCS) -o $(ATA_OBJ)
+
+$(ATA_GOX): $(ATA_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(ATA_GOX))
+	$(OBJCOPY) -j .go_export $(ATA_OBJ) $(ATA_GOX)
+
+$(FS_OBJ): $(FS_SRCS) $(MEM_GOX) $(ATA_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(FS_IMPORT) \
@@ -124,7 +145,7 @@ $(FS_GOX): $(FS_OBJ) | $(BUILD_DIR)
 	$(OBJCOPY) -j .go_export $(FS_OBJ) $(FS_GOX)
 
 # --- 6. Compile shell.go (package shell) with gccgo ---
-$(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) | $(BUILD_DIR)
+$(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) $(ATA_GOX) $(FAT16_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(SHELL_IMPORT) \
@@ -134,6 +155,17 @@ $(SHELL_OBJ): $(SHELL_SRCS) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) | $(BUILD_DIR)
 $(SHELL_GOX): $(SHELL_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(SHELL_GOX))
 	$(OBJCOPY) -j .go_export $(SHELL_OBJ) $(SHELL_GOX)
+
+$(FAT16_OBJ): $(FAT16_SRCS) $(ATA_GOX) | $(BUILD_DIR)
+	mkdir -p $(dir $(FAT16_OBJ))
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-I $(BUILD_DIR) \
+		-fgo-pkgpath=$(FAT16_IMPORT) \
+		-c $(FAT16_SRCS) -o $(FAT16_OBJ)
+
+$(FAT16_GOX): $(FAT16_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(FAT16_GOX))
+	$(OBJCOPY) -j .go_export $(FAT16_OBJ) $(FAT16_GOX)
 
 # --- Scheduler ---
 $(SCHEDULER_OBJ): $(SCHEDULER_SRCS) | $(BUILD_DIR)
@@ -157,10 +189,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
