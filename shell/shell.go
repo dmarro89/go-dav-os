@@ -38,7 +38,7 @@ var (
 const maxHistory = 32
 
 var commandBuf = [...]string{
-	"help", "clear", "echo", "ticks", "mem", "mmap", "mmapmax",
+	"help", "clear", "echo", "ticks", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
 	"version", "history",
 }
