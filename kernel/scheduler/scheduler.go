@@ -11,6 +11,7 @@ const (
 	TaskRunnable TaskState = iota
 	TaskRunning
 	TaskWaiting
+	TaskDead
 )
 
 type Task struct {
@@ -75,6 +76,17 @@ func NewTask(entry func()) *Task {
 	return t
 }
 
+func Exit() {
+	if currentTask == nil {
+		return
+	}
+	currentTask.State = TaskDead
+	Schedule()
+	// Should not return if Schedule switched
+	for {
+	}
+}
+
 func Schedule() {
 	if taskCount <= 1 {
 		return
@@ -101,13 +113,23 @@ func Schedule() {
 		}
 	}
 
-	if nextIndex == -1 || tasks[nextIndex] == currentTask {
-		return
+	if nextIndex == -1 {
+		// No runnable task found.
+		// If current task is dead, we must find SOMETHING (maybe idle task 0?)
+		if oldTask.State == TaskDead {
+			// Fallback to task 0 usually, assuming it's permanent
+			nextIndex = 0
+		} else {
+			// Current task is still runnable, just return without switching
+			return
+		}
 	}
 
 	newTask := tasks[nextIndex]
 
-	oldTask.State = TaskRunnable
+	if oldTask.State != TaskDead {
+		oldTask.State = TaskRunnable
+	}
 	newTask.State = TaskRunning
 	currentTask = newTask
 

@@ -14,7 +14,8 @@ const (
 	prompt    = "> "
 	maxLine   = 128
 	osName    = "DavOS"
-	osVersion = "0.1.0"
+	maxDistanceThreshold = 3
+	osVersion = "0.2.0"
 )
 
 var (
@@ -38,6 +39,12 @@ var (
 
 // maxHistory defines the maximum size of the history ring buffer
 const maxHistory = 32
+
+var commandBuf = [...]string{
+	"help", "clear", "echo", "ticks", "mem", "mmap",
+	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
+	"version", "history",
+}
 
 func SetTickProvider(fn func() uint64) { getTicks = fn }
 
@@ -647,6 +654,29 @@ func execute() {
 		return
 	}
 
+	var suggestionBuf [len(commandBuf)]string
+	suggestionCount := 0
+
+	for i := 0; i < len(commandBuf); i++ {
+		if calculateDistance(cmdStart, cmdEnd, commandBuf[i]) < maxDistanceThreshold {
+			suggestionBuf[suggestionCount] = commandBuf[i]
+			suggestionCount++
+		}
+	}
+
+	if suggestionCount > 0 {
+		terminal.Print("Did you mean '")
+		for i := 0; i < suggestionCount; i++ {
+			if i > 0 { // To ensure formatting; the first time we print we do not add a space in-front of the suggestion
+				terminal.Print(" ")
+			}
+			terminal.Print(suggestionBuf[i])
+		}
+		terminal.Print("'?")
+		terminal.PutRune('\n')
+		return
+	}
+
 	terminal.Print("Unknown command: ")
 	printRange(cmdStart, cmdEnd)
 	terminal.PutRune('\n')
@@ -867,6 +897,44 @@ func copyNameFromRange(start, end int) (int, bool) {
 		tmpName[i] = lineBuf[start+i]
 	}
 	return n, true
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func calculateDistance(start, end int, cmd string) int {
+	lenA := end - start
+	lenB := len(cmd)
+
+	var prev [maxLine + 1]int
+	var curr [maxLine + 1]int
+
+	for j := 0; j <= lenB; j++ {
+		prev[j] = j
+	}
+
+	for i := 1; i <= lenA; i++ {
+		curr[0] = i
+		for j := 1; j <= lenB; j++ {
+			cost := 1
+			if lineBuf[start+i-1] == cmd[j-1] {
+				cost = 0
+			}
+			curr[j] = minInt(
+				minInt(prev[j]+1, curr[j-1]+1),
+				prev[j-1]+cost,
+			)
+		}
+		for j := 0; j <= lenB; j++ {
+			prev[j] = curr[j]
+		}
+	}
+
+	return prev[lenB]
 }
 
 func copyDataFromRange(start, end int) uint32 {
