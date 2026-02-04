@@ -3,6 +3,7 @@ package kernel
 import (
 	"unsafe"
 
+	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -14,7 +15,7 @@ const (
 
 const (
 	SYS_WRITE = 1
-	// SYS_EXIT  = 2 // Not implemented
+	SYS_EXIT  = 2
 )
 
 type TrapFrame struct {
@@ -75,6 +76,12 @@ func Int80Handler(tf *TrapFrame) {
 		buf := uintptr(tf.RCX)
 		n := tf.RDX
 		tf.RAX = sysWrite(fd, buf, n)
+	case SYS_EXIT:
+		status := int(tf.RBX)
+		terminal.Print("Process exited with status ")
+		terminal.PrintInt(status)
+		terminal.Print("\n")
+		scheduler.Exit()
 	default:
 		terminal.Print("unknown syscall\n")
 		tf.RAX = ^uint64(0) // return -1

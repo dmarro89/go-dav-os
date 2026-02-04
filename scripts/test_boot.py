@@ -118,7 +118,7 @@ def main():
             time.sleep(0.1)
 
         print("Waiting for version output...")
-        if not check_log_for("DavOS 0.1.0", log_file, timeout=5):
+        if not check_log_for("DavOS 0.2.0", log_file, timeout=5):
             print("ERROR: Timeout waiting for version output.")
             if process.poll() is not None:
                 print(f"QEMU exited with {process.returncode}")
@@ -126,7 +126,7 @@ def main():
             sys.exit(1)
 
         print("Checking for 64-bit marker in version output...")
-        if not check_log_for("DavOS 0.1.0 (64bit)", log_file, timeout=5):
+        if not check_log_for("DavOS 0.2.0 (64bit)", log_file, timeout=5):
             print("ERROR: 64-bit marker not found in version output.")
             sys.exit(1)
         print("64-bit marker detected in version output.")
