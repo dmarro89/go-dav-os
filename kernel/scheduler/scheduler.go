@@ -119,9 +119,8 @@ func Schedule() {
 		if oldTask.State == TaskDead {
 			// Fallback to task 0 usually, assuming it's permanent
 			nextIndex = 0
-		} else if tasks[nextIndex] == currentTask {
-			return
 		} else {
+			// Current task is still runnable, just return without switching
 			return
 		}
 	}
