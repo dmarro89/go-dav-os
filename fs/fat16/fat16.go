@@ -109,16 +109,42 @@ func Format() bool {
 		return false
 	}
 
-	// Zero out FAT1 start and RootDir start
+	// Prepare zero buffer for clearing sectors
 	for i := 0; i < 512; i++ {
 		fatBuf[i] = 0
 	}
 
-	// FAT1 starts at ReservedSec (1)
-	ata.WriteSector(uint32(1), &fatBuf)
+	// FatSz16 = 160 sectors per FAT
+	// NumFATs = 2
+	// ReservedSec = 1
+	const fatSz16 uint32 = 160
+	const reservedSec uint32 = 1
 
-	// Root starts at 1 + 2*160 = 321
-	ata.WriteSector(321, &fatBuf)
+	// Zero out all sectors of FAT1 (sectors 1 to 160)
+	for sec := uint32(0); sec < fatSz16; sec++ {
+		if !ata.WriteSector(reservedSec+sec, &fatBuf) {
+			return false
+		}
+	}
+
+	// Zero out all sectors of FAT2 (sectors 161 to 320)
+	for sec := uint32(0); sec < fatSz16; sec++ {
+		if !ata.WriteSector(reservedSec+fatSz16+sec, &fatBuf) {
+			return false
+		}
+	}
+
+	// Root directory starts at sector 321 (1 + 160 + 160)
+	// Root has 512 entries * 32 bytes = 16384 bytes = 32 sectors
+	const rootStart uint32 = reservedSec + fatSz16*2 // = 321
+	const rootSectors uint32 = 32
+
+	// Zero out all root directory sectors
+	for sec := uint32(0); sec < rootSectors; sec++ {
+		if !ata.WriteSector(rootStart+sec, &fatBuf) {
+			return false
+		}
+	}
 
 	return true
 }
@@ -215,6 +241,50 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 	if !initialized {
 		terminal.Print("FAT16: Not initialized\n")
 		return false
+	}
+
+	// Check if file with same name already exists
+	for sec := uint32(0); sec < rootSectors; sec++ {
+		if !ata.ReadSector(rootStart+sec, &fatBuf) {
+			return false
+		}
+
+		for i := 0; i < 16; i++ {
+			off := i * DirEntrySize
+			firstByte := fatBuf[off]
+
+			if firstByte == 0x00 {
+				// End of directory, no duplicate found
+				break
+			}
+			if firstByte == 0xE5 {
+				continue // Deleted entry
+			}
+			if fatBuf[off+11]&0x08 != 0 {
+				continue // Volume label
+			}
+
+			// Compare name and extension
+			match := true
+			for j := 0; j < 8; j++ {
+				if fatBuf[off+j] != name[j] {
+					match = false
+					break
+				}
+			}
+			if match {
+				for j := 0; j < 3; j++ {
+					if fatBuf[off+8+j] != ext[j] {
+						match = false
+						break
+					}
+				}
+			}
+			if match {
+				terminal.Print("FAT16: File already exists\n")
+				return false
+			}
+		}
 	}
 
 	// Find free cluster in FAT

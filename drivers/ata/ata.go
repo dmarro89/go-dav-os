@@ -22,17 +22,21 @@ const (
 	CmdFlush = 0xE7
 )
 
-func waitBusy() {
-	for {
+// Timeout constant for ATA operations (iterations)
+const ataTimeout = 100000
+
+func waitBusy() bool {
+	for i := 0; i < ataTimeout; i++ {
 		status := inb(StatusCmd)
 		if (status & 0x80) == 0 {
-			break
+			return true
 		}
 	}
+	return false // Timeout
 }
 
 func waitDRQ() bool {
-	for {
+	for i := 0; i < ataTimeout; i++ {
 		status := inb(StatusCmd)
 		if (status & 0x01) != 0 {
 			return false // ERR
@@ -41,10 +45,13 @@ func waitDRQ() bool {
 			return true // DRQ ready
 		}
 	}
+	return false // Timeout
 }
 
 func ReadSector(lba uint32, buf *[512]byte) bool {
-	waitBusy()
+	if !waitBusy() {
+		return false
+	}
 
 	outb(DriveHead, 0xE0|byte((lba>>24)&0x0F))
 	outb(SecCount, 1)
@@ -62,7 +69,9 @@ func ReadSector(lba uint32, buf *[512]byte) bool {
 }
 
 func WriteSector(lba uint32, data *[512]byte) bool {
-	waitBusy()
+	if !waitBusy() {
+		return false
+	}
 
 	outb(DriveHead, 0xE0|byte((lba>>24)&0x0F))
 	outb(SecCount, 1)
@@ -79,7 +88,9 @@ func WriteSector(lba uint32, data *[512]byte) bool {
 
 	// Flush Cache
 	outb(StatusCmd, CmdFlush)
-	waitBusy()
+	if !waitBusy() {
+		return false
+	}
 
 	return true
 }

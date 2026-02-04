@@ -495,6 +495,10 @@ func execute() {
 			}
 
 			msgStart := trimLeft(a2e, end)
+			// Clear diskBuf before writing to avoid stale data
+			for i := 0; i < 512; i++ {
+				diskBuf[i] = 0
+			}
 			idx := 0
 			for i := msgStart; i < end && idx < 512; i++ {
 				diskBuf[idx] = lineBuf[i]
@@ -573,6 +577,10 @@ func execute() {
 		// Get content
 		msgStart := trimLeft(a1e, end)
 		var dataBuf [512]byte
+		// Clear dataBuf before writing to avoid stale data
+		for i := 0; i < 512; i++ {
+			dataBuf[i] = 0
+		}
 		idx := 0
 		for i := msgStart; i < end && idx < 512; i++ {
 			dataBuf[idx] = lineBuf[i]
