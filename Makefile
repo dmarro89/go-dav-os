@@ -67,7 +67,7 @@ SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
 
 .PHONY: all kernel iso run clean docker-build docker-shell docker-run user-hello
 
-all: $(ISO_IMAGE) user-hello
+all: $(ISO_IMAGE)
 
 kernel: $(KERNEL_ELF)
 
