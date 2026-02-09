@@ -10,7 +10,7 @@ _start:
     mov  $1, %rax           # SYS_WRITE = 1
     mov  $1, %rbx           # fd = 1 (stdout)
     lea  msg(%rip), %rcx    # buffer address
-    mov  $21, %rdx          # length = 21 bytes
+    mov  $msg_len, %rdx     # length
     int  $0x80              # invoke syscall
 
     # SYS_EXIT: terminate with status 0
@@ -24,3 +24,5 @@ _start:
 .section .rodata
 msg:
     .ascii "hello from userland\n"
+msg_end:
+    .set msg_len, msg_end - msg
