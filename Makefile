@@ -65,7 +65,7 @@ SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
 SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
 SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
 
-.PHONY: all kernel iso run clean docker-build docker-shell docker-run user-hello
+.PHONY: all kernel iso run clean docker-build docker-shell docker-run
 
 all: $(ISO_IMAGE)
 
