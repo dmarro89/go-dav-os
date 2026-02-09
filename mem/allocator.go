@@ -4,9 +4,6 @@ import "unsafe"
 
 const pageSize = 4096
 
-func bootstrapEnd() uint64
-func kernelEnd() uint64
-
 var (
 	pfaReady    bool
 	totalPages  uint64

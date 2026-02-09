@@ -1,4 +1,4 @@
-/* kernel/scheduler/switch.s */
+/* asm/switch.s */
 
 .code64
 .section .text

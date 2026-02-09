@@ -31,11 +31,9 @@ var (
 	taskPool [MaxTasks]Task
 )
 
-// CpuSwitch is defined in switch.s
-func CpuSwitch(oldESP *uint64, newESP uint64)
-
 func Init() {
 	taskCount = 0
+	nextID = 1
 	// Init initial task (0)
 	t := &taskPool[0]
 	t.ID = 0
@@ -47,7 +45,14 @@ func Init() {
 }
 
 func NewTask(entry func()) *Task {
+	return NewTaskEntry(funcPC(entry))
+}
+
+func NewTaskEntry(entry uintptr) *Task {
 	if taskCount >= MaxTasks {
+		return nil
+	}
+	if entry == 0 {
 		return nil
 	}
 
@@ -57,23 +62,40 @@ func NewTask(entry func()) *Task {
 	nextID++
 	t.State = TaskRunnable
 
-	// Setup stack
-	// Stack grows down from t.Stack[StackSize]
+	// Stack grows down and must match CpuSwitch pop order.
+	sp := uintptr(unsafe.Pointer(&t.Stack[0])) + StackSize
+	sp &= ^uintptr(15)
 
-	sp := uintptr(unsafe.Pointer(&t.Stack[StackSize-1]))
-	sp = sp & ^uintptr(15)
-
-	// Store return addr (entry) and register placeholders
+	// If entry returns, force task termination instead of jumping to garbage.
 	sp -= 8
-	*(*uintptr)(unsafe.Pointer(sp)) = *(*uintptr)(unsafe.Pointer(&entry))
+	*(*uintptr)(unsafe.Pointer(sp)) = funcPC(taskAutoExit)
 
-	sp -= 32 // 4 * 8 bytes for RBP, RBX, RSI, RDI
+	// First return target used by CpuSwitch (ret -> entry).
+	sp -= 8
+	*(*uintptr)(unsafe.Pointer(sp)) = entry
+
+	// CpuSwitch restores RDI, RSI, RBX, RBP from these slots.
+	sp -= 32
+	*(*uint64)(unsafe.Pointer(sp + 0)) = 0
+	*(*uint64)(unsafe.Pointer(sp + 8)) = 0
+	*(*uint64)(unsafe.Pointer(sp + 16)) = 0
+	*(*uint64)(unsafe.Pointer(sp + 24)) = 0
 
 	t.ESP = uint64(sp)
 
 	tasks[idx] = t
 	taskCount++
 	return t
+}
+
+func taskAutoExit() {
+	Exit()
+	for {
+	}
+}
+
+func funcPC(fn func()) uintptr {
+	return *(*uintptr)(unsafe.Pointer(&fn))
 }
 
 func Exit() {
@@ -133,7 +155,7 @@ func Schedule() {
 	newTask.State = TaskRunning
 	currentTask = newTask
 
-	CpuSwitch(&oldTask.ESP, newTask.ESP)
+	cpuSwitch(&oldTask.ESP, newTask.ESP)
 }
 
 func CurrentTaskID() int {

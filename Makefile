@@ -37,12 +37,12 @@ KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
 SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
-MEM_SRCS       := $(filter-out %_test.go, $(wildcard mem/*.go))
+MEM_SRCS       := $(filter-out %_test.go %_stub.go, $(wildcard mem/*.go))
 FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
 ATA_SRCS  := drivers/ata/ata.go
 FAT16_SRCS := fs/fat16/fat16.go
-SCHEDULER_SRCS := $(filter-out %_test.go, $(wildcard kernel/scheduler/*.go))
-SCH_SWITCH_SRC := kernel/scheduler/switch.s
+SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go, $(wildcard kernel/scheduler/*.go))
+SCH_SWITCH_SRC := asm/switch.s
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o

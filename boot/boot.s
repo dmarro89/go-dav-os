@@ -281,3 +281,14 @@ go_0kernel.TriggerSysWrite:
     int  $0x80
     ret
 .size go_0kernel.TriggerSysWrite, . - go_0kernel.TriggerSysWrite
+
+# void go_0kernel.TriggerSysExit(uint32 status)
+.global go_0kernel.TriggerSysExit
+.type   go_0kernel.TriggerSysExit, @function
+
+go_0kernel.TriggerSysExit:
+    mov  %edi, %ebx      # status
+    mov  $2, %eax        # SYS_EXIT
+    int  $0x80
+    ret
+.size go_0kernel.TriggerSysExit, . - go_0kernel.TriggerSysExit

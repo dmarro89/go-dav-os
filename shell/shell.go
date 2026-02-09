@@ -11,20 +11,21 @@ import (
 )
 
 const (
-	prompt    = "> "
-	maxLine   = 128
-	osName    = "DavOS"
+	prompt               = "> "
+	maxLine              = 128
+	osName               = "DavOS"
 	maxDistanceThreshold = 3
-	osVersion = "0.2.0"
+	osVersion            = "0.2.0"
 )
 
 var (
-	lineBuf  [maxLine]byte
-	lineLen  int
-	getTicks func() uint64
-	tmpName  [16]byte
-	tmpData  [4096]byte
-	diskBuf  [512]byte
+	lineBuf    [maxLine]byte
+	lineLen    int
+	getTicks   func() uint64
+	runProgram func(name *[16]byte, nameLen int) (pid int, ok bool)
+	tmpName    [16]byte
+	tmpData    [4096]byte
+	diskBuf    [512]byte
 
 	// History ring buffer
 	// historyBuf stores the content of the commands
@@ -43,10 +44,13 @@ const maxHistory = 32
 var commandBuf = [...]string{
 	"help", "clear", "echo", "ticks", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", "history",
+	"version", "history", "run",
 }
 
 func SetTickProvider(fn func() uint64) { getTicks = fn }
+func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
+	runProgram = fn
+}
 
 func Init() {
 	lineLen = 0
@@ -160,7 +164,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
+		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
 		return
 	}
 
@@ -650,6 +654,36 @@ func execute() {
 		if (proof >> 32) != 0 {
 			terminal.Print(" (64bit)")
 		}
+		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "run") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: run <program>\n")
+			return
+		}
+
+		if runProgram == nil {
+			terminal.Print("run: runner not wired\n")
+			return
+		}
+
+		nameLen, ok := copyNameFromRange(a1s, a1e)
+		if !ok {
+			terminal.Print("run: invalid name\n")
+			return
+		}
+
+		pid, ok := runProgram(&tmpName, nameLen)
+		if !ok {
+			terminal.Print("run: not found or no slot\n")
+			return
+		}
+
+		terminal.Print("started pid=")
+		printUint(uint64(pid))
 		terminal.PutRune('\n')
 		return
 	}

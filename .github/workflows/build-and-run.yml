@@ -18,6 +18,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run Unit Tests
+        run: |
+          mkdir -p build/.gocache
+          GOCACHE="$PWD/build/.gocache" go test ./kernel/scheduler ./fs
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 

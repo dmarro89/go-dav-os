@@ -68,6 +68,7 @@ func getIRQ1StubAddr() uint64
 
 // syscalls
 func TriggerSysWrite(buf *byte, n uint32)
+func TriggerSysExit(status uint32)
 
 func Int80Handler(tf *TrapFrame) {
 	switch uint32(tf.RAX) {
