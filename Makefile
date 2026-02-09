@@ -34,6 +34,7 @@ FAT16_IMPORT := $(MODPATH)/fs/fat16
 SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 
 KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
+USER_HELLO_SRC := user/hello.s
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
 SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
@@ -64,9 +65,9 @@ SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
 SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
 SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
 
-.PHONY: all kernel iso run clean docker-build docker-shell docker-run
+.PHONY: all kernel iso run clean docker-build docker-shell docker-run user-hello
 
-all: $(ISO_IMAGE)
+all: $(ISO_IMAGE) user-hello
 
 kernel: $(KERNEL_ELF)
 
@@ -227,3 +228,22 @@ docker-build-only: docker-image
 docker-shell: docker-image
 	docker run -it --rm --platform=$(DOCKER_PLATFORM) \
 	  -v "$(CURDIR)":/work -w /work $(DOCKER_IMAGE) bash
+
+# -----------------------
+# User hello
+# -----------------------
+HELLO_OBJ := $(BUILD_DIR)/hello.o
+HELLO_ELF := $(BUILD_DIR)/hello.elf
+HELLO_BIN := $(BUILD_DIR)/hello.bin
+
+user-hello: $(HELLO_BIN)
+
+$(HELLO_OBJ): $(USER_HELLO_SRC) | $(BUILD_DIR)
+	$(AS) $(USER_HELLO_SRC) -o $(HELLO_OBJ)
+
+$(HELLO_ELF): $(HELLO_OBJ)
+	$(GCC) -nostdlib -static -Wl,--build-id=none \
+		-Wl,-Ttext=0x400000 -o $(HELLO_ELF) $(HELLO_OBJ)
+
+$(HELLO_BIN): $(HELLO_ELF)
+	$(OBJCOPY) -O binary $(HELLO_ELF) $(HELLO_BIN)
