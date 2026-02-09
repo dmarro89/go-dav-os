@@ -95,7 +95,14 @@ func taskAutoExit() {
 }
 
 func funcPC(fn func()) uintptr {
-	return *(*uintptr)(unsafe.Pointer(&fn))
+	if fn == nil {
+		return 0
+	}
+	fnVal := *(*uintptr)(unsafe.Pointer(&fn))
+	if fnVal == 0 {
+		return 0
+	}
+	return *(*uintptr)(unsafe.Pointer(fnVal))
 }
 
 func Exit() {

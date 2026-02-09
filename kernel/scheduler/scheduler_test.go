@@ -1,9 +1,12 @@
 package scheduler
 
 import (
+	"reflect"
 	"testing"
 	"unsafe"
 )
+
+func testTaskEntry() {}
 
 func MockInit() {
 	taskCount = 0
@@ -73,5 +76,36 @@ func TestNewTaskEntryRejectsZeroEntry(t *testing.T) {
 
 	if task := NewTaskEntry(0); task != nil {
 		t.Fatalf("Expected nil task for zero entry")
+	}
+}
+
+func TestFuncPCMatchesReflectPointer(t *testing.T) {
+	got := funcPC(testTaskEntry)
+	want := reflect.ValueOf(testTaskEntry).Pointer()
+
+	if got == 0 || want == 0 {
+		t.Fatalf("Expected non-zero function pointers, got=0x%x want=0x%x", got, want)
+	}
+
+	if got != want {
+		t.Fatalf("funcPC mismatch: got=0x%x want=0x%x", got, want)
+	}
+}
+
+func TestNewTaskUsesFunctionEntryPointer(t *testing.T) {
+	MockInit()
+	Init()
+
+	task := NewTask(testTaskEntry)
+	if task == nil {
+		t.Fatalf("Expected task to be created")
+	}
+
+	sp := uintptr(task.ESP)
+	gotEntry := *(*uintptr)(unsafe.Pointer(sp + 32))
+	wantEntry := reflect.ValueOf(testTaskEntry).Pointer()
+
+	if gotEntry != wantEntry {
+		t.Fatalf("Expected task entry 0x%x, got 0x%x", wantEntry, gotEntry)
 	}
 }
