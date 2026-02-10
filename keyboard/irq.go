@@ -20,21 +20,9 @@ func push(r rune) {
 func IRQHandler() {
 	sc := inb(0x60)
 
-	// Ignore key releases (highest bit set)
-	if sc&0x80 != 0 {
-		return
+	if r, ok := translateScancode(sc); ok {
+		push(r)
 	}
-
-	if int(sc) >= len(LayoutIT) {
-		return
-	}
-
-	r := LayoutIT[sc]
-	if r == 0 {
-		return
-	}
-
-	push(r)
 }
 
 // Non-blocking read used by the shell loop.

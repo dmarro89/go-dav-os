@@ -47,3 +47,52 @@ var LayoutIT = Layout{
 	0x1C: '\n',
 	0x0E: '\b',
 }
+
+func isASCIILetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+}
+
+func isASCIIDigit(r rune) bool {
+	return r >= '0' && r <= '9'
+}
+
+func toUpperASCII(r rune) rune {
+	if r >= 'a' && r <= 'z' {
+		return r - 'a' + 'A'
+	}
+	return r
+}
+
+func toLowerASCII(r rune) rune {
+	if r >= 'A' && r <= 'Z' {
+		return r - 'A' + 'a'
+	}
+	return r
+}
+
+func toSymbol(r rune) (rune, bool) {
+	switch r {
+	case '1':
+		return '!', true
+	case '2':
+		return '"', true
+	case '3':
+		return '£', true
+	case '4':
+		return '$', true
+	case '5':
+		return '%', true
+	case '6':
+		return '&', true
+	case '7':
+		return '/', true
+	case '8':
+		return '(', true
+	case '9':
+		return ')', true
+	case '0':
+		return '=', true
+	default:
+		return 0, false
+	}
+}
