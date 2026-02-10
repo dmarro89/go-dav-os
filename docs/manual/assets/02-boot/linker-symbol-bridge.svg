@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" role="img" aria-labelledby="title desc">
+  <title id="title">Linker Symbol Bridge Flow</title>
+  <desc id="desc">How linker and assembly symbols are consumed by Go allocator logic.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 z" fill="#1f2937" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #334155; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .p1 { fill: #dbeafe; }
+      .p2 { fill: #dcfce7; }
+      .p3 { fill: #fde68a; }
+      .txt { font: 600 14px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 400 12px Arial, sans-serif; fill: #0f172a; }
+      .line { stroke: #1f2937; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="460" />
+  <text class="title" x="40" y="52">Symbol propagation: linker/asm to allocator safety checks</text>
+
+  <rect class="box p1" x="60" y="120" width="250" height="90" />
+  <text class="txt" x="80" y="150">boot/linker.ld</text>
+  <text class="small" x="80" y="172">defines __kernel_end</text>
+
+  <rect class="box p1" x="60" y="260" width="250" height="90" />
+  <text class="txt" x="80" y="290">boot/boot.s</text>
+  <text class="small" x="80" y="312">defines __bootstrap_end</text>
+
+  <rect class="box p2" x="390" y="190" width="300" height="110" />
+  <text class="txt" x="410" y="223">boot/stubs_amd64.s</text>
+  <text class="small" x="410" y="245">mem.bootstrapEnd() -> __bootstrap_end</text>
+  <text class="small" x="410" y="267">mem.kernelEnd() -> __kernel_end</text>
+
+  <rect class="box p2" x="760" y="190" width="220" height="110" />
+  <text class="txt" x="780" y="223">mem/kernel_bounds_gccgo.go</text>
+  <text class="small" x="780" y="245">declares function bridge</text>
+
+  <rect class="box p3" x="1020" y="190" width="150" height="110" />
+  <text class="txt" x="1038" y="223">mem/allocator.go</text>
+  <text class="small" x="1038" y="245">kernelEndPhys()</text>
+  <text class="small" x="1038" y="267">max(kernelEnd,</text>
+  <text class="small" x="1038" y="287">bootstrapEnd)</text>
+
+  <line class="line" x1="310" y1="165" x2="388" y2="225" />
+  <line class="line" x1="310" y1="305" x2="388" y2="265" />
+  <line class="line" x1="690" y1="245" x2="758" y2="245" />
+  <line class="line" x1="980" y1="245" x2="1018" y2="245" />
+
+  <text class="subtitle" x="40" y="420">Result: allocator metadata placement never overlaps bootstrap/kernel image.</text>
+</svg>

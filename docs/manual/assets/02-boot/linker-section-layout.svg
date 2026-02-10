@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Linker Section Layout</title>
+  <desc id="desc">Logical order of sections emitted by boot/linker.ld.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 z" fill="#1f2937" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #334155; }
+      .box { stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .a { fill: #e2e8f0; }
+      .b { fill: #dbeafe; }
+      .c { fill: #dcfce7; }
+      .d { fill: #fde68a; }
+      .e { fill: #fecaca; }
+      .txt { font: 600 15px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 400 13px Arial, sans-serif; fill: #0f172a; }
+      .line { stroke: #1f2937; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="520" />
+  <text class="title" x="40" y="52">Linker section order in memory</text>
+  <text class="subtitle" x="40" y="82">Derived from boot/linker.ld SECTIONS policy</text>
+
+  <rect class="box a" x="70" y="140" width="210" height="110" />
+  <text class="txt" x="88" y="172">Base: 0x00100000</text>
+  <text class="small" x="88" y="197">link address start</text>
+
+  <rect class="box b" x="320" y="140" width="210" height="110" />
+  <text class="txt" x="338" y="172">.text</text>
+  <text class="small" x="338" y="197">.multiboot2 + code</text>
+
+  <rect class="box c" x="570" y="140" width="210" height="110" />
+  <text class="txt" x="588" y="172">.rodata</text>
+  <text class="small" x="588" y="197">constants, gdt64</text>
+
+  <rect class="box d" x="820" y="140" width="170" height="110" />
+  <text class="txt" x="838" y="172">.data</text>
+  <text class="small" x="838" y="197">initialized RW</text>
+
+  <rect class="box e" x="1030" y="140" width="130" height="110" />
+  <text class="txt" x="1048" y="172">.bss</text>
+  <text class="small" x="1048" y="197">zero-init</text>
+
+  <line class="line" x1="280" y1="195" x2="318" y2="195" />
+  <line class="line" x1="530" y1="195" x2="568" y2="195" />
+  <line class="line" x1="780" y1="195" x2="818" y2="195" />
+  <line class="line" x1="990" y1="195" x2="1028" y2="195" />
+
+  <rect class="box" x="340" y="320" width="520" height="120" fill="#ffffff" />
+  <text class="txt" x="360" y="355">.bootstrap_stack (after .bss)</text>
+  <text class="small" x="360" y="380">stack_bottom..stack_top + pml4/pdpt/pd0..pd3 + __bootstrap_end</text>
+  <text class="small" x="360" y="405">__kernel_end marks the first byte after the full linked image</text>
+
+  <text class="subtitle" x="40" y="485">Source reference: boot/linker.ld lines 16-58</text>
+</svg>

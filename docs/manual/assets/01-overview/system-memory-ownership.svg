@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="860" viewBox="0 0 1300 860">
+  <defs><style>.bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}.b{fill:#fff;stroke:#1f2937;stroke-width:2;rx:8}.tx{font:600 14px Arial;fill:#0f172a}</style></defs>
+  <rect class="bg" width="1300" height="860"/>
+  <text class="t" x="30" y="45">Memory ownership map (conceptual)</text>
+  <text class="s" x="30" y="70">Not exact addresses; this shows ownership and responsibilities</text>
+
+  <rect class="b" x="70" y="120" width="520" height="150" fill="#dbeafe"/>
+  <text class="tx" x="90" y="152">Kernel image region</text>
+  <text class="tx" x="90" y="176">- .text/.rodata code and constants</text>
+  <text class="tx" x="90" y="200">- .data/.bss globals (idt, ticks, scheduler state)</text>
+  <text class="tx" x="90" y="224">Owner: linker + kernel core</text>
+
+  <rect class="b" x="70" y="300" width="520" height="150" fill="#dcfce7"/>
+  <text class="tx" x="90" y="332">Bootstrap reserved region</text>
+  <text class="tx" x="90" y="356">- boot stack</text>
+  <text class="tx" x="90" y="380">- early page tables</text>
+  <text class="tx" x="90" y="404">Owner: boot assembly</text>
+
+  <rect class="b" x="70" y="480" width="520" height="170" fill="#fde68a"/>
+  <text class="tx" x="90" y="512">Allocator-managed pages</text>
+  <text class="tx" x="90" y="536">- PFA bitmap area</text>
+  <text class="tx" x="90" y="560">- in-memory FS file pages</text>
+  <text class="tx" x="90" y="584">- future alloc/free pages</text>
+  <text class="tx" x="90" y="608">Owner: mem allocator + fs layer</text>
+
+  <rect class="b" x="680" y="120" width="550" height="250" fill="#fff"/>
+  <text class="tx" x="700" y="152">Runtime stacks and transient frames</text>
+  <text class="tx" x="700" y="176">- current kernel stack</text>
+  <text class="tx" x="700" y="200">- scheduler task stacks</text>
+  <text class="tx" x="700" y="224">- IRQ/syscall trap frames</text>
+  <text class="tx" x="700" y="248">Owner: scheduler + interrupt path</text>
+
+  <rect class="b" x="680" y="420" width="550" height="230" fill="#fff"/>
+  <text class="tx" x="700" y="452">Device-visible buffers/regions</text>
+  <text class="tx" x="700" y="476">- VGA text memory</text>
+  <text class="tx" x="700" y="500">- ATA sector buffers</text>
+  <text class="tx" x="700" y="524">- keyboard ring buffer (in kernel memory)</text>
+  <text class="tx" x="700" y="548">Owner: terminal + ata + keyboard modules</text>
+</svg>

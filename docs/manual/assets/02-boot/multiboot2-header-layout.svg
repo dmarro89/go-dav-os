@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">Multiboot2 Header Layout</title>
+  <desc id="desc">Conceptual memory layout of the .multiboot2 section.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 z" fill="#1f2937" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #334155; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 8; }
+      .box1 { fill: #e2e8f0; }
+      .box2 { fill: #dbeafe; }
+      .box3 { fill: #dcfce7; }
+      .box4 { fill: #fef3c7; }
+      .txt { font: 600 15px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 400 13px Arial, sans-serif; fill: #0f172a; }
+      .line { stroke: #1f2937; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="520" />
+  <text class="title" x="40" y="52">.multiboot2 section in memory (conceptual)</text>
+  <text class="subtitle" x="40" y="82">8-byte aligned block, located within the first 32 KiB of the kernel image</text>
+
+  <rect class="box box1" x="40" y="120" width="260" height="130" />
+  <text class="txt" x="58" y="150">Base + 0x00</text>
+  <text class="small" x="58" y="175">magic = 0xE85250D6</text>
+  <text class="small" x="58" y="198">arch = 0</text>
+  <text class="small" x="58" y="221">header_length</text>
+  <text class="small" x="58" y="244">checksum</text>
+
+  <rect class="box box2" x="340" y="120" width="260" height="130" />
+  <text class="txt" x="358" y="150">Base + 0x10</text>
+  <text class="small" x="358" y="175">Tag type = 1</text>
+  <text class="small" x="358" y="198">Size = 16</text>
+  <text class="small" x="358" y="221">Info request: mmap (6)</text>
+  <text class="small" x="358" y="244">and ELF sections (9)</text>
+
+  <rect class="box box3" x="640" y="120" width="260" height="130" />
+  <text class="txt" x="658" y="150">Base + 0x20</text>
+  <text class="small" x="658" y="175">Tag type = 3</text>
+  <text class="small" x="658" y="198">Size = 16</text>
+  <text class="small" x="658" y="221">Entry address tag</text>
+  <text class="small" x="658" y="244">entry = _start</text>
+
+  <rect class="box box4" x="940" y="120" width="220" height="130" />
+  <text class="txt" x="958" y="150">Base + 0x30</text>
+  <text class="small" x="958" y="175">Tag type = 0</text>
+  <text class="small" x="958" y="198">Size = 8</text>
+  <text class="small" x="958" y="221">End tag</text>
+
+  <line class="line" x1="300" y1="185" x2="338" y2="185" />
+  <line class="line" x1="600" y1="185" x2="638" y2="185" />
+  <line class="line" x1="900" y1="185" x2="938" y2="185" />
+
+  <text class="subtitle" x="40" y="322">Source reference: boot/boot.s lines 22-53</text>
+  <text class="subtitle" x="40" y="350">multiboot_header_start -> tags -> multiboot_header_end</text>
+</svg>
