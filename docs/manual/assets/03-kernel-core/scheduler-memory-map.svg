@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1250" height="760" viewBox="0 0 1250 760">
+  <defs><style>.bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}.b{fill:#fff;stroke:#1f2937;stroke-width:2;rx:8}.tx{font:600 14px Arial;fill:#0f172a}</style></defs>
+  <rect class="bg" width="1250" height="760"/>
+  <text class="t" x="30" y="45">Task bootstrap stack layout (conceptual)</text>
+  <text class="s" x="30" y="70">Built by NewTaskEntry to match asm CpuSwitch pop/ret sequence</text>
+
+  <rect class="b" x="80" y="120" width="500" height="580" fill="#dbeafe"/>
+  <text class="tx" x="100" y="152">Task.Stack [4096 bytes]</text>
+  <text class="tx" x="100" y="182">high address (top)</text>
+  <text class="tx" x="100" y="230">[taskAutoExit return target]</text>
+  <text class="tx" x="100" y="270">[entry return target]</text>
+  <text class="tx" x="100" y="310">[saved RBP slot]</text>
+  <text class="tx" x="100" y="350">[saved RBX slot]</text>
+  <text class="tx" x="100" y="390">[saved RSI slot]</text>
+  <text class="tx" x="100" y="430">[saved RDI slot]</text>
+  <text class="tx" x="100" y="470">t.ESP points here before first switch</text>
+  <text class="tx" x="100" y="520">low address</text>
+
+  <rect class="b" x="650" y="120" width="520" height="300" fill="#dcfce7"/>
+  <text class="tx" x="670" y="152">CpuSwitch behavior (asm/switch.s)</text>
+  <text class="tx" x="670" y="182">1) push rbp, rbx, rsi, rdi on old stack</text>
+  <text class="tx" x="670" y="212">2) store old rsp -> *oldESP</text>
+  <text class="tx" x="670" y="242">3) load new rsp from newESP</text>
+  <text class="tx" x="670" y="272">4) pop rdi, rsi, rbx, rbp</text>
+  <text class="tx" x="670" y="302">5) ret -> jumps to entry target</text>
+
+  <rect class="b" x="650" y="460" width="520" height="240" fill="#fde68a"/>
+  <text class="tx" x="670" y="492">Scheduler state around switch</text>
+  <text class="tx" x="670" y="522">oldTask.State: Running -> Runnable/Dead</text>
+  <text class="tx" x="670" y="552">newTask.State: Runnable -> Running</text>
+  <text class="tx" x="670" y="582">currentTask = newTask</text>
+</svg>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="840" viewBox="0 0 1300 840">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}
+      .b{stroke:#1f2937;stroke-width:2;rx:8}.p1{fill:#dbeafe}.p2{fill:#dcfce7}.p3{fill:#fde68a}
+      .tx{font:600 14px Arial;fill:#0f172a}.ln{stroke:#1f2937;stroke-width:2;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect class="bg" width="1300" height="840"/>
+  <text class="t" x="30" y="45">kernel.Main boot and runtime loop</text>
+  <text class="s" x="30" y="70">Source: kernel/kernel.go lines 27-64</text>
+
+  <rect class="b p1" x="60" y="120" width="240" height="60"/><text class="tx" x="78" y="156">DisableInterrupts</text>
+  <rect class="b p1" x="60" y="210" width="240" height="60"/><text class="tx" x="78" y="246">terminal.Init + Clear</text>
+  <rect class="b p1" x="60" y="300" width="240" height="60"/><text class="tx" x="78" y="336">InitIDT</text>
+  <rect class="b p1" x="60" y="390" width="240" height="60"/><text class="tx" x="78" y="426">PIC/PIT setup</text>
+  <rect class="b p1" x="60" y="480" width="240" height="60"/><text class="tx" x="78" y="516">mem + scheduler + fs init</text>
+  <rect class="b p1" x="60" y="570" width="240" height="60"/><text class="tx" x="78" y="606">EnableInterrupts + shell.Init</text>
+
+  <rect class="b p2" x="420" y="180" width="280" height="70"/><text class="tx" x="440" y="220">for { DisableInterrupts }</text>
+  <rect class="b p2" x="420" y="290" width="280" height="70"/><text class="tx" x="440" y="330">keyboard.TryRead + EnableInterrupts</text>
+  <rect class="b p3" x="780" y="220" width="200" height="70"/><text class="tx" x="800" y="260">if !ok -> Halt</text>
+  <rect class="b p3" x="780" y="340" width="250" height="70"/><text class="tx" x="800" y="380">if ok -> shell.FeedRune</text>
+
+  <line class="ln" x1="180" y1="180" x2="180" y2="208"/>
+  <line class="ln" x1="180" y1="270" x2="180" y2="298"/>
+  <line class="ln" x1="180" y1="360" x2="180" y2="388"/>
+  <line class="ln" x1="180" y1="450" x2="180" y2="478"/>
+  <line class="ln" x1="180" y1="540" x2="180" y2="568"/>
+  <line class="ln" x1="300" y1="600" x2="418" y2="215"/>
+  <line class="ln" x1="560" y1="250" x2="560" y2="288"/>
+  <line class="ln" x1="700" y1="325" x2="778" y2="255"/>
+  <line class="ln" x1="700" y1="325" x2="778" y2="375"/>
+  <line class="ln" x1="980" y1="255" x2="560" y2="215"/>
+  <line class="ln" x1="1030" y1="375" x2="560" y2="215"/>
+</svg>

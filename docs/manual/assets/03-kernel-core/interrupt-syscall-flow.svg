@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="860" viewBox="0 0 1300 860">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}
+      .b{stroke:#1f2937;stroke-width:2;rx:8}.p1{fill:#dbeafe}.p2{fill:#dcfce7}.p3{fill:#fde68a}
+      .tx{font:600 14px Arial;fill:#0f172a}.ln{stroke:#1f2937;stroke-width:2;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect class="bg" width="1300" height="860"/>
+  <text class="t" x="30" y="45">Interrupt and syscall execution flow</text>
+  <text class="s" x="30" y="70">Source: kernel/idt.go, kernel/irq.go, boot/stubs_amd64.s</text>
+
+  <rect class="b p1" x="60" y="120" width="260" height="70"/><text class="tx" x="80" y="160">IRQ0 (PIT) -> vector 0x20</text>
+  <rect class="b p1" x="60" y="230" width="260" height="70"/><text class="tx" x="80" y="270">IRQ1 (keyboard) -> 0x21</text>
+  <rect class="b p1" x="60" y="340" width="260" height="70"/><text class="tx" x="80" y="380">int 0x80 syscall -> 0x80</text>
+
+  <rect class="b p2" x="400" y="120" width="280" height="70"/><text class="tx" x="420" y="160">IRQ0Stub pushes regs</text>
+  <rect class="b p2" x="400" y="230" width="280" height="70"/><text class="tx" x="420" y="270">IRQ1Stub pushes regs</text>
+  <rect class="b p2" x="400" y="340" width="280" height="70"/><text class="tx" x="420" y="380">Int80Stub -> TrapFrame ptr</text>
+
+  <rect class="b p3" x="760" y="120" width="280" height="80"/><text class="tx" x="780" y="155">IRQ0Handler</text><text class="tx" x="780" y="178">ticks++, EOI, Schedule</text>
+  <rect class="b p3" x="760" y="230" width="280" height="80"/><text class="tx" x="780" y="265">IRQ1Handler</text><text class="tx" x="780" y="288">keyboard.IRQHandler + EOI</text>
+  <rect class="b p3" x="760" y="340" width="280" height="80"/><text class="tx" x="780" y="375">Int80Handler switch(RAX)</text><text class="tx" x="780" y="398">SYS_WRITE / SYS_EXIT</text>
+
+  <line class="ln" x1="320" y1="155" x2="398" y2="155"/>
+  <line class="ln" x1="320" y1="265" x2="398" y2="265"/>
+  <line class="ln" x1="320" y1="375" x2="398" y2="375"/>
+  <line class="ln" x1="680" y1="155" x2="758" y2="155"/>
+  <line class="ln" x1="680" y1="265" x2="758" y2="265"/>
+  <line class="ln" x1="680" y1="375" x2="758" y2="375"/>
+</svg>

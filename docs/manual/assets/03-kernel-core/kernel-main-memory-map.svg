@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <defs><style>.bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}.b{fill:#fff;stroke:#1f2937;stroke-width:2;rx:8}.tx{font:600 14px Arial;fill:#0f172a}</style></defs>
+  <rect class="bg" width="1200" height="760"/>
+  <text class="t" x="30" y="45">Kernel core runtime memory map (conceptual)</text>
+  <text class="s" x="30" y="70">Steady-state objects touched by the main loop</text>
+
+  <rect class="b" x="70" y="120" width="460" height="140" fill="#dbeafe"/>
+  <text class="tx" x="90" y="152">Kernel image region</text>
+  <text class="tx" x="90" y="176">- code/rodata</text>
+  <text class="tx" x="90" y="200">- globals in data/bss (ticks, idt, idtr)</text>
+  <text class="tx" x="90" y="224">- static subsystem state</text>
+
+  <rect class="b" x="70" y="300" width="460" height="130" fill="#dcfce7"/>
+  <text class="tx" x="90" y="332">Input/output state</text>
+  <text class="tx" x="90" y="356">- keyboard ring buffer</text>
+  <text class="tx" x="90" y="380">- shell line/history buffers</text>
+  <text class="tx" x="90" y="404">- terminal cursor/vga state</text>
+
+  <rect class="b" x="70" y="470" width="460" height="160" fill="#fde68a"/>
+  <text class="tx" x="90" y="502">Allocator and FS state</text>
+  <text class="tx" x="90" y="526">- pfa bitmap metadata</text>
+  <text class="tx" x="90" y="550">- fs in-memory table</text>
+  <text class="tx" x="90" y="574">- scheduler task pool</text>
+  <text class="tx" x="90" y="598">- current task pointer</text>
+
+  <rect class="b" x="620" y="120" width="500" height="510" fill="#fff"/>
+  <text class="tx" x="640" y="152">Transient stack state (changes continuously)</text>
+  <text class="tx" x="640" y="184">- kernel.Main call frames</text>
+  <text class="tx" x="640" y="208">- IRQ/syscall temporary frames</text>
+  <text class="tx" x="640" y="232">- shell command execution frames</text>
+  <text class="tx" x="640" y="256">- scheduler transition frames</text>
+</svg>

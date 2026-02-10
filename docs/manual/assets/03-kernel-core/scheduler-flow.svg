@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="840" viewBox="0 0 1300 840">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}
+      .b{stroke:#1f2937;stroke-width:2;rx:8}.p1{fill:#dbeafe}.p2{fill:#dcfce7}.p3{fill:#fde68a}
+      .tx{font:600 14px Arial;fill:#0f172a}.ln{stroke:#1f2937;stroke-width:2;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect class="bg" width="1300" height="840"/>
+  <text class="t" x="30" y="45">Scheduler and context switch flow</text>
+  <text class="s" x="30" y="70">Source: scheduler.go + asm/switch.s</text>
+
+  <rect class="b p1" x="60" y="120" width="280" height="80"/><text class="tx" x="80" y="155">NewTaskEntry prepares stack</text><text class="tx" x="80" y="178">state = Runnable</text>
+  <rect class="b p1" x="60" y="250" width="280" height="80"/><text class="tx" x="80" y="285">Timer IRQ0 -> Schedule</text>
+  <rect class="b p2" x="420" y="250" width="280" height="80"/><text class="tx" x="440" y="285">find next runnable task</text>
+  <rect class="b p2" x="780" y="250" width="260" height="80"/><text class="tx" x="800" y="285">cpuSwitch(old,new)</text>
+  <rect class="b p3" x="1080" y="210" width="180" height="140"/><text class="tx" x="1100" y="245">asm:</text><text class="tx" x="1100" y="270">push old regs</text><text class="tx" x="1100" y="295">save old RSP</text><text class="tx" x="1100" y="320">load new RSP</text>
+
+  <rect class="b p3" x="420" y="420" width="280" height="90"/><text class="tx" x="440" y="455">ret into new task entry</text><text class="tx" x="440" y="478">task runs</text>
+  <rect class="b p3" x="780" y="420" width="300" height="90"/><text class="tx" x="800" y="455">task exits -> scheduler.Exit</text><text class="tx" x="800" y="478">state=Dead then Schedule</text>
+
+  <line class="ln" x1="200" y1="200" x2="200" y2="248"/>
+  <line class="ln" x1="340" y1="290" x2="418" y2="290"/>
+  <line class="ln" x1="700" y1="290" x2="778" y2="290"/>
+  <line class="ln" x1="1040" y1="290" x2="1078" y2="290"/>
+  <line class="ln" x1="1120" y1="350" x2="560" y2="418"/>
+  <line class="ln" x1="700" y1="465" x2="778" y2="465"/>
+  <line class="ln" x1="1080" y1="465" x2="200" y2="250"/>
+</svg>

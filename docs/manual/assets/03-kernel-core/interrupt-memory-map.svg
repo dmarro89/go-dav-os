@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="760" viewBox="0 0 1300 760">
+  <defs><style>.bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}.b{fill:#fff;stroke:#1f2937;stroke-width:2;rx:8}.tx{font:600 14px Arial;fill:#0f172a}</style></defs>
+  <rect class="bg" width="1300" height="760"/>
+  <text class="t" x="30" y="45">IDT and TrapFrame memory view (conceptual)</text>
+  <text class="s" x="30" y="70">IDT table in global memory, TrapFrame on current stack during stub entry</text>
+
+  <rect class="b" x="70" y="120" width="560" height="260" fill="#dbeafe"/>
+  <text class="tx" x="90" y="152">Global IDT region</text>
+  <text class="tx" x="90" y="176">idt[256] entries, each 16 bytes</text>
+  <text class="tx" x="90" y="200">active vectors: 0x08, 0x0D, 0x20, 0x21, 0x80</text>
+  <text class="tx" x="90" y="224">IDTR (10-byte packed structure) points to this table</text>
+
+  <rect class="b" x="700" y="120" width="520" height="500" fill="#dcfce7"/>
+  <text class="tx" x="720" y="152">Current kernel stack during Int80Stub/IRQ stub</text>
+  <text class="tx" x="720" y="180">Top of saved context (high-level order):</text>
+  <text class="tx" x="720" y="208">R15 R14 R13 R12 R11 R10 R9 R8</text>
+  <text class="tx" x="720" y="236">RDI RSI RBP RBX RDX RCX RAX</text>
+  <text class="tx" x="720" y="264">RIP CS RFLAGS (pushed by CPU path)</text>
+  <text class="tx" x="720" y="292">Go handler sees this as TrapFrame*</text>
+
+  <rect class="b" x="70" y="430" width="560" height="190" fill="#fde68a"/>
+  <text class="tx" x="90" y="462">State updated by handlers</text>
+  <text class="tx" x="90" y="486">- ticks counter (IRQ0)</text>
+  <text class="tx" x="90" y="510">- keyboard ring buffer (IRQ1 path)</text>
+  <text class="tx" x="90" y="534">- scheduler state (on timer preemption)</text>
+</svg>
