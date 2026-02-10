@@ -7,8 +7,7 @@ Goal: understand how kernel components connect, and know where to look in the co
 ## Where to start
 
 1. Read `docs/manual/00-introduction/README.md`
-2. Follow `docs/manual/STUDY_PATH.md`
-3. Jump to the subsystem you care about (boot, memory, scheduler, filesystem, shell)
+2. Jump to the subsystem you care about (boot, memory, scheduler, filesystem, shell)
 
 ## Tree structure
 
