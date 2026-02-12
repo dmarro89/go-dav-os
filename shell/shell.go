@@ -19,13 +19,14 @@ const (
 )
 
 var (
-	lineBuf    [maxLine]byte
-	lineLen    int
-	getTicks   func() uint64
-	runProgram func(name *[16]byte, nameLen int) (pid int, ok bool)
-	tmpName    [16]byte
-	tmpData    [4096]byte
-	diskBuf    [512]byte
+	lineBuf         [maxLine]byte
+	lineLen         int
+	getTicks        func() uint64
+	getSyscallTicks func() uint64
+	runProgram      func(name *[16]byte, nameLen int) (pid int, ok bool)
+	tmpName         [16]byte
+	tmpData         [4096]byte
+	diskBuf         [512]byte
 
 	// History ring buffer
 	// historyBuf stores the content of the commands
@@ -42,12 +43,13 @@ var (
 const maxHistory = 32
 
 var commandBuf = [...]string{
-	"help", "clear", "echo", "ticks", "mem", "mmap",
+	"help", "clear", "echo", "ticks", "uptime", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
 	"version", "history", "run",
 }
 
-func SetTickProvider(fn func() uint64) { getTicks = fn }
+func SetTickProvider(fn func() uint64)        { getTicks = fn }
+func SetSyscallTickProvider(fn func() uint64) { getSyscallTicks = fn }
 func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
 	runProgram = fn
 }
@@ -164,7 +166,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
+		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
 		return
 	}
 
@@ -189,6 +191,25 @@ func execute() {
 		}
 		printUint(getTicks())
 		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "uptime") {
+		if getSyscallTicks == nil {
+			terminal.Print("uptime: not wired yet\n")
+			return
+		}
+		t := getSyscallTicks()
+		secs := t / 100
+		mins := secs / 60
+		secs = secs % 60
+		terminal.Print("up ")
+		printUint(mins)
+		terminal.Print("m ")
+		printUint(secs)
+		terminal.Print("s (")
+		printUint(t)
+		terminal.Print(" ticks via SYS_GETTICKS)\n")
 		return
 	}
 

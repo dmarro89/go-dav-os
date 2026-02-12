@@ -38,6 +38,7 @@ func Main(multibootInfoAddr uint64) {
 	PITInit(100)
 
 	shell.SetTickProvider(GetTicks)
+	shell.SetSyscallTickProvider(TriggerSysGetTicks)
 	shell.SetProgramRunner(RunProgram)
 
 	if mem.InitMultiboot(multibootInfoAddr) {

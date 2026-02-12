@@ -14,8 +14,9 @@ const (
 )
 
 const (
-	SYS_WRITE = 1
-	SYS_EXIT  = 2
+	SYS_WRITE    = 1
+	SYS_EXIT     = 2
+	SYS_GETTICKS = 3
 )
 
 type TrapFrame struct {
@@ -69,6 +70,7 @@ func getIRQ1StubAddr() uint64
 // syscalls
 func TriggerSysWrite(buf *byte, n uint32)
 func TriggerSysExit(status uint32)
+func TriggerSysGetTicks() uint64
 
 func Int80Handler(tf *TrapFrame) {
 	switch uint32(tf.RAX) {
@@ -83,6 +85,8 @@ func Int80Handler(tf *TrapFrame) {
 		terminal.PrintInt(status)
 		terminal.Print("\n")
 		scheduler.Exit()
+	case SYS_GETTICKS:
+		tf.RAX = ticks
 	default:
 		terminal.Print("unknown syscall\n")
 		tf.RAX = ^uint64(0) // return -1

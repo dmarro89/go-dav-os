@@ -292,3 +292,13 @@ go_0kernel.TriggerSysExit:
     int  $0x80
     ret
 .size go_0kernel.TriggerSysExit, . - go_0kernel.TriggerSysExit
+
+# uint64 go_0kernel.TriggerSysGetTicks()
+.global go_0kernel.TriggerSysGetTicks
+.type   go_0kernel.TriggerSysGetTicks, @function
+
+go_0kernel.TriggerSysGetTicks:
+    mov  $3, %eax        # SYS_GETTICKS
+    int  $0x80
+    ret
+.size go_0kernel.TriggerSysGetTicks, . - go_0kernel.TriggerSysGetTicks
