@@ -46,6 +46,7 @@ SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go, $(wildcard kernel/scheduler/
 SCH_SWITCH_SRC := asm/switch.s
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
+USER_HELLO_OBJ := $(BUILD_DIR)/user_hello.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
 TERMINAL_OBJ := $(BUILD_DIR)/terminal.o
 TERMINAL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/terminal.gox
@@ -93,6 +94,9 @@ $(BUILD_DIR):
 # -----------------------
 $(BOOT_OBJ): $(BOOT_SRCS) | $(BUILD_DIR)
 	$(AS) $(BOOT_SRCS) -o $(BOOT_OBJ)
+
+$(USER_HELLO_OBJ): $(USER_HELLO_SRC) | $(BUILD_DIR)
+	$(AS) $(USER_HELLO_SRC) -o $(USER_HELLO_OBJ)
 
 # --- 2. Compile terminal.go (package terminal) with gccgo ---
 $(TERMINAL_OBJ): $(TERMINAL_SRC) | $(BUILD_DIR)
@@ -191,10 +195,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
@@ -232,18 +236,14 @@ docker-shell: docker-image
 # -----------------------
 # User hello
 # -----------------------
-HELLO_OBJ := $(BUILD_DIR)/hello.o
 HELLO_ELF := $(BUILD_DIR)/hello.elf
 HELLO_BIN := $(BUILD_DIR)/hello.bin
 
 user-hello: $(HELLO_BIN)
 
-$(HELLO_OBJ): $(USER_HELLO_SRC) | $(BUILD_DIR)
-	$(AS) $(USER_HELLO_SRC) -o $(HELLO_OBJ)
-
-$(HELLO_ELF): $(HELLO_OBJ)
+$(HELLO_ELF): $(USER_HELLO_OBJ)
 	$(GCC) -nostdlib -static -Wl,--build-id=none \
-		-Wl,-Ttext=0x400000 -o $(HELLO_ELF) $(HELLO_OBJ)
+		-Wl,-Ttext=0x400000 -Wl,-e,go_0kernel.userHelloStart -o $(HELLO_ELF) $(USER_HELLO_OBJ)
 
 $(HELLO_BIN): $(HELLO_ELF)
 	$(OBJCOPY) -O binary $(HELLO_ELF) $(HELLO_BIN)
