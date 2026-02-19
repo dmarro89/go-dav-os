@@ -1,6 +1,7 @@
 # go-dav-os
 
 Hobby project to dig deeper into how an OS works by writing the bare essentials of a kernel in Go. Only the kernel lives here (gccgo, x86_64 long mode); BIOS and bootloader are handled by battle-tested tools (GRUB with a Multiboot2 header). No reinvention of those pieces.
+Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the project ! 
 
 ## What’s inside
 
