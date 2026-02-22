@@ -140,8 +140,8 @@ def main():
         
         # 5. Test FAT Commands
         fat_cmds = [
-            ("fatinit", "FAT16 Initialized"),
             ("fatformat", "FAT16 Formatted"),
+            ("fatinit", "FAT16 Initialized"),
             ("fatcreate test hi", "File created"),
             ("fatls", "TEST"),
             ("fatread test", "hi")
