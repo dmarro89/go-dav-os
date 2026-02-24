@@ -42,10 +42,57 @@ var (
 // maxHistory defines the maximum size of the history ring buffer
 const maxHistory = 32
 
-var commandBuf = [...]string{
-	"help", "clear", "echo", "ticks", "uptime", "mem", "mmap",
-	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", "history", "run",
+// CommandInfo is the single source of truth for command metadata.
+// Used by help, suggestions, and usage messages.
+type CommandInfo struct {
+	Name  string
+	Usage string // Empty if no args; shown when validation fails
+}
+
+var commands = []CommandInfo{
+	{Name: "help"},
+	{Name: "clear"},
+	{Name: "echo"},
+	{Name: "ticks"},
+	{Name: "uptime"},
+	{Name: "mem", Usage: "mem <hex_addr> [len]"},
+	{Name: "mmap"},
+	{Name: "mmapmax"},
+	{Name: "pfa"},
+	{Name: "alloc"},
+	{Name: "free", Usage: "free <hex_addr>"},
+	{Name: "ls"},
+	{Name: "write", Usage: "write <name> <text...>"},
+	{Name: "cat", Usage: "cat <name>"},
+	{Name: "rm", Usage: "rm <name>"},
+	{Name: "stat", Usage: "stat <name>"},
+	{Name: "version"},
+	{Name: "history"},
+	{Name: "run", Usage: "run <program>"},
+	{Name: "disk", Usage: "disk <read|write> <lba> [text]"},
+	{Name: "fatinit"},
+	{Name: "fatformat"},
+	{Name: "fatinfo"},
+	{Name: "fatls"},
+	{Name: "fatcreate", Usage: "fatcreate <filename> <content>"},
+	{Name: "fatread", Usage: "fatread <filename>"},
+}
+
+func commandNames() []string {
+	names := make([]string, len(commands))
+	for i, c := range commands {
+		names[i] = c.Name
+	}
+	return names
+}
+
+func getUsage(cmd string) string {
+	for _, c := range commands {
+		if c.Name == cmd {
+			return c.Usage
+		}
+	}
+	return ""
 }
 
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
@@ -166,7 +213,15 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
+		names := commandNames()
+		terminal.Print("Commands: ")
+		for i, n := range names {
+			if i > 0 {
+				terminal.Print(", ")
+			}
+			terminal.Print(n)
+		}
+		terminal.Print("\n")
 		return
 	}
 
@@ -219,7 +274,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "mem") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: mem <hex_addr> [len]\n")
+			terminal.Print("Usage: " + getUsage("mem") + "\n")
 			return
 		}
 
@@ -333,7 +388,7 @@ func execute() {
 
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: free <hex_addr>\n")
+			terminal.Print("Usage: " + getUsage("free") + "\n")
 			return
 		}
 
@@ -371,7 +426,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "write") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: write <name> <text...>\n")
+			terminal.Print("Usage: " + getUsage("write") + "\n")
 			return
 		}
 
@@ -396,7 +451,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "cat") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: cat <name>\n")
+			terminal.Print("Usage: " + getUsage("cat") + "\n")
 			return
 		}
 
@@ -424,7 +479,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "rm") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: rm <name>\n")
+			terminal.Print("Usage: " + getUsage("rm") + "\n")
 			return
 		}
 
@@ -445,7 +500,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "stat") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: stat <name>\n")
+			terminal.Print("Usage: " + getUsage("stat") + "\n")
 			return
 		}
 
@@ -472,7 +527,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "disk") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: disk <read|write> <lba> [text]\n")
+			terminal.Print("Usage: " + getUsage("disk") + "\n")
 			return
 		}
 
@@ -580,7 +635,7 @@ func execute() {
 		// Usage: fatcreate <filename> <content>
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: fatcreate <filename> <content>\n")
+			terminal.Print("Usage: " + getUsage("fatcreate") + "\n")
 			return
 		}
 
@@ -631,7 +686,7 @@ func execute() {
 		// Usage: fatread <filename>
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: fatread <filename>\n")
+			terminal.Print("Usage: " + getUsage("fatread") + "\n")
 			return
 		}
 
@@ -682,7 +737,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "run") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: run <program>\n")
+			terminal.Print("Usage: " + getUsage("run") + "\n")
 			return
 		}
 
@@ -709,23 +764,23 @@ func execute() {
 		return
 	}
 
-	var suggestionBuf [len(commandBuf)]string
-	suggestionCount := 0
+	names := commandNames()
+	suggestionBuf := make([]string, 0, len(names))
 
-	for i := 0; i < len(commandBuf); i++ {
-		if calculateDistance(cmdStart, cmdEnd, commandBuf[i]) < maxDistanceThreshold {
-			suggestionBuf[suggestionCount] = commandBuf[i]
-			suggestionCount++
+	for _, cmd := range names {
+		if calculateDistance(cmdStart, cmdEnd, cmd) < maxDistanceThreshold {
+			suggestionBuf = append(suggestionBuf, cmd)
 		}
 	}
+	suggestionCount := len(suggestionBuf)
 
 	if suggestionCount > 0 {
 		terminal.Print("Did you mean '")
-		for i := 0; i < suggestionCount; i++ {
-			if i > 0 { // To ensure formatting; the first time we print we do not add a space in-front of the suggestion
+		for i, s := range suggestionBuf {
+			if i > 0 {
 				terminal.Print(" ")
 			}
-			terminal.Print(suggestionBuf[i])
+			terminal.Print(s)
 		}
 		terminal.Print("'?")
 		terminal.PutRune('\n')
