@@ -56,7 +56,6 @@ var idtr [10]byte
 // Assembly hooks (boot/stubs_amd64.s)
 func LoadIDT(p *[10]byte)
 func StoreIDT(p *[10]byte)
-func InitTSS(rsp0 uint64)
 
 func getInt80StubAddr() uint64
 func getGPFaultStubAddr() uint64
@@ -140,15 +139,9 @@ func setIDTEntry(vec uint8, handler uint64, selector uint16, flags uint8) {
 	e.zero = 0
 }
 
-var ring0Stack [4096]byte
-
 // InitIDT builds the IDT and loads it into the CPU
 func InitIDT() {
 	cs := GetCS()
-
-	rsp0 := uint64(uintptr(unsafe.Pointer(&ring0Stack[4095])))
-	rsp0 = rsp0 &^ 15
-	InitTSS(rsp0)
 
 	// Install emergency handlers first
 	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateKernelFlags)  // #DF

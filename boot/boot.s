@@ -98,8 +98,8 @@ gdt64:
 	.quad 0x0000000000000000
 	.quad 0x00AF9A000000FFFF
 	.quad 0x00CF92000000FFFF
-	.quad 0x00CFF2000000FFFF
-	.quad 0x00AFFA000000FFFF
+	.quad 0x00AFFA000000FFFF  # Index 3: User Code (0x18 | 3 = 0x1B)
+	.quad 0x00CFF2000000FFFF  # Index 4: User Data (0x20 | 3 = 0x23)
 	.quad 0  # TSS low
 	.quad 0  # TSS high
 
