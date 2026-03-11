@@ -1,6 +1,7 @@
 # go-dav-os
 
 Hobby project to dig deeper into how an OS works by writing the bare essentials of a kernel in Go. Only the kernel lives here (gccgo, x86_64 long mode); BIOS and bootloader are handled by battle-tested tools (GRUB with a Multiboot2 header). No reinvention of those pieces.
+Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the project ! 
 
 ## What’s inside
 
@@ -75,18 +76,18 @@ To force cross binaries: `make CROSS=x86_64-elf`
 ## What you’ll see on screen
 
 - On boot the prompt `> ` shows up
-- `help` lists commands, `clear` wipes the screen, `about` prints kernel info
+- `help` lists commands, `clear` wipes the screen
 - The kernel idles with `hlt` when nothing is happening
 
 ### Shell commands (current)
 
-- `help`, `clear`, `about`, `echo`
+- `help`, `clear`, `echo`, `version`, `history`
 - `ticks` (PIT tick counter)
 - `mem <hex_addr> [len]` (hexdump)
 - `mmap`, `mmapmax` (Multiboot memory map and highest usable end)
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
 - `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (in-memory filesystem)
-- `version` (OS name and version)
+- `run <program>` (task runner)
 
 ### Persistent Storage (FAT16)
 
@@ -105,6 +106,19 @@ fatinit
 fatcreate hello Hello World
 fatls
 fatread hello
+```
+
+### Run simple programs
+
+The task runner can start small assembly programs linked into the kernel.
+At the moment, the supported launch name is:
+- `run hello`
+
+This starts `user/hello.s`, which calls `SYS_WRITE` and then `SYS_EXIT`.
+
+**Example:**
+```bash
+run hello
 ```
 
 ## Other folder layout

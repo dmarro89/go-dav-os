@@ -244,6 +244,36 @@ go_0kernel.LoadIDT:
 	lidt (%rdi)
 	ret
 
+# void go_0kernel.LoadGDT(void *gdtr)
+.global go_0kernel.LoadGDT
+.type   go_0kernel.LoadGDT, @function
+go_0kernel.LoadGDT:
+	lgdt (%rdi)
+	ret
+.size go_0kernel.LoadGDT, . - go_0kernel.LoadGDT
+
+# void go_0kernel.LoadTR(uint16 sel)
+.global go_0kernel.LoadTR
+.type   go_0kernel.LoadTR, @function
+go_0kernel.LoadTR:
+	movw %di, %ax
+	ltr %ax
+	ret
+.size go_0kernel.LoadTR, . - go_0kernel.LoadTR
+
+# void go_0kernel.LoadDataSegments(uint16 sel)
+.global go_0kernel.LoadDataSegments
+.type   go_0kernel.LoadDataSegments, @function
+go_0kernel.LoadDataSegments:
+	movw %di, %ax
+	movw %ax, %ds
+	movw %ax, %es
+	movw %ax, %ss
+	movw %ax, %fs
+	movw %ax, %gs
+	ret
+.size go_0kernel.LoadDataSegments, . - go_0kernel.LoadDataSegments
+
 # void go_0kernel.StoreIDT(void *idtr)
 .global go_0kernel.StoreIDT
 .type   go_0kernel.StoreIDT, @function

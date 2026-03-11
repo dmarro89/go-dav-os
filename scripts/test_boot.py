@@ -28,11 +28,18 @@ def main():
     print(f"Starting QEMU verification for {iso_path}...")
     print(f"Log file: {log_file}")
     
+    disk_img = "disk.img"
+    if not os.path.exists(disk_img):
+        print(f"Creating empty {disk_img} (20MB)...")
+        with open(disk_img, "wb") as f:
+            f.write(b'\0' * (20 * 1024 * 1024))
+
     # Run QEMU with debugcon logging to file and monitor on stdio.
     # CRITICAL: We use 'file:qemu.log' to capture 0xE9 port output.
     cmd = [
         "qemu-system-x86_64",
         "-cdrom", iso_path,
+        "-drive", f"file={disk_img},format=raw",
         "-debugcon", f"file:{log_file}",
         "-serial", "none",
         "-monitor", "stdio",
@@ -130,6 +137,45 @@ def main():
             print("ERROR: 64-bit marker not found in version output.")
             sys.exit(1)
         print("64-bit marker detected in version output.")
+        
+        # 5. Test FAT Commands
+        fat_cmds = [
+            ("fatformat", "FAT16 Formatted"),
+            ("fatinit", "FAT16 Initialized"),
+            ("fatcreate test hi", "File created"),
+            ("fatls", "TEST"),
+            ("fatread test", "hi")
+        ]
+
+        for cmd_text, expected in fat_cmds:
+            print(f"Sending '{cmd_text}' command via QEMU monitor...")
+            for char in cmd_text:
+                k = 'spc' if char == ' ' else char
+                cmd_str = f"sendkey {k}\n"
+                try:
+                    process.stdin.write(cmd_str)
+                    process.stdin.flush()
+                except BrokenPipeError:
+                    print("Error: QEMU closed stdin (crashed?)")
+                    break
+                time.sleep(0.1)
+            
+            try:
+                process.stdin.write("sendkey ret\n")
+                process.stdin.flush()
+            except BrokenPipeError:
+                pass
+            time.sleep(0.1)
+
+            print(f"Waiting for '{expected}' output...")
+            if not check_log_for(expected, log_file, timeout=5):
+                print(f"ERROR: Timeout waiting for '{expected}' from command '{cmd_text}'.")
+                if process.poll() is not None:
+                    print(f"QEMU exited with {process.returncode}")
+                    print("Stderr:", process.stderr.read())
+                sys.exit(1)
+            print(f"Test Passed: '{cmd_text}' command executed successfully.")
+
         
     finally:
         if process.poll() is None:

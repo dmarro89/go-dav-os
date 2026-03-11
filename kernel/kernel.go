@@ -29,6 +29,7 @@ func Main(multibootInfoAddr uint64) {
 	terminal.Init()
 	terminal.Clear()
 
+	InitGDTAndTSS()
 	InitIDT()
 
 	SyscallTest()

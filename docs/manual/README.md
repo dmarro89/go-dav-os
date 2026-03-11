@@ -26,6 +26,7 @@ docs/manual/
 ├── 03-kernel-core/
 │   ├── main-loop.md
 │   ├── interrupts-and-syscalls.md
+│   ├── privilege-transition-gdt-tss-rsp0.md
 │   ├── scheduler-and-tasks.md
 │   └── theory-reference.md
 ├── 04-memory/

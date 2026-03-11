@@ -32,6 +32,8 @@ FS_IMPORT := $(MODPATH)/fs
 ATA_IMPORT := $(MODPATH)/drivers/ata
 FAT16_IMPORT := $(MODPATH)/fs/fat16
 SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
+GDT_IMPORT := $(MODPATH)/kernel/gdt
+TSS_IMPORT := $(MODPATH)/kernel/tss
 
 KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
 USER_HELLO_SRC := user/hello.s
@@ -43,9 +45,13 @@ FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
 ATA_SRCS  := drivers/ata/ata.go
 FAT16_SRCS := fs/fat16/fat16.go
 SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go, $(wildcard kernel/scheduler/*.go))
+GDT_SRCS := $(filter-out %_test.go, $(wildcard kernel/gdt/*.go))
+TSS_SRCS := $(filter-out %_test.go, $(wildcard kernel/tss/*.go))
 SCH_SWITCH_SRC := asm/switch.s
+TEST_PKGS := $(shell find . -name '*_test.go' -not -path './build/*' -exec dirname {} \; | sed 's|^\./|./|' | sort -u)
 
 BOOT_OBJ   := $(BUILD_DIR)/boot.o
+USER_HELLO_OBJ := $(BUILD_DIR)/user_hello.o
 KERNEL_OBJ := $(BUILD_DIR)/kernel.o
 TERMINAL_OBJ := $(BUILD_DIR)/terminal.o
 TERMINAL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/terminal.gox
@@ -62,10 +68,14 @@ ATA_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/drivers/ata.gox
 FAT16_OBJ := $(BUILD_DIR)/fat16.o
 FAT16_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/fs/fat16.gox
 SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
+GDT_OBJ := $(BUILD_DIR)/gdt.o
+TSS_OBJ := $(BUILD_DIR)/tss.o
 SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
 SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
+GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
+TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
 
-.PHONY: all kernel iso run clean docker-build docker-shell docker-run
+.PHONY: all kernel iso run clean docker-build docker-shell docker-run test
 
 all: $(ISO_IMAGE)
 
@@ -93,6 +103,9 @@ $(BUILD_DIR):
 # -----------------------
 $(BOOT_OBJ): $(BOOT_SRCS) | $(BUILD_DIR)
 	$(AS) $(BOOT_SRCS) -o $(BOOT_OBJ)
+
+$(USER_HELLO_OBJ): $(USER_HELLO_SRC) | $(BUILD_DIR)
+	$(AS) $(USER_HELLO_SRC) -o $(USER_HELLO_OBJ)
 
 # --- 2. Compile terminal.go (package terminal) with gccgo ---
 $(TERMINAL_OBJ): $(TERMINAL_SRC) | $(BUILD_DIR)
@@ -179,11 +192,29 @@ $(SCHEDULER_GOX): $(SCHEDULER_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(SCHEDULER_GOX))
 	$(OBJCOPY) -j .go_export $(SCHEDULER_OBJ) $(SCHEDULER_GOX)
 
+$(GDT_OBJ): $(GDT_SRCS) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(GDT_IMPORT) \
+		-c $(GDT_SRCS) -o $(GDT_OBJ)
+
+$(GDT_GOX): $(GDT_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(GDT_GOX))
+	$(OBJCOPY) -j .go_export $(GDT_OBJ) $(GDT_GOX)
+
+$(TSS_OBJ): $(TSS_SRCS) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(TSS_IMPORT) \
+		-c $(TSS_SRCS) -o $(TSS_OBJ)
+
+$(TSS_GOX): $(TSS_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(TSS_GOX))
+	$(OBJCOPY) -j .go_export $(TSS_OBJ) $(TSS_GOX)
+
 $(SCH_SWITCH_OBJ): $(SCH_SWITCH_SRC) | $(BUILD_DIR)
 	$(AS) $(SCH_SWITCH_SRC) -o $(SCH_SWITCH_OBJ)
 
 # --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) $(GDT_GOX) $(TSS_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
@@ -191,10 +222,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
@@ -230,20 +261,23 @@ docker-shell: docker-image
 	  -v "$(CURDIR)":/work -w /work $(DOCKER_IMAGE) bash
 
 # -----------------------
+# Unit tests
+# -----------------------
+test:
+	mkdir -p $(BUILD_DIR)/.gocache
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test $(TEST_PKGS)
+
+# -----------------------
 # User hello
 # -----------------------
-HELLO_OBJ := $(BUILD_DIR)/hello.o
 HELLO_ELF := $(BUILD_DIR)/hello.elf
 HELLO_BIN := $(BUILD_DIR)/hello.bin
 
 user-hello: $(HELLO_BIN)
 
-$(HELLO_OBJ): $(USER_HELLO_SRC) | $(BUILD_DIR)
-	$(AS) $(USER_HELLO_SRC) -o $(HELLO_OBJ)
-
-$(HELLO_ELF): $(HELLO_OBJ)
+$(HELLO_ELF): $(USER_HELLO_OBJ)
 	$(GCC) -nostdlib -static -Wl,--build-id=none \
-		-Wl,-Ttext=0x400000 -o $(HELLO_ELF) $(HELLO_OBJ)
+		-Wl,-Ttext=0x400000 -Wl,-e,go_0kernel.userHelloStart -o $(HELLO_ELF) $(USER_HELLO_OBJ)
 
 $(HELLO_BIN): $(HELLO_ELF)
 	$(OBJCOPY) -O binary $(HELLO_ELF) $(HELLO_BIN)

@@ -1,11 +1,11 @@
-# hello.s - Tiny userland program for go-dav-os
-# Validates syscall interface: SYS_WRITE and SYS_EXIT
+# hello.s - Tiny user task for go-dav-os
+# Linked into kernel and started by the task runner via run hello
 
 .code64
 .section .text
-.global _start
+.global go_0kernel.userHelloStart
 
-_start:
+go_0kernel.userHelloStart:
     # SYS_WRITE: write "hello from userland\n" to stdout
     mov  $1, %rax           # SYS_WRITE = 1
     mov  $1, %rbx           # fd = 1 (stdout)
