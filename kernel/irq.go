@@ -3,7 +3,12 @@ package kernel
 import (
 	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/keyboard"
+	"github.com/dmarro89/go-dav-os/keyboard/layout"
 )
+
+func init() {
+	keyboard.SetLayout(layout.IT)
+}
 
 var ticks uint64
 
