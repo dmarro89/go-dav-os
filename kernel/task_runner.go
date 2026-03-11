@@ -1,15 +1,15 @@
 package kernel
 
-import "github.com/dmarro89/go-dav-os/kernel/scheduler"
-
-var helloProgramMsg = [...]byte{
-	'H', 'e', 'l', 'l', 'o', ' ', 'f', 'r', 'o', 'm', ' ',
-	't', 'a', 's', 'k', '\n',
-}
+import "unsafe"
 
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}
 
 const helloProgramNameLen = 5
+
+func ExecuteUserTask(rip, rsp uint64)
+func GetUserProgramShellAddr() uint64
+
+var userStack [4096]byte
 
 func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
 	if nameLen != helloProgramNameLen {
@@ -22,16 +22,11 @@ func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
 		}
 	}
 
-	task := scheduler.NewTask(programHello)
-	if task == nil {
-		return -1, false
-	}
-	return task.ID, true
-}
+	stackAddr := uint64(uintptr(unsafe.Pointer(&userStack[4095])))
+	stackAddr = stackAddr &^ 15
 
-func programHello() {
-	TriggerSysWrite(&helloProgramMsg[0], uint32(len(helloProgramMsg)))
-	TriggerSysExit(0)
-	for {
-	}
+	rip := GetUserProgramShellAddr()
+	ExecuteUserTask(rip, stackAddr)
+
+	return 1, true
 }

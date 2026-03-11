@@ -474,3 +474,134 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw:
 	rep outsw
 	ret
 .size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
+
+# void go_0kernel.ExecuteUserTask(funcPtr uint64, stackPtr uint64)
+.global go_0kernel.ExecuteUserTask
+.type   go_0kernel.ExecuteUserTask, @function
+go_0kernel.ExecuteUserTask:
+    # Save kernel state
+    mov %rsp, __kernel_saved_rsp(%rip)
+    mov %rbp, __kernel_saved_rbp(%rip)
+    mov %rbx, __kernel_saved_rbx(%rip)
+    mov %r12, __kernel_saved_r12(%rip)
+    mov %r13, __kernel_saved_r13(%rip)
+    mov %r14, __kernel_saved_r14(%rip)
+    mov %r15, __kernel_saved_r15(%rip)
+
+    # Setup iretq frame
+    mov $0x23, %ax      # user data selector 0x18 | 3 = 0x1B? No, User Data is index 3 (0x18), wait: 0x00 Null, 0x08 KCode, 0x10 KData, 0x18 UData, 0x20 UCode. So 0x1B is UData, 0x23 is UCode. NO, wait! my gdt in boot.s is: 0x18: User Data, 0x20: User Code. So 0x1B for DS, ES, FS, GS, SS. And 0x23 for CS.
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    pushq $0x1B         # SS
+    pushq %rsi          # RSP
+    pushf               # RFLAGS
+    popq %rax
+    orq $0x200, %rax    # IF bit
+    pushq %rax
+    pushq $0x23         # CS
+    pushq %rdi          # RIP
+    iretq
+.size go_0kernel.ExecuteUserTask, . - go_0kernel.ExecuteUserTask
+
+# void go_0kernel.ReturnToKernel()
+.global go_0kernel.ReturnToKernel
+.type   go_0kernel.ReturnToKernel, @function
+go_0kernel.ReturnToKernel:
+    # Restore kernel data segments
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    mov __kernel_saved_rsp(%rip), %rsp
+    mov __kernel_saved_rbp(%rip), %rbp
+    mov __kernel_saved_rbx(%rip), %rbx
+    mov __kernel_saved_r12(%rip), %r12
+    mov __kernel_saved_r13(%rip), %r13
+    mov __kernel_saved_r14(%rip), %r14
+    mov __kernel_saved_r15(%rip), %r15
+
+    # Ret where ExecuteUserTask was called
+    ret
+.size go_0kernel.ReturnToKernel, . - go_0kernel.ReturnToKernel
+
+# uint64 go_0kernel.GetUserProgramShellAddr()
+.global go_0kernel.GetUserProgramShellAddr
+.type   go_0kernel.GetUserProgramShellAddr, @function
+go_0kernel.GetUserProgramShellAddr:
+    leaq go_0kernel.UserProgramShell(%rip), %rax
+    ret
+.size go_0kernel.GetUserProgramShellAddr, . - go_0kernel.GetUserProgramShellAddr
+
+.global go_0kernel.UserProgramShell
+.type go_0kernel.UserProgramShell, @function
+go_0kernel.UserProgramShell:
+    mov $1, %rax
+    mov $1, %rbx
+    lea __user_msg(%rip), %rcx
+    mov $20, %rdx
+    int $0x80
+
+    mov $2, %rax
+    mov $0, %rbx
+    int $0x80
+    hlt
+
+# void go_0kernel.InitTSS(uint64 rsp0)
+.global go_0kernel.InitTSS
+.type   go_0kernel.InitTSS, @function
+go_0kernel.InitTSS:
+    # Initialize TSS RSP0
+    leaq tss(%rip), %rax
+    mov %rdi, 4(%rax)
+    movw $104, 102(%rax)
+
+    # Build TSS descriptor in gdt64 at offset 0x28
+    # We do this from assembly directly to gdt64
+    # Limit: 103 (0x67) -> word at [0x28]
+    # Base Low: ax -> word at [0x2A]
+    # Base Mid: (rax >> 16) & 0xFF -> byte at [0x2C]
+    # Type/Flags: 0x89 -> byte at [0x2D]
+    # Flags2/Limit High: 0x00 -> byte at [0x2E]
+    # Base High: (rax >> 24) & 0xFF -> byte at [0x2F]
+    # Base Upper: (rax >> 32) & 0xFFFFFFFF -> dword at [0x30]
+    
+    leaq gdt64(%rip), %rcx
+    movw $0x67, 40(%rcx)
+    movw %ax, 42(%rcx)
+    
+    movq %rax, %rdx
+    shrq $16, %rdx
+    movb %dl, 44(%rcx)
+    
+    movb $0x89, 45(%rcx)
+    movb $0x00, 46(%rcx)
+    
+    movq %rax, %rdx
+    shrq $24, %rdx
+    movb %dl, 47(%rcx)
+    
+    movq %rax, %rdx
+    shrq $32, %rdx
+    movl %edx, 48(%rcx)
+    movl $0, 52(%rcx)
+
+    # Load TR (offset 0x28)
+    mov $0x28, %dx
+    ltr %dx
+    ret
+.size go_0kernel.InitTSS, . - go_0kernel.InitTSS
+
+.section .data
+__kernel_saved_rsp: .quad 0
+__kernel_saved_rbp: .quad 0
+__kernel_saved_rbx: .quad 0
+__kernel_saved_r12: .quad 0
+__kernel_saved_r13: .quad 0
+__kernel_saved_r14: .quad 0
+__kernel_saved_r15: .quad 0
+__user_msg: .ascii "hello from userland\n"
