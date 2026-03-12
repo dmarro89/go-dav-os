@@ -140,18 +140,16 @@ func setIDTEntry(vec uint8, handler uint64, selector uint16, flags uint8) {
 
 // InitIDT builds the IDT and loads it into the CPU
 func InitIDT() {
-	cs := GetCS()
-
 	// Install emergency handlers first
-	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateKernelFlags)  // #DF
-	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateKernelFlags) // #GP
+	setIDTEntry(0x08, getDFaultStubAddr(), kernelCodeSelector, intGateKernelFlags)  // #DF
+	setIDTEntry(0x0D, getGPFaultStubAddr(), kernelCodeSelector, intGateKernelFlags) // #GP
 
 	// Install IRQ handlers
-	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateKernelFlags) // IRQ0
-	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateKernelFlags) // IRQ1
+	setIDTEntry(0x20, getIRQ0StubAddr(), kernelCodeSelector, intGateKernelFlags) // IRQ0
+	setIDTEntry(0x21, getIRQ1StubAddr(), kernelCodeSelector, intGateKernelFlags) // IRQ1
 
 	// Install 0x80 syscall handler
-	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateUserFlags)
+	setIDTEntry(0x80, getInt80StubAddr(), kernelCodeSelector, intGateUserFlags)
 
 	// Build IDTR (packed 10 bytes)
 	base := uint64(uintptr(unsafe.Pointer(&idt[0])))
