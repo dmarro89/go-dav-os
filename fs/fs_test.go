@@ -12,9 +12,12 @@ func MockInit() {
 		files[i].size = 0
 		files[i].page = 0
 	}
-	// Default to success mocks
+	// Default to success mocks with a valid backing address
 	pfaReady = func() bool { return true }
-	allocPage = func() uint64 { return 10000 }
+	mockPage := make([]byte, 4096)
+	allocPage = func() uint64 {
+		return uint64(uintptr(unsafe.Pointer(&mockPage[0])))
+	}
 	freePage = func(page uint64) bool { return true }
 }
 
