@@ -2,6 +2,7 @@ package fs
 
 import (
 	"testing"
+	"unsafe"
 )
 
 func MockInit() {
@@ -11,6 +12,13 @@ func MockInit() {
 		files[i].size = 0
 		files[i].page = 0
 	}
+	// Default to success mocks with a valid backing address
+	pfaReady = func() bool { return true }
+	mockPage := make([]byte, 4096)
+	allocPage = func() uint64 {
+		return uint64(uintptr(unsafe.Pointer(&mockPage[0])))
+	}
+	freePage = func(page uint64) bool { return true }
 }
 
 // helper to make a name array
@@ -96,14 +104,55 @@ func TestRemove(t *testing.T) {
 func TestWriteFailure(t *testing.T) {
 	MockInit()
 
-	// Because we cannot mock mem.PFAReady() or mem.AllocPage() without modifying fs.go,
-	// Write() must fail.
+	// Mock pfaReady to fail
+	pfaReady = func() bool { return false }
+	
 
 	name, nameLen := makeName("new.txt")
 	data := []byte("hello")
 
 	success := Write(&name, nameLen, &data[0], uint32(len(data)))
 	if success {
-		t.Errorf("Write succeeded unexpectedly (should fail due to missing memory subsystem)")
+		t.Errorf("Write succeeded unexpectedly")
+	}
+
+	// Mock allocPage to fail
+	pfaReady = func() bool { return true }
+	allocPage = func() uint64 { return 0 }
+
+	success = Write(&name, nameLen, &data[0], uint32(len(data)))
+	if success {
+		t.Errorf("Write succeeded unexpectedly when allocPage fails")
+	}
+}
+
+func TestWriteSuccess(t *testing.T) {
+	MockInit()
+
+	// Mock functions to return success (already done in MockInit)
+	// We need to provide actual memory to write to.
+	// We'll mock allocPage to return an address to a local slice.
+	fakePage := make([]byte, 4096)
+	pfaReady = func() bool { return true }
+	
+	// WARNING: In fs.go we do runtime casting from uint64 address to memory pointers.
+	// We must return a valid memory address.
+	allocPage = func() uint64 {
+		return uint64(uintptr(unsafe.Pointer(&fakePage[0])))
+	}
+
+	name, nameLen := makeName("new.txt")
+	data := []byte("hello")
+
+	success := Write(&name, nameLen, &data[0], uint32(len(data)))
+	if !success {
+		t.Fatalf("Write failed unexpectedly")
+	}
+
+	// Verify the data was written to our fake memory
+	for i := range data {
+		if fakePage[i] != data[i] {
+			t.Errorf("Byte %d mismatch: got %c, want %c", i, fakePage[i], data[i])
+		}
 	}
 }

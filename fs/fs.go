@@ -22,6 +22,12 @@ type fileEntry struct {
 
 var files [maxFiles]fileEntry
 
+var (
+	pfaReady  = mem.PFAReady
+	allocPage = mem.AllocPage
+	freePage  = mem.FreePage
+)
+
 // Init resets the in-memory filesystem table
 func Init() {
 	for i := 0; i < maxFiles; i++ {
@@ -76,10 +82,10 @@ func Write(name *[maxName]byte, nameLen int, data *byte, dataLen uint32) bool {
 
 	// allocate a page if this is a new file
 	if !e.used {
-		if !mem.PFAReady() {
+		if !pfaReady() {
 			return false
 		}
-		p := mem.AllocPage()
+		p := allocPage()
 		if p == 0 {
 			return false
 		}
@@ -108,7 +114,7 @@ func Remove(name *[maxName]byte, nameLen int) bool {
 
 	e := &files[idx]
 	if e.used && e.page != 0 {
-		mem.FreePage(e.page)
+		freePage(e.page)
 	}
 
 	e.used = false
