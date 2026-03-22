@@ -485,9 +485,9 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb:
 .global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw
 .type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw, @function
 github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw:
+	movq %rdx, %rcx    # count to RCX
 	movw %di, %dx      # port in DX
 	movq %rsi, %rdi    # addr to RDI (destination)
-	movq %rdx, %rcx    # count to RCX
 	cld
 	rep insw
 	ret
@@ -497,9 +497,9 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw:
 .global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
 .type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, @function
 github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw:
+	movq %rdx, %rcx    # count to RCX
 	movw %di, %dx      # port in DX
 	# addr is already in RSI (source)
-	movq %rdx, %rcx    # count to RCX
 	cld
 	rep outsw
 	ret
