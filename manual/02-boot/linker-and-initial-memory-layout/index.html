@@ -1,0 +1,829 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Linker and Initial Memory Layout - Go DAV OS</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#linker-and-initial-memory-layout" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Go DAV OS
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Linker and Initial Memory Layout
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Go DAV OS
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/00-introduction/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/01-overview/architecture.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot & GRUB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Privilege Transition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-chapter-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this chapter matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#linker-vs-loader-clear-responsibility-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linker vs loader: clear responsibility split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-anchors-exact-code-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source anchors (exact code references)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#our-linker-script-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Our linker script at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-placement-policy-in-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime placement policy in SECTIONS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-means-in-practice-manual-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this means in practice (manual-level)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exported-symbols-and-who-uses-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exported symbols and who uses them
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exported symbols and who uses them">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__bss_start-__bss_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __bss_start, __bss_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#__bootstrap_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __bootstrap_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#__kernel_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __kernel_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-kernelend-and-bootstrapend-are-both-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why kernelEnd and bootstrapEnd are both needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-bootstrap_stack-is-outside-bss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why .bootstrap_stack is outside .bss
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-layout-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual layout (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-flow-of-symbol-propagation-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual flow of symbol propagation (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-layout-address-oriented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual layout (address-oriented)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-time-contract-vs-runtime-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build-time contract vs runtime behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-source-files-to-read-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related source files to read next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="linker-and-initial-memory-layout">Linker and Initial Memory Layout</h1>
+<h2 id="why-this-chapter-matters">Why this chapter matters</h2>
+<p>GRUB loads your kernel image, but the linker script decides how that image is organized in memory.
+This file is the contract between build-time layout and runtime assumptions.</p>
+<h2 id="linker-vs-loader-clear-responsibility-split">Linker vs loader: clear responsibility split</h2>
+<ul>
+<li>Loader (GRUB): reads ELF from disk and places loadable segments in RAM</li>
+<li>Linker (<code>ld</code> via <code>boot/linker.ld</code>): defines section order, addresses, alignment, and exported symbols</li>
+</ul>
+<p>If the linker layout is wrong, early boot code can fail even when GRUB is working correctly.</p>
+<h2 id="source-anchors-exact-code-references">Source anchors (exact code references)</h2>
+<p>Use these anchors while reading:</p>
+<ul>
+<li>Linker declarations and section policy: <code>boot/linker.ld:11</code> to <code>boot/linker.ld:58</code></li>
+<li><code>.bss</code> clear at runtime: <code>boot/boot.s:258</code> to <code>boot/boot.s:263</code></li>
+<li>Symbol bridge assembly stubs:</li>
+<li><code>boot/stubs_amd64.s:60</code> to <code>boot/stubs_amd64.s:66</code> (<code>__bootstrap_end</code>)</li>
+<li><code>boot/stubs_amd64.s:68</code> to <code>boot/stubs_amd64.s:74</code> (<code>__kernel_end</code>)</li>
+<li>Go declarations for linker bounds: <code>mem/kernel_bounds_gccgo.go:5</code> to <code>mem/kernel_bounds_gccgo.go:6</code></li>
+<li>Allocator safety check: <code>mem/allocator.go:16</code> to <code>mem/allocator.go:23</code></li>
+</ul>
+<h2 id="our-linker-script-at-a-glance">Our linker script at a glance</h2>
+<p>Key file:</p>
+<ul>
+<li><code>boot/linker.ld</code></li>
+</ul>
+<p>Core declarations:</p>
+<ul>
+<li><code>OUTPUT_FORMAT("elf64-x86-64")</code></li>
+<li><code>OUTPUT_ARCH(i386:x86-64)</code></li>
+<li><code>ENTRY(_start)</code></li>
+</ul>
+<p>This means:</p>
+<ul>
+<li>64-bit ELF output</li>
+<li>x86_64 target architecture</li>
+<li>entry symbol is <code>_start</code> (implemented in <code>boot/boot.s</code>)</li>
+</ul>
+<h2 id="runtime-placement-policy-in-sections">Runtime placement policy in <code>SECTIONS</code></h2>
+<p><code>SECTIONS</code> starts with:</p>
+<ul>
+<li><code>. = 1M;</code></li>
+</ul>
+<p>So the kernel image is linked to begin at physical address <code>0x00100000</code>.</p>
+<p>Then sections are laid out in this order, each page-aligned (<code>BLOCK(4K)</code> + <code>ALIGN(4K)</code>):</p>
+<ol>
+<li><code>.text</code></li>
+<li><code>.rodata</code></li>
+<li><code>.data</code></li>
+<li><code>.bss</code></li>
+<li><code>.bootstrap_stack</code></li>
+</ol>
+<p>Important detail: <code>.text</code> includes both:</p>
+<ul>
+<li><code>*(.multiboot2)</code></li>
+<li><code>*(.text)</code></li>
+</ul>
+<p>This helps keep the Multiboot2 header near the beginning of the image, where GRUB can find it.</p>
+<h2 id="what-this-means-in-practice-manual-level">What this means in practice (manual-level)</h2>
+<p>When GRUB loads your ELF, it does not "invent" a memory layout for your internals.
+It maps loadable segments according to the ELF produced by your linker script.</p>
+<p>So if you change section order/alignment in <code>boot/linker.ld</code>, you are changing the runtime memory map your boot code relies on.</p>
+<h2 id="exported-symbols-and-who-uses-them">Exported symbols and who uses them</h2>
+<h3 id="__bss_start-__bss_end"><code>__bss_start</code>, <code>__bss_end</code></h3>
+<p>Defined inside <code>.bss</code> section (<code>boot/linker.ld:45</code>, <code>boot/linker.ld:48</code>).
+Used in <code>boot/boot.s</code> (<code>long_mode_entry</code>) to clear zero-initialized memory:</p>
+<ul>
+<li><code>movq $__bss_start, %rdi</code></li>
+<li><code>movq $__bss_end, %rcx</code></li>
+<li><code>rep stosb</code></li>
+</ul>
+<h3 id="__bootstrap_end"><code>__bootstrap_end</code></h3>
+<p>Defined in <code>boot/boot.s</code> right after bootstrap stack/page-table structures.
+Read by the bridge stub in <code>boot/stubs_amd64.s:60</code> to <code>boot/stubs_amd64.s:66</code> and exposed as <code>mem.bootstrapEnd()</code>.</p>
+<h3 id="__kernel_end"><code>__kernel_end</code></h3>
+<p>Defined in <code>boot/linker.ld:57</code> at the end of linked kernel image.
+Read by the bridge stub in <code>boot/stubs_amd64.s:68</code> to <code>boot/stubs_amd64.s:74</code> and exposed as <code>mem.kernelEnd()</code>.</p>
+<h3 id="why-kernelend-and-bootstrapend-are-both-needed">Why <code>kernelEnd</code> and <code>bootstrapEnd</code> are both needed</h3>
+<p>In <code>mem/allocator.go</code>, <code>kernelEndPhys()</code> chooses the max of:</p>
+<ul>
+<li><code>kernelEnd()</code></li>
+<li><code>bootstrapEnd()</code></li>
+</ul>
+<p>This is a safety guard: allocator metadata must never overlap kernel/boot data.</p>
+<h2 id="why-bootstrap_stack-is-outside-bss">Why <code>.bootstrap_stack</code> is outside <code>.bss</code></h2>
+<p>The bootstrap area stores runtime-critical early objects:</p>
+<ul>
+<li>16 KiB stack (<code>stack_bottom..stack_top</code>)</li>
+<li>page tables (<code>pml4</code>, <code>pdpt</code>, <code>pd0..pd3</code>)</li>
+</ul>
+<p>If these lived inside <code>.bss</code>, generic <code>.bss</code> clearing logic could wipe them at the wrong time.
+Keeping them in a dedicated section prevents accidental zeroing during runtime initialization.</p>
+<h2 id="visual-layout-mermaid">Visual layout (Mermaid)</h2>
+<pre><code class="language-mermaid">flowchart TB
+    A[Link address base: 0x00100000] --&gt; B[.text\n(.multiboot2 + code)]
+    B --&gt; C[.rodata\nconstants, gdt64]
+    C --&gt; D[.data\ninitialized writable data]
+    D --&gt; E[.bss\nzero-initialized globals\n__bss_start/__bss_end]
+    E --&gt; F[.bootstrap_stack\nstack + early page tables\n... __bootstrap_end]
+    F --&gt; G[__kernel_end]
+</code></pre>
+<p>Rendered image:</p>
+<p><img alt="Linker section layout" src="../../assets/02-boot/linker-section-layout.svg" /></p>
+<h2 id="visual-flow-of-symbol-propagation-mermaid">Visual flow of symbol propagation (Mermaid)</h2>
+<pre><code class="language-mermaid">flowchart LR
+    A[boot/linker.ld defines __kernel_end] --&gt; B[boot/stubs_amd64.s reads symbol]
+    C[boot/boot.s defines __bootstrap_end] --&gt; B
+    B --&gt; D[mem/kernel_bounds_gccgo.go declarations]
+    D --&gt; E[mem/allocator.go kernelEndPhys]
+    E --&gt; F[InitPFA chooses safe bitmap placement]
+</code></pre>
+<p>Rendered image:</p>
+<p><img alt="Linker symbol bridge flow" src="../../assets/02-boot/linker-symbol-bridge.svg" /></p>
+<h2 id="visual-layout-address-oriented">Visual layout (address-oriented)</h2>
+<pre><code class="language-text">0x00100000  -----------------------------------------------
+            | .text                                        |
+            |   includes .multiboot2 header               |
+            |   includes _start and boot code             |
+            -----------------------------------------------
+            | .rodata                                     |
+            -----------------------------------------------
+            | .data                                       |
+            -----------------------------------------------
+            | .bss                                        |
+__bss_start -&gt; first byte of .bss                         |
+__bss_end   -&gt; first byte after .bss                      |
+            -----------------------------------------------
+            | .bootstrap_stack                            |
+            |   stack_bottom..stack_top                   |
+            |   pml4/pdpt/pd0/pd1/pd2/pd3                |
+__bootstrap_end -&gt; first byte after bootstrap structures   |
+            -----------------------------------------------
+__kernel_end -&gt; first byte after linked kernel image
+</code></pre>
+<h2 id="build-time-contract-vs-runtime-behavior">Build-time contract vs runtime behavior</h2>
+<table>
+<thead>
+<tr>
+<th>Linker rule</th>
+<th>Why it exists</th>
+<th>Runtime dependency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ENTRY(_start)</code></td>
+<td>Define real execution entry</td>
+<td>GRUB jumps into <code>_start</code></td>
+</tr>
+<tr>
+<td><code>. = 1M</code></td>
+<td>Known physical base</td>
+<td>boot code and diagrams assume low fixed base</td>
+</tr>
+<tr>
+<td><code>.text</code> starts with <code>.multiboot2</code></td>
+<td>Keep header discoverable</td>
+<td>GRUB recognizes image as Multiboot2</td>
+</tr>
+<tr>
+<td>4 KiB alignment</td>
+<td>Page-friendly layout</td>
+<td>simplifies paging/allocator assumptions</td>
+</tr>
+<tr>
+<td><code>.bss</code> symbol bounds</td>
+<td>precise clear range</td>
+<td><code>long_mode_entry</code> zeroes exactly <code>.bss</code></td>
+</tr>
+<tr>
+<td><code>.bootstrap_stack</code> separate section</td>
+<td>protect early structures</td>
+<td>avoids accidental clobbering of stack/page tables</td>
+</tr>
+<tr>
+<td><code>__kernel_end</code> export</td>
+<td>mark reserved image end</td>
+<td>allocator avoids kernel overwrite</td>
+</tr>
+</tbody>
+</table>
+<h2 id="related-source-files-to-read-next">Related source files to read next</h2>
+<ul>
+<li><code>boot/boot.s</code> for <code>_start</code>, long mode switch, and <code>.bss</code> clear</li>
+<li><code>mem/allocator.go</code> for how linker symbols protect allocator placement</li>
+<li><code>mem/kernel_bounds_gccgo.go</code> + <code>boot/stubs_amd64.s</code> for symbol bridge into Go</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="840" viewBox="0 0 1400 840">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}
+      .b{stroke:#1f2937;stroke-width:2;rx:8}.p1{fill:#dbeafe}.p2{fill:#dcfce7}.p3{fill:#fde68a}
+      .tx{font:600 14px Arial;fill:#0f172a}.ln{stroke:#1f2937;stroke-width:2;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="840"/>
+  <text class="t" x="30" y="45">System component dependency map</text>
+  <text class="s" x="30" y="70">High-level static relationships between major modules</text>
+
+  <rect class="b p1" x="90" y="130" width="220" height="70"/><text class="tx" x="110" y="170">boot + grub</text>
+  <rect class="b p1" x="420" y="130" width="220" height="70"/><text class="tx" x="440" y="170">kernel.Main</text>
+
+  <rect class="b p2" x="760" y="60" width="260" height="70"/><text class="tx" x="780" y="100">IDT/PIC/PIT/IRQ</text>
+  <rect class="b p2" x="760" y="160" width="260" height="70"/><text class="tx" x="780" y="200">scheduler</text>
+  <rect class="b p2" x="760" y="260" width="260" height="70"/><text class="tx" x="780" y="300">mem subsystem</text>
+  <rect class="b p2" x="760" y="360" width="260" height="70"/><text class="tx" x="780" y="400">fs + fat16</text>
+  <rect class="b p2" x="760" y="460" width="260" height="70"/><text class="tx" x="780" y="500">terminal + keyboard + ata</text>
+  <rect class="b p3" x="1100" y="260" width="220" height="70"/><text class="tx" x="1120" y="300">shell</text>
+
+  <line class="ln" x1="310" y1="165" x2="418" y2="165"/>
+  <line class="ln" x1="640" y1="165" x2="758" y2="95"/>
+  <line class="ln" x1="640" y1="165" x2="758" y2="195"/>
+  <line class="ln" x1="640" y1="165" x2="758" y2="295"/>
+  <line class="ln" x1="640" y1="165" x2="758" y2="395"/>
+  <line class="ln" x1="640" y1="165" x2="758" y2="495"/>
+
+  <line class="ln" x1="1020" y1="95" x2="1098" y2="295"/>
+  <line class="ln" x1="1020" y1="195" x2="1098" y2="295"/>
+  <line class="ln" x1="1020" y1="295" x2="1098" y2="295"/>
+  <line class="ln" x1="1020" y1="395" x2="1098" y2="295"/>
+  <line class="ln" x1="1020" y1="495" x2="1098" y2="295"/>
+</svg>

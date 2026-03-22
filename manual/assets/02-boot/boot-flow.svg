@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="960" viewBox="0 0 1200 960" role="img" aria-labelledby="title desc">
+  <title id="title">Boot Flow</title>
+  <desc id="desc">Boot flow from firmware to go_0kernel.Main in long mode.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4 L0,8 z" fill="#1f2937" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 16px Arial, sans-serif; fill: #334155; }
+      .box { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .phase1 { fill: #e2e8f0; }
+      .phase2 { fill: #dbeafe; }
+      .phase3 { fill: #dcfce7; }
+      .txt { font: 600 15px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 400 13px Arial, sans-serif; fill: #0f172a; }
+      .line { stroke: #1f2937; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="960" />
+  <text class="title" x="40" y="52">Boot flow: firmware -> GRUB -> _start -> go_0kernel.Main</text>
+  <text class="subtitle" x="40" y="82">Equivalent static rendering of the Mermaid diagram in boot-and-grub.md</text>
+
+  <rect class="box phase1" x="80" y="130" width="300" height="70" />
+  <text class="txt" x="98" y="173">BIOS / emulator firmware</text>
+
+  <rect class="box phase1" x="80" y="250" width="300" height="70" />
+  <text class="txt" x="98" y="293">GRUB starts</text>
+
+  <rect class="box phase1" x="80" y="370" width="300" height="70" />
+  <text class="txt" x="98" y="413">Read iso/grub/grub.cfg</text>
+
+  <rect class="box phase1" x="80" y="490" width="300" height="90" />
+  <text class="txt" x="98" y="525">multiboot2 /boot/kernel.elf</text>
+  <text class="small" x="98" y="548">load ELF + prepare MB2 info struct</text>
+
+  <rect class="box phase2" x="460" y="130" width="320" height="70" />
+  <text class="txt" x="478" y="173">Jump to _start (boot/boot.s)</text>
+
+  <rect class="box phase2" x="460" y="250" width="320" height="90" />
+  <text class="txt" x="478" y="285">Early setup</text>
+  <text class="small" x="478" y="308">cli + temporary stack + save EBX</text>
+
+  <rect class="box phase2" x="460" y="390" width="320" height="90" />
+  <text class="txt" x="478" y="425">setup_long_mode</text>
+  <text class="small" x="478" y="448">build page tables + enable CR0/CR4/EFER</text>
+
+  <rect class="box phase2" x="460" y="530" width="320" height="70" />
+  <text class="txt" x="478" y="573">far jump to 64-bit code</text>
+
+  <rect class="box phase3" x="860" y="250" width="280" height="90" />
+  <text class="txt" x="878" y="285">long_mode_entry</text>
+  <text class="small" x="878" y="308">set segments + clear .bss</text>
+
+  <rect class="box phase3" x="860" y="410" width="280" height="90" />
+  <text class="txt" x="878" y="445">call go_0kernel.Main</text>
+  <text class="small" x="878" y="468">pass MB2 info pointer</text>
+
+  <line class="line" x1="230" y1="200" x2="230" y2="248" />
+  <line class="line" x1="230" y1="320" x2="230" y2="368" />
+  <line class="line" x1="230" y1="440" x2="230" y2="488" />
+
+  <line class="line" x1="380" y1="535" x2="458" y2="165" />
+  <line class="line" x1="620" y1="200" x2="620" y2="248" />
+  <line class="line" x1="620" y1="340" x2="620" y2="388" />
+  <line class="line" x1="620" y1="480" x2="620" y2="528" />
+
+  <line class="line" x1="780" y1="565" x2="858" y2="295" />
+  <line class="line" x1="1000" y1="340" x2="1000" y2="408" />
+
+  <text class="subtitle" x="80" y="900">Source references: boot/boot.s, iso/grub/grub.cfg</text>
+</svg>

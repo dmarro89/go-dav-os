@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#1f2937"/></marker>
+    <style>
+      .bg{fill:#f8fafc}.t{font:700 28px Arial;fill:#0f172a}.s{font:400 15px Arial;fill:#334155}
+      .b{stroke:#1f2937;stroke-width:2;rx:8}.p1{fill:#dbeafe}.p2{fill:#dcfce7}.p3{fill:#fde68a}
+      .tx{font:600 14px Arial;fill:#0f172a}.ln{stroke:#1f2937;stroke-width:2;marker-end:url(#a)}
+    </style>
+  </defs>
+  <rect class="bg" width="1400" height="900"/>
+  <text class="t" x="30" y="45">System boot/runtime flow</text>
+  <text class="s" x="30" y="70">GRUB -> boot assembly -> kernel.Main -> steady-state shell loop</text>
+
+  <rect class="b p1" x="70" y="120" width="280" height="70"/><text class="tx" x="90" y="160">GRUB loads kernel.elf + MB2 info</text>
+  <rect class="b p1" x="70" y="230" width="280" height="70"/><text class="tx" x="90" y="270">_start in boot/boot.s</text>
+  <rect class="b p1" x="70" y="340" width="280" height="70"/><text class="tx" x="90" y="380">long mode + clear .bss</text>
+
+  <rect class="b p2" x="430" y="230" width="260" height="70"/><text class="tx" x="450" y="270">kernel.Main</text>
+  <rect class="b p2" x="760" y="120" width="280" height="70"/><text class="tx" x="780" y="160">IDT/PIC/PIT init</text>
+  <rect class="b p2" x="760" y="230" width="280" height="70"/><text class="tx" x="780" y="270">mem.InitMultiboot + InitPFA</text>
+  <rect class="b p2" x="760" y="340" width="280" height="70"/><text class="tx" x="780" y="380">scheduler.Init + fs.Init</text>
+
+  <rect class="b p3" x="1110" y="230" width="220" height="70"/><text class="tx" x="1130" y="270">EnableInterrupts</text>
+  <rect class="b p3" x="1110" y="340" width="220" height="70"/><text class="tx" x="1130" y="380">shell.Init</text>
+
+  <rect class="b p3" x="430" y="520" width="350" height="70"/><text class="tx" x="450" y="560">loop: keyboard.TryRead</text>
+  <rect class="b p3" x="860" y="500" width="180" height="70"/><text class="tx" x="880" y="540">if no input -> hlt</text>
+  <rect class="b p3" x="860" y="600" width="300" height="70"/><text class="tx" x="880" y="640">if input -> shell dispatch -> ops</text>
+
+  <line class="ln" x1="210" y1="190" x2="210" y2="228"/>
+  <line class="ln" x1="210" y1="300" x2="210" y2="338"/>
+  <line class="ln" x1="350" y1="375" x2="428" y2="265"/>
+  <line class="ln" x1="690" y1="265" x2="758" y2="155"/>
+  <line class="ln" x1="690" y1="265" x2="758" y2="265"/>
+  <line class="ln" x1="690" y1="265" x2="758" y2="375"/>
+  <line class="ln" x1="1040" y1="155" x2="1108" y2="265"/>
+  <line class="ln" x1="1040" y1="265" x2="1108" y2="265"/>
+  <line class="ln" x1="1040" y1="375" x2="1108" y2="265"/>
+  <line class="ln" x1="1220" y1="300" x2="1220" y2="338"/>
+  <line class="ln" x1="1220" y1="410" x2="605" y2="518"/>
+  <line class="ln" x1="780" y1="555" x2="858" y2="535"/>
+  <line class="ln" x1="780" y1="555" x2="858" y2="635"/>
+  <line class="ln" x1="1040" y1="535" x2="605" y2="518"/>
+  <line class="ln" x1="1160" y1="635" x2="605" y2="518"/>
+</svg>

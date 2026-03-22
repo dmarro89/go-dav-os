@@ -1,0 +1,658 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>x86_64 Migration Plan - Go DAV OS</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#x86_64-migration-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Go DAV OS
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              x86_64 Migration Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Go DAV OS
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/00-introduction/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/01-overview/architecture.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot & GRUB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Privilege Transition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-bootloader-changes-long-mode-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Bootloader Changes (Long Mode Setup)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Bootloader Changes (Long Mode Setup)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steps:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-kernel-changes-go-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Kernel Changes (Go Runtime)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Kernel Changes (Go Runtime)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#steps_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steps:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-architecture-independent-parts-no-change-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Architecture Independent Parts (No Change Needed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-minimal-roadmap-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Minimal Roadmap Checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="x86_64-migration-plan">x86_64 Migration Plan</h1>
+<p>This document outlines the steps required to migrate <code>go-dav-os</code> from 32-bit protected mode to 64-bit long mode (x86_64).</p>
+<h2 id="1-bootloader-changes-long-mode-setup">1. Bootloader Changes (Long Mode Setup)</h2>
+<p>Current state: Boots via Multiboot 1 (32-bit protected mode).
+Goal: Reach 64-bit Long Mode.</p>
+<p><strong>Note</strong>: Multiboot v1 is 32-bit only. We should switch to <strong>Multiboot2</strong> to support modern 64-bit loading properly, or use a trampoline. This plan assumes moving to Multiboot2.</p>
+<h3 id="steps">Steps:</h3>
+<ol>
+<li>
+<p><strong>Paging Setup</strong>:</p>
+<ul>
+<li>Create a Page Map Level 4 (PML4) table.</li>
+<li>Create a Page Directory Pointer Table (PDPT).</li>
+<li>Create a Page Directory (PD).</li>
+<li>Identity map the first 1GB (or enough for kernel + boot structures) using huge pages (2MB) for simplicity.</li>
+<li>Update <code>boot.s</code> header to use <strong>Multiboot2</strong> tags.</li>
+<li>Load clean CR3 with the address of PML4.</li>
+</ul>
+</li>
+<li>
+<p><strong>Enable Long Mode</strong>:</p>
+<ul>
+<li>Set PAE bit in CR4.</li>
+<li>Set LME (Long Mode Enable) bit in EFER MSR (Model Specific Register <code>0xC0000080</code>).</li>
+<li>Enable Paging (PG bit in CR0).</li>
+</ul>
+</li>
+<li>
+<p><strong>GDT Update</strong>:</p>
+<ul>
+<li>Define a 64-bit GDT (Global Descriptor Table). The code segment descriptor must have the 'L' bit set (Long mode).</li>
+<li>Load the new GDT (<code>lgdt</code>).</li>
+</ul>
+</li>
+<li>
+<p><strong>Jump</strong>:</p>
+<ul>
+<li>Perform a long jump to the 64-bit code segment to update <code>CS</code>.</li>
+</ul>
+</li>
+</ol>
+<h2 id="2-kernel-changes-go-runtime">2. Kernel Changes (Go Runtime)</h2>
+<p>Current state: <code>GOARCH=386</code>
+Goal: <code>GOARCH=amd64</code></p>
+<h3 id="steps_1">Steps:</h3>
+<ol>
+<li>
+<p><strong>Compiler Target</strong>:</p>
+<ul>
+<li>Update <code>Makefile</code> to set <code>GOARCH=amd64</code> for <code>gccgo</code>.</li>
+<li>Ensure cross-compiler <code>x86_64-elf-gcc</code> / <code>x86_64-elf-gccgo</code> is used.</li>
+<li>Update <code>linker.ld</code> to output <code>elf64-x86-64</code> and handle 64-bit sections.</li>
+</ul>
+</li>
+<li>
+<p><strong>Entry Point</strong>:</p>
+<ul>
+<li><strong>Assembly Stub Contract</strong>: Since we use a custom runtime, the entry point contract must be explicitly defined.</li>
+<li>Create a 64-bit assembly stub in <code>boot.s</code> (or <code>entry64.s</code>) to setup the stack and registers.</li>
+<li>The stub effectively defines the calling convention for jumping into Go.</li>
+<li>Update <code>kernel.Main</code> signature in <code>kernel/kernel.go</code> to match this contract:
+    <code>go
+    // from func Main(addr uint32)
+    func Main(addr uint64) // Argument passed from asm stub (e.g. in RDI or on stack)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Memory Management (<code>mem/</code>)</strong>:</p>
+<ul>
+<li>Refactor <code>allocator.go</code> to use <code>uint64</code> or <code>uintptr</code> for physical addresses.</li>
+<li>The current bitmap allocator assumes 32-bit addresses. It needs to handle &gt;4GB memory ranges if available from Multiboot memory map.</li>
+<li>Struct <code>mmapEntry</code> in <code>mem/multiboot.go</code> may ideally remain compatible if we parse the raw bytes correctly, but internal representation should standardise on 64-bit types.</li>
+</ul>
+</li>
+<li>
+<p><strong>Interrupts (<code>kernel/idt.go</code>, <code>kernel/pic.go</code>)</strong>:</p>
+<ul>
+<li><strong>IDT</strong>: In 64-bit mode, IDT entries are 16 bytes (was 8 bytes). This requires a new struct definition and loader logic.</li>
+<li><strong>Handlers</strong>: Assembly interrupt stubs (<code>boot/boot.s</code>) must use <code>iretq</code> (64-bit return) and save/restore 64-bit registers (<code>rax</code>, <code>rbx</code>... <code>r15</code>).</li>
+</ul>
+</li>
+<li>
+<p><strong>Syscalls</strong>:</p>
+<ul>
+<li>(Future Work): Once the kernel is stable in 64-bit, switch system calls to use <code>syscall</code>/<code>sysret</code> instructions instead of <code>int 0x80</code>.</li>
+<li>This will require updating the userspace/kernel boundary ABI.</li>
+</ul>
+</li>
+</ol>
+<h2 id="3-architecture-independent-parts-no-change-needed">3. Architecture Independent Parts (No Change Needed)</h2>
+<p>The following components are largely high-level and should remain mostly untouched, assuming <code>int</code> / <code>uint</code> behave as expected (Go <code>int</code> becomes 64-bit on amd64):</p>
+<ul>
+<li><strong>Filesystem (<code>fs/</code>)</strong>: FAT driver logic is independent of CPU bit-mode.</li>
+<li><strong>Shell (<code>shell/</code>)</strong>: Command parsing and logic are generic.</li>
+<li><strong>Keyboard (<code>keyboard/</code>)</strong>: Logic for scancodes is the same, though port I/O wrappers <code>inb</code>/<code>outb</code> assembly needs 64-bit register usage updates (e.g. <code>mov dx, [rsp+...]</code>).</li>
+<li><strong>Terminal (<code>terminal/</code>)</strong>: VGA buffer manipulation (0xB8000) is standard, though pointer arithmetic will be 64-bit.</li>
+</ul>
+<h2 id="4-minimal-roadmap-checklist">4. Minimal Roadmap Checklist</h2>
+<ul>
+<li>
+<p>[x] <strong>Phase 1: Toolchain &amp; Build</strong></p>
+<ul>
+<li>[x] Update <code>Makefile</code> variables for <code>x86_64</code> toolchain.</li>
+<li>[x] Update <code>Dockerfile</code> to include <code>x86_64-elf-gcc</code> and <code>qemu-system-x86_64</code>.</li>
+<li>[x] Update <code>linker.ld</code> for 64-bit output.</li>
+</ul>
+</li>
+<li>
+<p>[ ] <strong>Phase 2: Bootloader</strong></p>
+<ul>
+<li>[x] Modify <code>boot.s</code> to implement paging and long mode switch.</li>
+<li>[ ] Stub out the Go kernel entry for a simple "Hello 64-bit" asm check.</li>
+</ul>
+</li>
+<li>
+<p>[x] <strong>Phase 3: Kernel Port</strong></p>
+<ul>
+<li>[x] Update <code>kernel.Main</code> and <code>allocator</code> to 64-bit.</li>
+<li>[x] Fix assembly stubs (<code>inb</code>, <code>outb</code>, <code>lidt</code>, <code>lgdt</code>) for 64-bit registers.</li>
+<li>[x] Get "Hello World" from Go kernel on screen.</li>
+</ul>
+</li>
+<li>
+<p>[x] <strong>Phase 4: Interrupts &amp; Input</strong></p>
+<ul>
+<li>[x] Implement 64-bit IDT.</li>
+<li>[x] Port PIT and Keyboard drivers.</li>
+<li>[x] Verify Shell works.</li>
+</ul>
+</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
