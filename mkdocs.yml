@@ -1,0 +1,10 @@
+site_name: Go DAV OS
+theme:
+  name: material
+nav:
+  - Introduction: docs/manual/00-introduction/README.md
+  - Glossary: docs/manual/00-introduction/glossary.md
+  - Architecture: docs/manual/01-overview/architecture.md
+  - Boot & GRUB: docs/manual/02-boot/boot-and-grub.md
+  - Memory Layout: docs/manual/02-boot/linker-and-initial-memory-layout.md
+  - Privilege Transition: docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md
