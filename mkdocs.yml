@@ -1,10 +1,13 @@
 site_name: Go DAV OS
+site_url: https://dmarro89.github.io/go-dav-os/
+use_directory_urls: false
 theme:
   name: material
 nav:
-  - Introduction: docs/manual/00-introduction/README.md
-  - Glossary: docs/manual/00-introduction/glossary.md
-  - Architecture: docs/manual/01-overview/architecture.md
-  - Boot & GRUB: docs/manual/02-boot/boot-and-grub.md
-  - Memory Layout: docs/manual/02-boot/linker-and-initial-memory-layout.md
-  - Privilege Transition: docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md
+  - Home: index.md
+  - Introduction: manual/00-introduction/README.md
+  - Glossary: manual/00-introduction/glossary.md
+  - Architecture: manual/01-overview/architecture.md
+  - Boot & GRUB: manual/02-boot/boot-and-grub.md
+  - Memory Layout: manual/02-boot/linker-and-initial-memory-layout.md
+  - Privilege Transition: manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md
