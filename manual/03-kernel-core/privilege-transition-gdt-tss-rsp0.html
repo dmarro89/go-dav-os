@@ -8,22 +8,26 @@
       
       
       
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.html">
+      
+      
+        <link rel="prev" href="../02-boot/linker-and-initial-memory-layout.html">
       
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>GDT, TSS, and RSP0 in go-dav-os - Go DAV OS</title>
+        <title>Privilege Transition - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -42,7 +46,7 @@
       
     
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +80,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -96,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              GDT, TSS, and RSP0 in go-dav-os
+              Privilege Transition
             
           </span>
         </div>
@@ -174,7 +178,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -192,7 +196,34 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/README.md" class="md-nav__link">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -219,7 +250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -246,7 +277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/01-overview/architecture.md" class="md-nav__link">
+      <a href="../01-overview/architecture.html" class="md-nav__link">
         
   
   
@@ -273,7 +304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+      <a href="../02-boot/boot-and-grub.html" class="md-nav__link">
         
   
   
@@ -300,7 +331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+      <a href="../02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
         
   
   
@@ -324,10 +355,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Privilege Transition
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="privilege-transition-gdt-tss-rsp0.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -343,6 +401,241 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-why-this-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Why this exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-quick-theory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Quick theory
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#21-gdt-in-long-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 GDT in long mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#22-tss-in-long-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 TSS in long mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#23-what-rsp0-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 What RSP0 is
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-gdttss-layout-used-here" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. GDT/TSS layout used here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-go-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Go implementation details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#41-files-kernelgdtgo-and-kerneltssgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Files: kernel/gdt.go and kernel/tss.go
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4.1 Files: kernel/gdt.go and kernel/tss.go">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#constants-and-selectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Constants and selectors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exact-tss-memory-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exact TSS memory image
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kernel-trap-stack" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Kernel trap stack
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building-and-loading-gdttss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building and loading GDT+TSS
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#42-file-kernelkernelgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 File: kernel/kernel.go
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#43-file-kernelidtgo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 File: kernel/idt.go
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-assembly-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Assembly implementation details
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file-bootstubs_amd64s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File: boot/stubs_amd64.s
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-end-to-end-flow-intended-ring3-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. End-to-end flow (intended ring3 path)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-current-scope-and-limitation-in-this-repo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Current scope and limitation in this repo
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-why-this-design-is-robust" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Why this design is robust
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -785,10 +1078,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

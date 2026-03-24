@@ -8,22 +8,28 @@
       
       
       
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/01-overview/architecture.html">
       
+      
+        <link rel="prev" href="../00-introduction/glossary.html">
+      
+      
+        <link rel="next" href="../02-boot/boot-and-grub.html">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>System Architecture - Go DAV OS</title>
+        <title>Architecture - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -42,7 +48,7 @@
       
     
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +82,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -96,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              System Architecture
+              Architecture
             
           </span>
         </div>
@@ -174,7 +180,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -192,7 +198,34 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/README.md" class="md-nav__link">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -219,7 +252,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -243,10 +276,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../docs/manual/01-overview/architecture.md" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="architecture.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -262,6 +322,136 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-page-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this page matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-architecture-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope and architecture style
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-anchors-quick-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source anchors (quick references)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-layers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural layers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#end-to-end-bootruntime-flow-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-to-end boot/runtime flow (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-dependency-map-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component dependency map (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-ownership-map-conceptual" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory ownership map (conceptual)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-flows-that-matter-operationally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data flows that matter operationally
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture-constraints-and-tradeoffs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture constraints and tradeoffs
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-continue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to continue
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -273,7 +463,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+      <a href="../02-boot/boot-and-grub.html" class="md-nav__link">
         
   
   
@@ -300,7 +490,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+      <a href="../02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
         
   
   
@@ -327,7 +517,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+      <a href="../03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -580,7 +770,7 @@ Before diving into single subsystems, use this chapter to understand:</p>
     N --&gt; J
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="System boot/runtime flow" src="../../assets/01-overview/system-boot-runtime-flow.svg" /></p>
+<p><img alt="System boot/runtime flow" src="../assets/01-overview/system-boot-runtime-flow.svg" /></p>
 <h2 id="component-dependency-map-mermaid">Component dependency map (Mermaid)</h2>
 <pre><code class="language-mermaid">flowchart LR
     BOOT[boot + grub] --&gt; KERNEL[kernel.Main]
@@ -600,7 +790,7 @@ Before diving into single subsystems, use this chapter to understand:</p>
     SCHED --&gt; SH
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="System component map" src="../../assets/01-overview/system-component-map.svg" /></p>
+<p><img alt="System component map" src="../assets/01-overview/system-component-map.svg" /></p>
 <h2 id="memory-ownership-map-conceptual">Memory ownership map (conceptual)</h2>
 <p>This is not an exact address map; it is an ownership map of major runtime regions.</p>
 <pre><code class="language-mermaid">flowchart TB
@@ -626,7 +816,7 @@ Before diving into single subsystems, use this chapter to understand:</p>
     E --&gt; E2[ATA sector buffers]
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="System memory ownership" src="../../assets/01-overview/system-memory-ownership.svg" /></p>
+<p><img alt="System memory ownership" src="../assets/01-overview/system-memory-ownership.svg" /></p>
 <h2 id="data-flows-that-matter-operationally">Data flows that matter operationally</h2>
 <ol>
 <li>Input path</li>
@@ -716,10 +906,10 @@ Before diving into single subsystems, use this chapter to understand:</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

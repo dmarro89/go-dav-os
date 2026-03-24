@@ -8,22 +8,28 @@
       
       
       
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/02-boot/linker-and-initial-memory-layout.html">
       
+      
+        <link rel="prev" href="boot-and-grub.html">
+      
+      
+        <link rel="next" href="../03-kernel-core/privilege-transition-gdt-tss-rsp0.html">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Linker and Initial Memory Layout - Go DAV OS</title>
+        <title>Memory Layout - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -42,7 +48,7 @@
       
     
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +82,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -96,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Linker and Initial Memory Layout
+              Memory Layout
             
           </span>
         </div>
@@ -174,7 +180,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -192,7 +198,34 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/README.md" class="md-nav__link">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -219,7 +252,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -246,7 +279,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/01-overview/architecture.md" class="md-nav__link">
+      <a href="../01-overview/architecture.html" class="md-nav__link">
         
   
   
@@ -273,7 +306,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+      <a href="boot-and-grub.html" class="md-nav__link">
         
   
   
@@ -297,10 +330,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layout
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="linker-and-initial-memory-layout.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -316,6 +376,219 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-chapter-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this chapter matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#linker-vs-loader-clear-responsibility-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linker vs loader: clear responsibility split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source-anchors-exact-code-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Source anchors (exact code references)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#our-linker-script-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Our linker script at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#runtime-placement-policy-in-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runtime placement policy in SECTIONS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-this-means-in-practice-manual-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What this means in practice (manual-level)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exported-symbols-and-who-uses-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exported symbols and who uses them
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exported symbols and who uses them">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#__bss_start-__bss_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __bss_start, __bss_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#__bootstrap_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __bootstrap_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#__kernel_end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        __kernel_end
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-kernelend-and-bootstrapend-are-both-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why kernelEnd and bootstrapEnd are both needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-bootstrap_stack-is-outside-bss" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why .bootstrap_stack is outside .bss
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-layout-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual layout (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-flow-of-symbol-propagation-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual flow of symbol propagation (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-layout-address-oriented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual layout (address-oriented)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-time-contract-vs-runtime-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build-time contract vs runtime behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-source-files-to-read-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related source files to read next
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -327,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+      <a href="../03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -685,7 +958,7 @@ Keeping them in a dedicated section prevents accidental zeroing during runtime i
     F --&gt; G[__kernel_end]
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="Linker section layout" src="../../assets/02-boot/linker-section-layout.svg" /></p>
+<p><img alt="Linker section layout" src="../assets/02-boot/linker-section-layout.svg" /></p>
 <h2 id="visual-flow-of-symbol-propagation-mermaid">Visual flow of symbol propagation (Mermaid)</h2>
 <pre><code class="language-mermaid">flowchart LR
     A[boot/linker.ld defines __kernel_end] --&gt; B[boot/stubs_amd64.s reads symbol]
@@ -695,7 +968,7 @@ Keeping them in a dedicated section prevents accidental zeroing during runtime i
     E --&gt; F[InitPFA chooses safe bitmap placement]
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="Linker symbol bridge flow" src="../../assets/02-boot/linker-symbol-bridge.svg" /></p>
+<p><img alt="Linker symbol bridge flow" src="../assets/02-boot/linker-symbol-bridge.svg" /></p>
 <h2 id="visual-layout-address-oriented">Visual layout (address-oriented)</h2>
 <pre><code class="language-text">0x00100000  -----------------------------------------------
             | .text                                        |
@@ -819,10 +1092,10 @@ __kernel_end -&gt; first byte after linked kernel image
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

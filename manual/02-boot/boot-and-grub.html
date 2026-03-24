@@ -8,22 +8,28 @@
       
       
       
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/02-boot/boot-and-grub.html">
       
+      
+        <link rel="prev" href="../01-overview/architecture.html">
+      
+      
+        <link rel="next" href="linker-and-initial-memory-layout.html">
       
       
         
       
       
-      <link rel="icon" href="../../../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Boot and GRUB - Go DAV OS</title>
+        <title>Boot & GRUB - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -42,7 +48,7 @@
       
     
     
-    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +82,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../.." title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -96,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Boot and GRUB
+              Boot & GRUB
             
           </span>
         </div>
@@ -174,7 +180,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../.." title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -192,7 +198,34 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/README.md" class="md-nav__link">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -219,7 +252,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/00-introduction/glossary.md" class="md-nav__link">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -246,7 +279,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/01-overview/architecture.md" class="md-nav__link">
+      <a href="../01-overview/architecture.html" class="md-nav__link">
         
   
   
@@ -270,10 +303,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/boot-and-grub.md" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot & GRUB
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="boot-and-grub.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -289,6 +349,214 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-this-chapter-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why this chapter matters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-grub-does-manual-level-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What GRUB does (manual-level view)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-grub-expects-from-a-multiboot2-kernel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What GRUB expects from a Multiboot2 kernel
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What GRUB expects from a Multiboot2 kernel">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#required-header-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required header constraints
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-this-is-implemented-in-our-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How this is implemented in our code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#graphical-example-how-multiboot2-is-laid-out-in-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graphical example: how .multiboot2 is laid out in memory
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-grub-passes-at-kernel-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What GRUB passes at kernel entry
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-the-multiboot2-info-structure-looks-like" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What the Multiboot2 info structure looks like
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-we-put-in-memory-our-side" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What we put in memory (our side)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What we put in memory (our side)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#linker-placement-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linker placement policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bootstrap-specific-memory-we-allocate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bootstrap-specific memory we allocate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-boot-flow-mermaid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual boot flow (Mermaid)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-memory-map-physical" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual memory map (physical)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-map-of-early-paging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual map of early paging
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#step-by-step-grub-contract-vs-our-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-step: GRUB contract vs our implementation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-to-continue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to continue
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -300,7 +568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/02-boot/linker-and-initial-memory-layout.md" class="md-nav__link">
+      <a href="linker-and-initial-memory-layout.html" class="md-nav__link">
         
   
   
@@ -327,7 +595,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../../docs/manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md" class="md-nav__link">
+      <a href="../03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -636,7 +904,7 @@ The exact base address can vary, but this block is inside the first 32 KiB of th
     A --&gt; B --&gt; C --&gt; D --&gt; E --&gt; F
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="Multiboot2 header layout" src="../../assets/02-boot/multiboot2-header-layout.svg" /></p>
+<p><img alt="Multiboot2 header layout" src="../assets/02-boot/multiboot2-header-layout.svg" /></p>
 <p>Runtime meaning:</p>
 <ul>
 <li>GRUB scans this structure to validate that the image is a Multiboot2 kernel.</li>
@@ -714,7 +982,7 @@ The exact base address can vary, but this block is inside the first 32 KiB of th
     O --&gt; P[call go_0kernel.Main]
 </code></pre>
 <p>Rendered image:</p>
-<p><img alt="Boot flow" src="../../assets/02-boot/boot-flow.svg" /></p>
+<p><img alt="Boot flow" src="../assets/02-boot/boot-flow.svg" /></p>
 <h2 id="visual-memory-map-physical">Visual memory map (physical)</h2>
 <p>The exact end addresses depend on build size, but the structure is:</p>
 <pre><code class="language-text">Low physical memory
@@ -860,10 +1128,10 @@ Each PD entry maps one 2 MiB page (PS bit set).
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
