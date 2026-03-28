@@ -31,9 +31,14 @@ Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the p
   - FAT16 filesystem with file create/read/list operations
   - Data persists across reboots on a 20MB disk image
   
-## Architecture
+## Documentation
 
-![DavOS Architecture](docs/architecture.png)
+Full manual: https://dmarro89.github.io/go-dav-os/
+
+- Introduction: https://dmarro89.github.io/go-dav-os/manual/00-introduction/index.html
+- Architecture: https://dmarro89.github.io/go-dav-os/manual/01-overview/architecture.html
+- Boot & GRUB: https://dmarro89.github.io/go-dav-os/manual/02-boot/boot-and-grub.html
+- ...
 
 ## Project status
 
@@ -140,9 +145,8 @@ Contributions are welcome! This project is still early-stage and intentionally m
 
 Personal, open-source, work-in-progress. I’m building pieces as I learn them—the goal is understanding, not chasing modern-OS feature lists
 
-## Contribution
-Thanks to:
-[@metacatdud](https://github.com/metacatdud)for taking care of the entire migration from 32 to 64 bit architecture - really amazing work!<br/>
-[@ranjan42](https://github.com/ranjan42)for the useful documentation added and the implementation of the scheduled and the command history<br/>
-[@jgafnea](https://github.com/jgafnea) for improving the shell and documenting the contributing section<br/>
-[@soorya38](https://github.com/soorya38)for taking care of a missing part of the project - the unit tests!<br/>
+## Contributors
+<a href="https://github.com/dmarro89/go-dav-os/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=dmarro89/go-dav-os" />
+</a>
+
