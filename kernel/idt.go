@@ -82,10 +82,18 @@ func Int80Handler(tf *TrapFrame) {
 		tf.RAX = sysWrite(fd, buf, n)
 	case SYS_EXIT:
 		status := int(tf.RBX)
-		terminal.Print("Process exited with status ")
+		if tf.CS&3 == 3 {
+			terminal.Print("Process exited with status ")
+			terminal.PrintInt(status)
+			terminal.Print("\n")
+			ReturnToKernel()
+			return
+		}
+
+		terminal.Print("kernel-mode SYS_EXIT rejected (status ")
 		terminal.PrintInt(status)
-		terminal.Print("\n")
-		ReturnToKernel()
+		terminal.Print(")\n")
+		tf.RAX = ^uint64(0) // return -1 for CPL0 callers
 	case SYS_GETTICKS:
 		tf.RAX = ticks
 	default:

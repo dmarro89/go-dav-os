@@ -517,6 +517,8 @@ go_0kernel.ExecuteUserTask:
     mov %r13, __kernel_saved_r13(%rip)
     mov %r14, __kernel_saved_r14(%rip)
     mov %r15, __kernel_saved_r15(%rip)
+    pushfq
+    popq __kernel_saved_rflags(%rip)
 
     # Setup iretq frame
     mov $0x23, %ax      # user data selector Index 4 (0x20) | 3 = 0x23
@@ -554,6 +556,8 @@ go_0kernel.ReturnToKernel:
     mov __kernel_saved_r13(%rip), %r13
     mov __kernel_saved_r14(%rip), %r14
     mov __kernel_saved_r15(%rip), %r15
+    pushq __kernel_saved_rflags(%rip)
+    popfq
 
     # Ret where ExecuteUserTask was called
     ret
@@ -591,4 +595,5 @@ __kernel_saved_r12: .quad 0
 __kernel_saved_r13: .quad 0
 __kernel_saved_r14: .quad 0
 __kernel_saved_r15: .quad 0
+__kernel_saved_rflags: .quad 0
 __user_msg: .ascii "hello from userland\n"

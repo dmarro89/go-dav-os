@@ -22,7 +22,7 @@ func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
 		}
 	}
 
-	stackAddr := uint64(uintptr(unsafe.Pointer(&userStack[4095])))
+	stackAddr := uint64(uintptr(unsafe.Pointer(&userStack[0])) + uintptr(len(userStack)))
 	stackAddr = stackAddr &^ 15
 
 	rip := GetUserProgramShellAddr()
