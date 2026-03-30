@@ -1,32 +1,42 @@
 package kernel
 
-import "unsafe"
-
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}
-
-const helloProgramNameLen = 5
+var kernelReadProbeProgramName = [...]byte{'k', 'r', 'e', 'a', 'd'}
+var kernelWriteProbeProgramName = [...]byte{'k', 'w', 'r', 'i', 't', 'e'}
 
 func ExecuteUserTask(rip, rsp uint64)
-func GetUserProgramShellAddr() uint64
-
-var userStack [4096]byte
+func GetUserProgramHelloAddr() uint64
+func GetUserProgramKernelReadProbeAddr() uint64
+func GetUserProgramKernelWriteProbeAddr() uint64
+func GetUserStackTopAddr() uint64
 
 func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
-	if nameLen != helloProgramNameLen {
+	var rip uint64
+	switch {
+	case matchProgramName(name, nameLen, helloProgramName[:]):
+		rip = GetUserProgramHelloAddr()
+	case matchProgramName(name, nameLen, kernelReadProbeProgramName[:]):
+		rip = GetUserProgramKernelReadProbeAddr()
+	case matchProgramName(name, nameLen, kernelWriteProbeProgramName[:]):
+		rip = GetUserProgramKernelWriteProbeAddr()
+	default:
 		return -1, false
 	}
 
-	for i := 0; i < helloProgramNameLen; i++ {
-		if name[i] != helloProgramName[i] {
-			return -1, false
-		}
-	}
-
-	stackAddr := uint64(uintptr(unsafe.Pointer(&userStack[0])) + uintptr(len(userStack)))
-	stackAddr = stackAddr &^ 15
-
-	rip := GetUserProgramShellAddr()
-	ExecuteUserTask(rip, stackAddr)
+	ExecuteUserTask(rip, GetUserStackTopAddr())
 
 	return 1, true
+}
+
+func matchProgramName(name *[16]byte, nameLen int, expected []byte) bool {
+	if nameLen != len(expected) {
+		return false
+	}
+
+	for i := 0; i < len(expected); i++ {
+		if name[i] != expected[i] {
+			return false
+		}
+	}
+	return true
 }

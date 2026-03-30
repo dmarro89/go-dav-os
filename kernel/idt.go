@@ -60,6 +60,7 @@ func StoreIDT(p *[10]byte)
 func getInt80StubAddr() uint64
 func getGPFaultStubAddr() uint64
 func getDFaultStubAddr() uint64
+func getPFaultStubAddr() uint64
 func Int80Stub()
 func TriggerInt80()
 func GetCS() uint16
@@ -154,6 +155,7 @@ func InitIDT() {
 	// Install emergency handlers first
 	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateKernelFlags)  // #DF
 	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateKernelFlags) // #GP
+	setIDTEntry(0x0E, getPFaultStubAddr(), cs, intGateKernelFlags)  // #PF
 
 	// Install IRQ handlers
 	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateKernelFlags) // IRQ0

@@ -18,6 +18,7 @@
  */
 .set MULTIBOOT_MAGIC, 0xE85250D6
 .set MULTIBOOT_ARCH,  0
+.set USER_VA_BASE,    0x40000000
 
 .section .multiboot2
 .align 8
@@ -84,6 +85,13 @@ pd2:
 .align 4096
 pd3:
 	.skip 4096
+.align 4096
+pt_user:
+	.skip 4096
+
+.align 4096
+user_stack_page:
+	.skip 4096
 .global __bootstrap_end
 __bootstrap_end:
 
@@ -139,7 +147,8 @@ _start:
 .size _start, . - _start
 
 setup_long_mode:
-# Build minimal identity-mapped paging (4 GiB via 2 MiB pages).
+# Build identity-mapped paging (4 GiB via 2 MiB pages).
+# Kernel mappings stay supervisor-only (U/S=0).
 	lea pml4, %edi
 	movl $pdpt, %eax
 	orl $0x07, %eax
@@ -148,7 +157,7 @@ setup_long_mode:
 
 	lea pdpt, %edi
 	movl $pd0, %eax
-	orl $0x07, %eax
+	orl $0x03, %eax
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 	movl $pd1, %eax
@@ -156,15 +165,15 @@ setup_long_mode:
 	movl %eax, 8(%edi)
 	movl $0, 12(%edi)
 	movl $pd2, %eax
-	orl $0x07, %eax
+	orl $0x03, %eax
 	movl %eax, 16(%edi)
 	movl $0, 20(%edi)
 	movl $pd3, %eax
-	orl $0x07, %eax
+	orl $0x03, %eax
 	movl %eax, 24(%edi)
 	movl $0, 28(%edi)
 
-	movl $0x87, %edx           # present|rw|user|ps
+	movl $0x83, %edx           # present|rw|ps (supervisor)
 
 	lea pd0, %edi
 	xorl %ecx, %ecx
@@ -229,6 +238,28 @@ setup_long_mode:
 	incl %ecx
 	cmpl $512, %ecx
 	jne .Lmap_2m_pd3
+
+# User virtual window:
+#   0x40000000 -> user program page
+#   0x40001000 -> user stack page
+# PDPT[1] already points to pd1 with U/S=1. Replace pd1[0] with a PT.
+	lea pd1, %edi
+	movl $pt_user, %eax
+	orl $0x07, %eax            # present|rw|user
+	movl %eax, (%edi)
+	movl $0, 4(%edi)
+
+	movl $__user_program_page, %eax
+	andl $0xFFFFF000, %eax
+	orl $0x05, %eax            # present|user (read-only)
+	movl %eax, pt_user
+	movl $0, pt_user+4
+
+	movl $user_stack_page, %eax
+	andl $0xFFFFF000, %eax
+	orl $0x07, %eax            # present|rw|user
+	movl %eax, pt_user+8
+	movl $0, pt_user+12
 
 # Load PML4 and enable PAE.
 	movl $pml4, %eax
