@@ -3,7 +3,6 @@ package kernel
 import (
 	"unsafe"
 
-	"github.com/dmarro89/go-dav-os/kernel/scheduler"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -72,6 +71,8 @@ func TriggerSysWrite(buf *byte, n uint32)
 func TriggerSysExit(status uint32)
 func TriggerSysGetTicks() uint64
 
+func ReturnToKernel()
+
 func Int80Handler(tf *TrapFrame) {
 	switch uint32(tf.RAX) {
 	case SYS_WRITE:
@@ -81,10 +82,18 @@ func Int80Handler(tf *TrapFrame) {
 		tf.RAX = sysWrite(fd, buf, n)
 	case SYS_EXIT:
 		status := int(tf.RBX)
-		terminal.Print("Process exited with status ")
+		if tf.CS&3 == 3 {
+			terminal.Print("Process exited with status ")
+			terminal.PrintInt(status)
+			terminal.Print("\n")
+			ReturnToKernel()
+			return
+		}
+
+		terminal.Print("kernel-mode SYS_EXIT rejected (status ")
 		terminal.PrintInt(status)
-		terminal.Print("\n")
-		scheduler.Exit()
+		terminal.Print(")\n")
+		tf.RAX = ^uint64(0) // return -1 for CPL0 callers
 	case SYS_GETTICKS:
 		tf.RAX = ticks
 	default:
@@ -140,16 +149,18 @@ func setIDTEntry(vec uint8, handler uint64, selector uint16, flags uint8) {
 
 // InitIDT builds the IDT and loads it into the CPU
 func InitIDT() {
+	cs := GetCS()
+
 	// Install emergency handlers first
-	setIDTEntry(0x08, getDFaultStubAddr(), kernelCodeSelector, intGateKernelFlags)  // #DF
-	setIDTEntry(0x0D, getGPFaultStubAddr(), kernelCodeSelector, intGateKernelFlags) // #GP
+	setIDTEntry(0x08, getDFaultStubAddr(), cs, intGateKernelFlags)  // #DF
+	setIDTEntry(0x0D, getGPFaultStubAddr(), cs, intGateKernelFlags) // #GP
 
 	// Install IRQ handlers
-	setIDTEntry(0x20, getIRQ0StubAddr(), kernelCodeSelector, intGateKernelFlags) // IRQ0
-	setIDTEntry(0x21, getIRQ1StubAddr(), kernelCodeSelector, intGateKernelFlags) // IRQ1
+	setIDTEntry(0x20, getIRQ0StubAddr(), cs, intGateKernelFlags) // IRQ0
+	setIDTEntry(0x21, getIRQ1StubAddr(), cs, intGateKernelFlags) // IRQ1
 
 	// Install 0x80 syscall handler
-	setIDTEntry(0x80, getInt80StubAddr(), kernelCodeSelector, intGateUserFlags)
+	setIDTEntry(0x80, getInt80StubAddr(), cs, intGateUserFlags)
 
 	// Build IDTR (packed 10 bytes)
 	base := uint64(uintptr(unsafe.Pointer(&idt[0])))

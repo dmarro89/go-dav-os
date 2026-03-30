@@ -60,6 +60,11 @@ stack_bottom:
 	.skip 16384              # 16 KB di stack
 stack_top:
 
+.align 16
+.global tss
+tss:
+	.skip 104
+
 # Long mode paging structures (4 KiB aligned, zero-initialized).
 .align 4096
 pml4:
@@ -86,16 +91,22 @@ __bootstrap_end:
 multiboot_info_ptr:
 	.long 0
 
-.section .rodata
+.section .data
 .align 8
+.global gdt64
 gdt64:
 	.quad 0x0000000000000000
 	.quad 0x00AF9A000000FFFF
 	.quad 0x00CF92000000FFFF
+	.quad 0x00AFFA000000FFFF  # Index 3: User Code (0x18 | 3 = 0x1B)
+	.quad 0x00CFF2000000FFFF  # Index 4: User Data (0x20 | 3 = 0x23)
+	.quad 0  # TSS low
+	.quad 0  # TSS high
 
 gdt64_desc:
 	.word (gdt64_end - gdt64 - 1)
 	.long gdt64
+	.long 0
 
 gdt64_end:
 
@@ -131,29 +142,29 @@ setup_long_mode:
 # Build minimal identity-mapped paging (4 GiB via 2 MiB pages).
 	lea pml4, %edi
 	movl $pdpt, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 
 	lea pdpt, %edi
 	movl $pd0, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 	movl $pd1, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, 8(%edi)
 	movl $0, 12(%edi)
 	movl $pd2, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, 16(%edi)
 	movl $0, 20(%edi)
 	movl $pd3, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, 24(%edi)
 	movl $0, 28(%edi)
 
-	movl $0x83, %edx           # present|rw|ps
+	movl $0x87, %edx           # present|rw|user|ps
 
 	lea pd0, %edi
 	xorl %ecx, %ecx

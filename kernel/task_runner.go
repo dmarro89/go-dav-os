@@ -1,34 +1,32 @@
 package kernel
 
-import "github.com/dmarro89/go-dav-os/kernel/scheduler"
-
-func userHelloStart()
+import "unsafe"
 
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}
 
 const helloProgramNameLen = 5
 
-func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
-	if !matchProgramName(name, nameLen) {
-		return -1, false
-	}
-	task := scheduler.NewTask(userHelloStart)
-	if task == nil {
-		return -1, false
-	}
-	return task.ID, true
-}
+func ExecuteUserTask(rip, rsp uint64)
+func GetUserProgramShellAddr() uint64
 
-func matchProgramName(name *[16]byte, nameLen int) bool {
+var userStack [4096]byte
+
+func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
 	if nameLen != helloProgramNameLen {
-		return false
+		return -1, false
 	}
 
 	for i := 0; i < helloProgramNameLen; i++ {
 		if name[i] != helloProgramName[i] {
-			return false
+			return -1, false
 		}
 	}
 
-	return true
+	stackAddr := uint64(uintptr(unsafe.Pointer(&userStack[0])) + uintptr(len(userStack)))
+	stackAddr = stackAddr &^ 15
+
+	rip := GetUserProgramShellAddr()
+	ExecuteUserTask(rip, stackAddr)
+
+	return 1, true
 }

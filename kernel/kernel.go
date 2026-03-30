@@ -16,14 +16,6 @@ func EnableInterrupts()
 func DisableInterrupts()
 func Halt()
 
-var syscallMsg = [...]byte{
-	'W', 'e', 'l', 'c', 'o', 'm', 'e', ' ', 'T', 'o', ' ', 'O', 'S', ' ', 'D', 'a', 'v', '\n',
-}
-
-func SyscallTest() {
-	TriggerSysWrite(&syscallMsg[0], uint32(len(syscallMsg)))
-}
-
 func Main(multibootInfoAddr uint64) {
 	DisableInterrupts()
 	terminal.Init()
@@ -31,8 +23,6 @@ func Main(multibootInfoAddr uint64) {
 
 	InitGDTAndTSS()
 	InitIDT()
-
-	SyscallTest()
 
 	PICRemap(0x20, 0x28)
 	PICSetMask(0xFC, 0xFF)

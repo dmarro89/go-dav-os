@@ -485,9 +485,9 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outb:
 .global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw
 .type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw, @function
 github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw:
+	movq %rdx, %rcx    # count to RCX
 	movw %di, %dx      # port in DX
 	movq %rsi, %rdi    # addr to RDI (destination)
-	movq %rdx, %rcx    # count to RCX
 	cld
 	rep insw
 	ret
@@ -497,10 +497,103 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.insw:
 .global github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
 .type   github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, @function
 github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw:
+	movq %rdx, %rcx    # count to RCX
 	movw %di, %dx      # port in DX
 	# addr is already in RSI (source)
-	movq %rdx, %rcx    # count to RCX
 	cld
 	rep outsw
 	ret
 .size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
+
+# void go_0kernel.ExecuteUserTask(funcPtr uint64, stackPtr uint64)
+.global go_0kernel.ExecuteUserTask
+.type   go_0kernel.ExecuteUserTask, @function
+go_0kernel.ExecuteUserTask:
+    # Save kernel state
+    mov %rsp, __kernel_saved_rsp(%rip)
+    mov %rbp, __kernel_saved_rbp(%rip)
+    mov %rbx, __kernel_saved_rbx(%rip)
+    mov %r12, __kernel_saved_r12(%rip)
+    mov %r13, __kernel_saved_r13(%rip)
+    mov %r14, __kernel_saved_r14(%rip)
+    mov %r15, __kernel_saved_r15(%rip)
+    pushfq
+    popq __kernel_saved_rflags(%rip)
+
+    # Setup iretq frame
+    mov $0x23, %ax      # user data selector Index 4 (0x20) | 3 = 0x23
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    pushq $0x23         # SS (Data)
+    pushq %rsi          # RSP
+    pushf               # RFLAGS
+    popq %rax
+    orq $0x200, %rax    # IF bit
+    pushq %rax
+    pushq $0x1B         # CS (Code) Index 3 (0x18) | 3 = 0x1B
+    pushq %rdi          # RIP
+    iretq
+.size go_0kernel.ExecuteUserTask, . - go_0kernel.ExecuteUserTask
+
+# void go_0kernel.ReturnToKernel()
+.global go_0kernel.ReturnToKernel
+.type   go_0kernel.ReturnToKernel, @function
+go_0kernel.ReturnToKernel:
+    # Restore kernel data segments
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    mov __kernel_saved_rsp(%rip), %rsp
+    mov __kernel_saved_rbp(%rip), %rbp
+    mov __kernel_saved_rbx(%rip), %rbx
+    mov __kernel_saved_r12(%rip), %r12
+    mov __kernel_saved_r13(%rip), %r13
+    mov __kernel_saved_r14(%rip), %r14
+    mov __kernel_saved_r15(%rip), %r15
+    pushq __kernel_saved_rflags(%rip)
+    popfq
+
+    # Ret where ExecuteUserTask was called
+    ret
+.size go_0kernel.ReturnToKernel, . - go_0kernel.ReturnToKernel
+
+# uint64 go_0kernel.GetUserProgramShellAddr()
+.global go_0kernel.GetUserProgramShellAddr
+.type   go_0kernel.GetUserProgramShellAddr, @function
+go_0kernel.GetUserProgramShellAddr:
+    leaq go_0kernel.UserProgramShell(%rip), %rax
+    ret
+.size go_0kernel.GetUserProgramShellAddr, . - go_0kernel.GetUserProgramShellAddr
+
+.global go_0kernel.UserProgramShell
+.type go_0kernel.UserProgramShell, @function
+go_0kernel.UserProgramShell:
+    mov $1, %rax
+    mov $1, %rbx
+    lea __user_msg(%rip), %rcx
+    mov $20, %rdx
+    int $0x80
+
+    mov $2, %rax
+    mov $0, %rbx
+    int $0x80
+    hlt
+
+
+
+.section .data
+__kernel_saved_rsp: .quad 0
+__kernel_saved_rbp: .quad 0
+__kernel_saved_rbx: .quad 0
+__kernel_saved_r12: .quad 0
+__kernel_saved_r13: .quad 0
+__kernel_saved_r14: .quad 0
+__kernel_saved_r15: .quad 0
+__kernel_saved_rflags: .quad 0
+__user_msg: .ascii "hello from userland\n"
