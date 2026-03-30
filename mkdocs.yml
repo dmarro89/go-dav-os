@@ -11,3 +11,4 @@ nav:
   - Boot & GRUB: manual/02-boot/boot-and-grub.md
   - Memory Layout: manual/02-boot/linker-and-initial-memory-layout.md
   - Privilege Transition: manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md
+  - User/Kernel Memory Isolation: manual/03-kernel-core/user-kernel-memory-isolation.md
