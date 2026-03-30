@@ -355,10 +355,48 @@ go_0kernel.DFaultStub:
 .global go_0kernel.PFaultStub
 .type   go_0kernel.PFaultStub, @function
 go_0kernel.PFaultStub:
+	# Debug marker + faulting linear address from CR2.
 	movb $'P', %al
 	outb %al, $0xe9
 	movb $'F', %al
 	outb %al, $0xe9
+	movb $' ', %al
+	outb %al, $0xe9
+	movb $'C', %al
+	outb %al, $0xe9
+	movb $'R', %al
+	outb %al, $0xe9
+	movb $'2', %al
+	outb %al, $0xe9
+	movb $'=', %al
+	outb %al, $0xe9
+	movb $'0', %al
+	outb %al, $0xe9
+	movb $'x', %al
+	outb %al, $0xe9
+
+	movq %cr2, %rbx
+	movl $16, %ecx
+
+.Lpf_hex_loop:
+	movq %rbx, %rdx
+	shrq $60, %rdx
+	andb $0x0F, %dl
+	cmpb $10, %dl
+	jb .Lpf_hex_digit
+	addb $('a' - 10), %dl
+	jmp .Lpf_hex_emit
+
+.Lpf_hex_digit:
+	addb $'0', %dl
+
+.Lpf_hex_emit:
+	movb %dl, %al
+	outb %al, $0xe9
+	shlq $4, %rbx
+	decl %ecx
+	jnz .Lpf_hex_loop
+
 	movb $'\n', %al
 	outb %al, $0xe9
 	cli

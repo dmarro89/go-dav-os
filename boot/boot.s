@@ -249,6 +249,25 @@ setup_long_mode:
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 
+	# Keep the old 2 MiB identity map semantics via 4 KiB PTEs:
+	# map 0x40000000..0x401FFFFF as supervisor identity first.
+	lea pt_user, %edi
+	xorl %ecx, %ecx
+	movl $0x40000000, %ebx
+
+.Lmap_4k_pt_user_identity:
+	movl %ecx, %eax
+	shll $12, %eax             # ecx * 4 KiB
+	addl %ebx, %eax
+	orl $0x03, %eax            # present|rw (supervisor)
+	movl %eax, (%edi)
+	movl $0, 4(%edi)
+	addl $8, %edi
+	incl %ecx
+	cmpl $512, %ecx
+	jne .Lmap_4k_pt_user_identity
+
+	# Override first two pages as user mappings.
 	movl $__user_program_page, %eax
 	andl $0xFFFFF000, %eax
 	orl $0x05, %eax            # present|user (read-only)
