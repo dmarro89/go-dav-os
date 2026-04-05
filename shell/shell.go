@@ -24,6 +24,8 @@ var (
 	getTicks        func() uint64
 	getSyscallTicks func() uint64
 	runProgram      func(name *[16]byte, nameLen int) (pid int, ok bool)
+	switchLayoutFn  func(string) bool
+	currentLayout   = "it"
 	tmpName         [16]byte
 	tmpData         [4096]byte
 	diskBuf         [512]byte
@@ -45,7 +47,7 @@ const maxHistory = 32
 var commandBuf = [...]string{
 	"help", "clear", "echo", "ticks", "uptime", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", "history", "run",
+	"version", "history", "run", "layout",
 }
 
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
@@ -53,6 +55,8 @@ func SetSyscallTickProvider(fn func() uint64) { getSyscallTicks = fn }
 func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
 	runProgram = fn
 }
+func SetLayoutSwitcher(fn func(string) bool) { switchLayoutFn = fn }
+func SetInitialLayout(name string)           { currentLayout = name }
 
 func Init() {
 	lineLen = 0
@@ -666,6 +670,31 @@ func execute() {
 			terminal.PutRune(rune(diskBuf[i]))
 		}
 		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "layout") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("current layout: ")
+			terminal.Print(currentLayout)
+			terminal.PutRune('\n')
+			return
+		}
+
+		if matchLiteral(a1s, a1e, "us") && switchLayoutFn != nil && switchLayoutFn("us") {
+			currentLayout = "us"
+			terminal.Print("layout: switched to ")
+			terminal.Print("us")
+			terminal.PutRune('\n')
+		} else if matchLiteral(a1s, a1e, "it") && switchLayoutFn != nil && switchLayoutFn("it") {
+			currentLayout = "it"
+			terminal.Print("layout: switched to ")
+			terminal.Print("it")
+			terminal.PutRune('\n')
+		} else {
+			terminal.Print("layout: failed to switch\n")
+		}
 		return
 	}
 

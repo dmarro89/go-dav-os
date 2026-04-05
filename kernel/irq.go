@@ -6,8 +6,41 @@ import (
 	"github.com/dmarro89/go-dav-os/keyboard/layout"
 )
 
-func init() {
-	keyboard.SetLayout(layout.IT)
+var currentLayoutName string
+
+// InitKeyboard initializes the keyboard layout from the build-time default.
+func InitKeyboard() {
+	currentLayoutName = initKeyboardLayout()
+}
+
+// SwitchLayout switches the active keyboard layout by name ("us" or "it").
+// Interrupts are disabled during the swap to prevent IRQ1 from calling
+// translateScancode while currentLayout is half-written (type ptr != data ptr).
+// Returns true if the layout was found and applied.
+func SwitchLayout(name string) bool {
+	switch name {
+	case "us":
+		DisableInterrupts()
+		keyLayout, layoutName := layout.GetUS()
+		keyboard.SetLayout(keyLayout)
+		EnableInterrupts()
+		currentLayoutName = layoutName
+		return true
+	case "it":
+		DisableInterrupts()
+		keyLayout, layoutName := layout.GetIT()
+		keyboard.SetLayout(keyLayout)
+		EnableInterrupts()
+		currentLayoutName = layoutName
+		return true
+	default:
+		return false
+	}
+}
+
+// GetCurrentLayoutName returns the name of the currently active layout.
+func GetCurrentLayoutName() string {
+	return currentLayoutName
 }
 
 var ticks uint64
