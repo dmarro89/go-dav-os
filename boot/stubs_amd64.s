@@ -240,6 +240,16 @@ runtime.memequal64..f:
 	ret
 .size runtime.memequal64..f, . - runtime.memequal64..f
 
+# bool runtime.interequal..f(p, q unsafe.Pointer) bool
+# Interface equality stub — keyboard.Layout type descriptor references this.
+# We never compare Layout values with ==, so returning false is safe.
+.global runtime.interequal..f
+.type   runtime.interequal..f, @function
+runtime.interequal..f:
+	xor %eax, %eax
+	ret
+.size runtime.interequal..f, . - runtime.interequal..f
+
 # void go_0kernel.LoadIDT(void *idtr)
 .global go_0kernel.LoadIDT
 .type   go_0kernel.LoadIDT, @function
