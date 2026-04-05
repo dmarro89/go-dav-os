@@ -1,34 +1,42 @@
 package kernel
 
-import "github.com/dmarro89/go-dav-os/kernel/scheduler"
-
-func userHelloStart()
-
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}
+var kernelReadProbeProgramName = [...]byte{'k', 'r', 'e', 'a', 'd'}
+var kernelWriteProbeProgramName = [...]byte{'k', 'w', 'r', 'i', 't', 'e'}
 
-const helloProgramNameLen = 5
+func ExecuteUserTask(rip, rsp uint64)
+func GetUserProgramHelloAddr() uint64
+func GetUserProgramKernelReadProbeAddr() uint64
+func GetUserProgramKernelWriteProbeAddr() uint64
+func GetUserStackTopAddr() uint64
 
 func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
-	if !matchProgramName(name, nameLen) {
+	var rip uint64
+	switch {
+	case matchProgramName(name, nameLen, helloProgramName[:]):
+		rip = GetUserProgramHelloAddr()
+	case matchProgramName(name, nameLen, kernelReadProbeProgramName[:]):
+		rip = GetUserProgramKernelReadProbeAddr()
+	case matchProgramName(name, nameLen, kernelWriteProbeProgramName[:]):
+		rip = GetUserProgramKernelWriteProbeAddr()
+	default:
 		return -1, false
 	}
-	task := scheduler.NewTask(userHelloStart)
-	if task == nil {
-		return -1, false
-	}
-	return task.ID, true
+
+	ExecuteUserTask(rip, GetUserStackTopAddr())
+
+	return 1, true
 }
 
-func matchProgramName(name *[16]byte, nameLen int) bool {
-	if nameLen != helloProgramNameLen {
+func matchProgramName(name *[16]byte, nameLen int, expected []byte) bool {
+	if nameLen != len(expected) {
 		return false
 	}
 
-	for i := 0; i < helloProgramNameLen; i++ {
-		if name[i] != helloProgramName[i] {
+	for i := 0; i < len(expected); i++ {
+		if name[i] != expected[i] {
 			return false
 		}
 	}
-
 	return true
 }

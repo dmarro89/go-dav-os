@@ -1,28 +1,45 @@
-# hello.s - Tiny user task for go-dav-os
-# Linked into kernel and started by the task runner via run hello
+# hello.s - ring3 user programs mapped into the dedicated user VA range.
+
+.set KERNEL_TEXT_BASE, 0x00100000
 
 .code64
-.section .text
+.section .user_prog, "ax"
+.align 4096
+.global __user_program_page
+__user_program_page:
+
 .global go_0kernel.userHelloStart
-
 go_0kernel.userHelloStart:
-    # SYS_WRITE: write "hello from userland\n" to stdout
-    mov  $1, %rax           # SYS_WRITE = 1
-    mov  $1, %rbx           # fd = 1 (stdout)
-    lea  msg(%rip), %rcx    # buffer address
-    mov  $msg_len, %rdx     # length
-    int  $0x80              # invoke syscall
+	mov  $1, %rax            # SYS_WRITE
+	mov  $1, %rbx            # fd = stdout
+	lea  hello_msg(%rip), %rcx
+	mov  $hello_msg_len, %rdx
+	int  $0x80
 
-    # SYS_EXIT: terminate with status 0
-    mov  $2, %rax           # SYS_EXIT = 2
-    xor  %rbx, %rbx         # status = 0
-    int  $0x80              # invoke syscall
+	mov  $2, %rax            # SYS_EXIT
+	xor  %rbx, %rbx
+	int  $0x80
+	hlt
 
-    # Should never reach here, but just in case:
-    hlt
+.global go_0kernel.userProbeReadKernelStart
+go_0kernel.userProbeReadKernelStart:
+	mov  $KERNEL_TEXT_BASE, %r8
+	mov  (%r8), %rax         # Must #PF in ring3 (supervisor page)
+	mov  $2, %rax
+	mov  $11, %rbx
+	int  $0x80
+	hlt
 
-.section .rodata
-msg:
-    .ascii "hello from userland\n"
-msg_end:
-    .set msg_len, msg_end - msg
+.global go_0kernel.userProbeWriteKernelStart
+go_0kernel.userProbeWriteKernelStart:
+	mov  $KERNEL_TEXT_BASE, %r8
+	movb $0x41, (%r8)        # Must #PF in ring3 (supervisor page)
+	mov  $2, %rax
+	mov  $12, %rbx
+	int  $0x80
+	hlt
+
+hello_msg:
+	.ascii "hello from userland\n"
+hello_msg_end:
+	.set hello_msg_len, hello_msg_end - hello_msg

@@ -31,9 +31,14 @@ Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the p
   - FAT16 filesystem with file create/read/list operations
   - Data persists across reboots on a 20MB disk image
   
-## Architecture
+## Documentation
 
-![DavOS Architecture](docs/architecture.png)
+Full manual: https://dmarro89.github.io/go-dav-os/
+
+- Introduction: https://dmarro89.github.io/go-dav-os/manual/00-introduction/index.html
+- Architecture: https://dmarro89.github.io/go-dav-os/manual/01-overview/architecture.html
+- Boot & GRUB: https://dmarro89.github.io/go-dav-os/manual/02-boot/boot-and-grub.html
+- ...
 
 ## Project status
 
@@ -111,10 +116,12 @@ fatread hello
 ### Run simple programs
 
 The task runner can start small assembly programs linked into the kernel.
-At the moment, the supported launch name is:
+At the moment, the supported launch names are:
 - `run hello`
+- `run kread` (ring3 read probe against kernel memory, should page-fault)
+- `run kwrite` (ring3 write probe against kernel memory, should page-fault)
 
-This starts `user/hello.s`, which calls `SYS_WRITE` and then `SYS_EXIT`.
+`run hello` starts `user/hello.s`, which calls `SYS_WRITE` and then `SYS_EXIT`.
 
 **Example:**
 ```bash
@@ -144,4 +151,3 @@ Personal, open-source, work-in-progress. Iâ€™m building pieces as I learn themâ€
 <a href="https://github.com/dmarro89/go-dav-os/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=dmarro89/go-dav-os" />
 </a>
-
