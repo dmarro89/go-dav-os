@@ -61,14 +61,7 @@ func GetIT() (keyboard.Layout, string) {
 }
 
 func (l *ITLayout) GetKey(sc byte) (rune, bool) {
-	if int(sc) >= len(l.keys) {
-		return 0, false
-	}
-	r := l.keys[sc]
-	if r == 0 {
-		return 0, false
-	}
-	return r, true
+	return lookupKey(l.keys, sc)
 }
 
 func (l *ITLayout) GetShiftDigitSymbol(r rune) (rune, bool) {
