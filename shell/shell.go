@@ -170,7 +170,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
+		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout\n")
 		return
 	}
 
