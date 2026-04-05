@@ -1,6 +1,9 @@
 .code64
 .section .text
 
+.set USER_VA_BASE,  0x40000000
+.set USER_STACK_TOP, 0x40002000
+
 .macro PUSH_REGS
 	pushq %rax
 	pushq %rcx
@@ -348,6 +351,60 @@ go_0kernel.DFaultStub:
 	jmp 1b
 .size go_0kernel.DFaultStub, . - go_0kernel.DFaultStub
 
+# void go_0kernel.PFaultStub()
+.global go_0kernel.PFaultStub
+.type   go_0kernel.PFaultStub, @function
+go_0kernel.PFaultStub:
+	# Debug marker + faulting linear address from CR2.
+	movb $'P', %al
+	outb %al, $0xe9
+	movb $'F', %al
+	outb %al, $0xe9
+	movb $' ', %al
+	outb %al, $0xe9
+	movb $'C', %al
+	outb %al, $0xe9
+	movb $'R', %al
+	outb %al, $0xe9
+	movb $'2', %al
+	outb %al, $0xe9
+	movb $'=', %al
+	outb %al, $0xe9
+	movb $'0', %al
+	outb %al, $0xe9
+	movb $'x', %al
+	outb %al, $0xe9
+
+	movq %cr2, %rbx
+	movl $16, %ecx
+
+.Lpf_hex_loop:
+	movq %rbx, %rdx
+	shrq $60, %rdx
+	andb $0x0F, %dl
+	cmpb $10, %dl
+	jb .Lpf_hex_digit
+	addb $('a' - 10), %dl
+	jmp .Lpf_hex_emit
+
+.Lpf_hex_digit:
+	addb $'0', %dl
+
+.Lpf_hex_emit:
+	movb %dl, %al
+	outb %al, $0xe9
+	shlq $4, %rbx
+	decl %ecx
+	jnz .Lpf_hex_loop
+
+	movb $'\n', %al
+	outb %al, $0xe9
+	cli
+1:
+	hlt
+	jmp 1b
+.size go_0kernel.PFaultStub, . - go_0kernel.PFaultStub
+
 # uint64 go_0kernel.getGPFaultStubAddr()
 .global go_0kernel.getGPFaultStubAddr
 .type   go_0kernel.getGPFaultStubAddr, @function
@@ -363,6 +420,14 @@ go_0kernel.getDFaultStubAddr:
 	leaq go_0kernel.DFaultStub(%rip), %rax
 	ret
 .size go_0kernel.getDFaultStubAddr, . - go_0kernel.getDFaultStubAddr
+
+# uint64 go_0kernel.getPFaultStubAddr()
+.global go_0kernel.getPFaultStubAddr
+.type   go_0kernel.getPFaultStubAddr, @function
+go_0kernel.getPFaultStubAddr:
+	leaq go_0kernel.PFaultStub(%rip), %rax
+	ret
+.size go_0kernel.getPFaultStubAddr, . - go_0kernel.getPFaultStubAddr
 
 # void go_0kernel.DebugChar(byte)
 .global go_0kernel.DebugChar
@@ -504,3 +569,113 @@ github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw:
 	rep outsw
 	ret
 .size github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw, . - github_0com_1dmarro89_1go_x2ddav_x2dos_1drivers_1ata.outsw
+
+# void go_0kernel.ExecuteUserTask(funcPtr uint64, stackPtr uint64)
+.global go_0kernel.ExecuteUserTask
+.type   go_0kernel.ExecuteUserTask, @function
+go_0kernel.ExecuteUserTask:
+    # Save kernel state
+    mov %rsp, __kernel_saved_rsp(%rip)
+    mov %rbp, __kernel_saved_rbp(%rip)
+    mov %rbx, __kernel_saved_rbx(%rip)
+    mov %r12, __kernel_saved_r12(%rip)
+    mov %r13, __kernel_saved_r13(%rip)
+    mov %r14, __kernel_saved_r14(%rip)
+    mov %r15, __kernel_saved_r15(%rip)
+    pushfq
+    popq __kernel_saved_rflags(%rip)
+
+    # Setup iretq frame
+    mov $0x23, %ax      # user data selector Index 4 (0x20) | 3 = 0x23
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    pushq $0x23         # SS (Data)
+    pushq %rsi          # RSP
+    pushf               # RFLAGS
+    popq %rax
+    orq $0x200, %rax    # IF bit
+    pushq %rax
+    pushq $0x1B         # CS (Code) Index 3 (0x18) | 3 = 0x1B
+    pushq %rdi          # RIP
+    iretq
+.size go_0kernel.ExecuteUserTask, . - go_0kernel.ExecuteUserTask
+
+# void go_0kernel.ReturnToKernel()
+.global go_0kernel.ReturnToKernel
+.type   go_0kernel.ReturnToKernel, @function
+go_0kernel.ReturnToKernel:
+    # Restore kernel data segments
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+
+    mov __kernel_saved_rsp(%rip), %rsp
+    mov __kernel_saved_rbp(%rip), %rbp
+    mov __kernel_saved_rbx(%rip), %rbx
+    mov __kernel_saved_r12(%rip), %r12
+    mov __kernel_saved_r13(%rip), %r13
+    mov __kernel_saved_r14(%rip), %r14
+    mov __kernel_saved_r15(%rip), %r15
+    pushq __kernel_saved_rflags(%rip)
+    popfq
+
+    # Ret where ExecuteUserTask was called
+    ret
+.size go_0kernel.ReturnToKernel, . - go_0kernel.ReturnToKernel
+
+# uint64 go_0kernel.GetUserProgramHelloAddr()
+.global go_0kernel.GetUserProgramHelloAddr
+.type   go_0kernel.GetUserProgramHelloAddr, @function
+go_0kernel.GetUserProgramHelloAddr:
+	leaq go_0kernel.userHelloStart(%rip), %rax
+	leaq __user_program_page(%rip), %rdx
+	subq %rdx, %rax
+	addq $USER_VA_BASE, %rax
+	ret
+.size go_0kernel.GetUserProgramHelloAddr, . - go_0kernel.GetUserProgramHelloAddr
+
+# uint64 go_0kernel.GetUserProgramKernelReadProbeAddr()
+.global go_0kernel.GetUserProgramKernelReadProbeAddr
+.type   go_0kernel.GetUserProgramKernelReadProbeAddr, @function
+go_0kernel.GetUserProgramKernelReadProbeAddr:
+	leaq go_0kernel.userProbeReadKernelStart(%rip), %rax
+	leaq __user_program_page(%rip), %rdx
+	subq %rdx, %rax
+	addq $USER_VA_BASE, %rax
+	ret
+.size go_0kernel.GetUserProgramKernelReadProbeAddr, . - go_0kernel.GetUserProgramKernelReadProbeAddr
+
+# uint64 go_0kernel.GetUserProgramKernelWriteProbeAddr()
+.global go_0kernel.GetUserProgramKernelWriteProbeAddr
+.type   go_0kernel.GetUserProgramKernelWriteProbeAddr, @function
+go_0kernel.GetUserProgramKernelWriteProbeAddr:
+	leaq go_0kernel.userProbeWriteKernelStart(%rip), %rax
+	leaq __user_program_page(%rip), %rdx
+	subq %rdx, %rax
+	addq $USER_VA_BASE, %rax
+	ret
+.size go_0kernel.GetUserProgramKernelWriteProbeAddr, . - go_0kernel.GetUserProgramKernelWriteProbeAddr
+
+# uint64 go_0kernel.GetUserStackTopAddr()
+.global go_0kernel.GetUserStackTopAddr
+.type   go_0kernel.GetUserStackTopAddr, @function
+go_0kernel.GetUserStackTopAddr:
+	movabs $USER_STACK_TOP, %rax
+	ret
+.size go_0kernel.GetUserStackTopAddr, . - go_0kernel.GetUserStackTopAddr
+
+
+.section .data
+__kernel_saved_rsp: .quad 0
+__kernel_saved_rbp: .quad 0
+__kernel_saved_rbx: .quad 0
+__kernel_saved_r12: .quad 0
+__kernel_saved_r13: .quad 0
+__kernel_saved_r14: .quad 0
+__kernel_saved_r15: .quad 0
+__kernel_saved_rflags: .quad 0
