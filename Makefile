@@ -265,7 +265,7 @@ docker-shell: docker-image
 # -----------------------
 test:
 	mkdir -p $(BUILD_DIR)/.gocache
-	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test $(TEST_PKGS)
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing ./...
 
 # -----------------------
 # User hello
