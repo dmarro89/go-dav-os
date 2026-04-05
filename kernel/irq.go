@@ -16,6 +16,8 @@ func InitKeyboard() {
 // SwitchLayout switches the active keyboard layout by name ("us" or "it").
 // Interrupts are disabled during the swap to prevent IRQ1 from calling
 // translateScancode while currentLayout is half-written (type ptr != data ptr).
+// Must only be called with interrupts already enabled: it unconditionally calls
+// EnableInterrupts() after the swap and does not preserve the prior interrupt state.
 // Returns true if the layout was found and applied.
 func SwitchLayout(name string) bool {
 	switch name {
