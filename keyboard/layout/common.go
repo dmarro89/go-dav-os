@@ -1,7 +1,7 @@
 package layout
 
 func lookupKey(keys *[128]rune, sc byte) (rune, bool) {
-	if int(sc) >= len(keys) {
+	if int(sc) >= len(*keys) {
 		return 0, false
 	}
 	r := keys[sc]
