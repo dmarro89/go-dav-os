@@ -6,7 +6,9 @@ type USLayout struct {
 	keys [128]rune
 }
 
-var US keyboard.Layout = &USLayout{
+const USLayoutName string = "us"
+
+var usLayoutData = USLayout{
 	keys: [128]rune{
 		0x02: '1',
 		0x03: '2',
@@ -52,6 +54,10 @@ var US keyboard.Layout = &USLayout{
 		0x1C: '\n',
 		0x0E: '\b',
 	},
+}
+
+func GetUS() (keyboard.Layout, string) {
+	return &usLayoutData, USLayoutName
 }
 
 func (u *USLayout) GetKey(sc byte) (rune, bool) {

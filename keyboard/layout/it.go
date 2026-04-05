@@ -6,7 +6,9 @@ type ITLayout struct {
 	keys [128]rune
 }
 
-var IT keyboard.Layout = &ITLayout{
+const ITLayoutName string = "it"
+
+var itLayoutData = ITLayout{
 	keys: [128]rune{
 		0x02: '1',
 		0x03: '2',
@@ -52,6 +54,10 @@ var IT keyboard.Layout = &ITLayout{
 		0x1C: '\n',
 		0x0E: '\b',
 	},
+}
+
+func GetIT() (keyboard.Layout, string) {
+	return &itLayoutData, ITLayoutName
 }
 
 func (l *ITLayout) GetKey(sc byte) (rune, bool) {
