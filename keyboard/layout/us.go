@@ -61,7 +61,7 @@ func GetUS() (keyboard.Layout, string) {
 }
 
 func (u *USLayout) GetKey(sc byte) (rune, bool) {
-	return lookupKey(u.keys, sc)
+	return lookupKey(&u.keys, sc)
 }
 
 func (u *USLayout) GetShiftDigitSymbol(r rune) (rune, bool) {
