@@ -27,9 +27,6 @@ var (
 var currentLayout Layout
 
 func SetLayout(l Layout) {
-	if l == nil {
-		panic("keyboard: cannot set nil layout")
-	}
 	currentLayout = l
 }
 
