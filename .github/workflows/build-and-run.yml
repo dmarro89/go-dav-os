@@ -7,6 +7,33 @@ on:
     types: [ opened, synchronize ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check formatting
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not formatted (run 'gofmt -w .' to fix):"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet -unsafeptr=false ./kernel/scheduler ./fs
+
   build-run:
     runs-on: ubuntu-latest
 

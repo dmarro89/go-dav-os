@@ -40,8 +40,31 @@ That’s enough.
 - Prefer **small PRs** (one thing at a time)
 - Try to keep changes **local** (avoid “while I’m here I refactor the whole repo”)
 - Readability > cleverness
-- Run `gofmt` on Go code
+- Run `gofmt` on Go code (see below)
 - Comments are welcome when they explain **why** (not what)
+
+## Code formatting and vet
+
+The CI enforces formatting and runs `go vet` on every PR. Run these locally before pushing to avoid CI failures.
+
+**Fix formatting:**
+```bash
+gofmt -w .
+```
+
+To check which files need formatting without modifying them:
+```bash
+gofmt -l .
+```
+
+**Run go vet:**
+```bash
+go vet -unsafeptr=false ./kernel/scheduler ./fs
+```
+
+The `-unsafeptr=false` flag is intentional: several packages use raw unsafe pointer arithmetic for physical memory access in the OS kernel, which is flagged as "possible misuse" but is correct in a freestanding context. The scope is limited to the packages that compile with the standard Go toolchain (the gccgo freestanding packages like `keyboard`, `terminal`, and `drivers/ata` cannot be built with `go vet`).
+
+Fix any other issues reported before opening a PR. `go vet` catches common mistakes like incorrect format strings, unreachable code, and misuse of sync primitives.
 
 If you want to do a bigger change (design/architecture), open a Discussion first so we don’t waste time.
 
