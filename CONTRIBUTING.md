@@ -18,7 +18,21 @@ Anything that helps the project move forward, especially:
 ## Setup / how to run
 Please follow the README for the full setup (Docker/native toolchain, QEMU, etc.).
 
-If something is unclear or missing, that’s already a useful contribution: improve the docs.
+
+## Testing
+
+```bash
+# Run all unit tests
+make test
+
+# Or run tests for specific packages
+go test ./fs ./kernel/scheduler ./kernel/gdt ./kernel/tss
+
+# Run integration tests (requires QEMU)
+python3 scripts/test_boot.py
+```
+
+All tests must pass in CI. The `make test` command automatically discovers and runs all packages containing `*_test.go` files.
 
 ## How to open a PR
 The workflow is the classic one:
