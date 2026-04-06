@@ -20,24 +20,25 @@ func InitKeyboard() {
 // EnableInterrupts() after the swap and does not preserve the prior interrupt state.
 // Returns true if the layout was found and applied.
 func SwitchLayout(name string) bool {
+	var (
+		keyLayout  layout.Layout
+		layoutName string
+	)
+
 	switch name {
 	case "us":
-		DisableInterrupts()
-		keyLayout, layoutName := layout.GetUS()
-		keyboard.SetLayout(keyLayout)
-		EnableInterrupts()
-		currentLayoutName = layoutName
-		return true
+		keyLayout, layoutName = layout.GetUS()
 	case "it":
-		DisableInterrupts()
-		keyLayout, layoutName := layout.GetIT()
-		keyboard.SetLayout(keyLayout)
-		EnableInterrupts()
-		currentLayoutName = layoutName
-		return true
+		keyLayout, layoutName = layout.GetIT()
 	default:
 		return false
 	}
+
+	DisableInterrupts()
+	keyboard.SetLayout(keyLayout)
+	EnableInterrupts()
+	currentLayoutName = layoutName
+	return true
 }
 
 // GetCurrentLayoutName returns the name of the currently active layout.
