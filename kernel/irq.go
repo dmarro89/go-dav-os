@@ -6,7 +6,11 @@ import (
 	"github.com/dmarro89/go-dav-os/keyboard/layout"
 )
 
-var currentLayoutName string
+var (
+	currentLayoutName string
+	switchKeyLayout   keyboard.Layout
+	switchLayoutName  string
+)
 
 // InitKeyboard initializes the keyboard layout from the build-time default.
 func InitKeyboard() {
@@ -20,24 +24,19 @@ func InitKeyboard() {
 // EnableInterrupts() after the swap and does not preserve the prior interrupt state.
 // Returns true if the layout was found and applied.
 func SwitchLayout(name string) bool {
-	var (
-		keyLayout  layout.Layout
-		layoutName string
-	)
-
 	switch name {
 	case "us":
-		keyLayout, layoutName = layout.GetUS()
+		switchKeyLayout, switchLayoutName = layout.GetUS()
 	case "it":
-		keyLayout, layoutName = layout.GetIT()
+		switchKeyLayout, switchLayoutName = layout.GetIT()
 	default:
 		return false
 	}
 
 	DisableInterrupts()
-	keyboard.SetLayout(keyLayout)
+	keyboard.SetLayout(switchKeyLayout)
 	EnableInterrupts()
-	currentLayoutName = layoutName
+	currentLayoutName = switchLayoutName
 	return true
 }
 
