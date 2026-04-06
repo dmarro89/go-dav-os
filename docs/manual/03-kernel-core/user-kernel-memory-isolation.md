@@ -74,9 +74,11 @@ Result:
 
 This keeps runtime entry addresses in the user VA window even though payload bytes are linked into the kernel image physically.
 
+User-mode `SYS_WRITE` and `SYS_EXIT` then flow through the syscall entry stub in `boot/stubs_amd64.s` and the Go dispatcher in `kernel/syscall/`.
+
 `kernel/task_runner.go` then dispatches:
 
-- `run hello` -> normal user syscall demo
+- `run hello` -> normal user syscall demo (`syscall` entry, `SYS_WRITE`, `SYS_EXIT`)
 - `run kread` -> intentional ring3 read from kernel address
 - `run kwrite` -> intentional ring3 write to kernel address
 
@@ -90,6 +92,7 @@ Implementation:
 
 - `boot/stubs_amd64.s` provides `PFaultStub` and emits `PF` on debug port `0xE9`
 - `kernel/idt.go` installs vector `0x0E` with `getPFaultStubAddr()`
+- `kernel/syscall/` remains unchanged by the fault itself because the violation is trapped before any user pointer is accepted as trusted kernel memory
 
 This gives an unambiguous marker in QEMU debug logs when isolation works as intended.
 

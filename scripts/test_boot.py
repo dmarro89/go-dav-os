@@ -115,24 +115,26 @@ def run_functional_suite(iso_path, disk_img, log_file):
         wait_for_boot(process, log_file)
 
         test_cases = [
-            ("help", "Commands:"),
-            ("version", "DavOS 0.2.0 (64bit)"),
-            ("fatformat", "FAT16 Formatted"),
-            ("fatinit", "FAT16 Initialized"),
-            ("fatcreate test hi", "File created"),
-            ("fatls", "TEST"),
-            ("fatread test", "hi"),
+            ("help", ["Commands:"]),
+            ("version", ["DavOS 0.2.0 (64bit)"]),
+            ("fatformat", ["FAT16 Formatted"]),
+            ("fatinit", ["FAT16 Initialized"]),
+            ("fatcreate test hi", ["File created"]),
+            ("fatls", ["TEST"]),
+            ("fatread test", ["hi"]),
+            ("run hello", ["hello from userland", "Process exited with status 0"]),
         ]
 
-        for cmd_text, expected in test_cases:
+        for cmd_text, expected_outputs in test_cases:
             send_shell_command(process, cmd_text)
-            print(f"Waiting for '{expected}' output...")
-            if not check_log_for(expected, log_file, timeout=6):
-                fail_with_log(
-                    f"Timeout waiting for '{expected}' from command '{cmd_text}'.",
-                    process,
-                    log_file,
-                )
+            for expected in expected_outputs:
+                print(f"Waiting for '{expected}' output...")
+                if not check_log_for(expected, log_file, timeout=6):
+                    fail_with_log(
+                        f"Timeout waiting for '{expected}' from command '{cmd_text}'.",
+                        process,
+                        log_file,
+                    )
             print(f"Test Passed: '{cmd_text}' command executed successfully.")
     finally:
         stop_qemu(process)

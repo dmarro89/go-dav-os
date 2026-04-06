@@ -335,10 +335,10 @@ long_mode_entry:
 .type   go_0kernel.TriggerSysWrite, @function
 
 go_0kernel.TriggerSysWrite:
-    mov  %rdi, %rcx      # buf
     mov  %rsi, %rdx      # n
+    mov  %rdi, %rsi      # buf
+    mov  $1, %edi        # fd=1
     mov  $1, %eax        # SYS_WRITE
-    mov  $1, %ebx        # fd=1
     int  $0x80
     ret
 .size go_0kernel.TriggerSysWrite, . - go_0kernel.TriggerSysWrite
@@ -348,7 +348,6 @@ go_0kernel.TriggerSysWrite:
 .type   go_0kernel.TriggerSysExit, @function
 
 go_0kernel.TriggerSysExit:
-    mov  %edi, %ebx      # status
     mov  $2, %eax        # SYS_EXIT
     int  $0x80
     ret

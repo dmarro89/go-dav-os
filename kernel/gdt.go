@@ -10,14 +10,6 @@ import (
 )
 
 const (
-	kernelCodeSelector uint16 = 0x08
-	kernelDataSelector uint16 = 0x10
-	userCodeSelector   uint16 = 0x1B
-	userDataSelector   uint16 = 0x23
-	tssSelector        uint16 = 0x28
-)
-
-const (
 	kernelCodeDescriptor uint64 = 0x00AF9A000000FFFF
 	kernelDataDescriptor uint64 = 0x00CF92000000FFFF
 	userCodeDescriptor   uint64 = 0x00AFFA000000FFFF

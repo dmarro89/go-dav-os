@@ -34,6 +34,7 @@ FAT16_IMPORT := $(MODPATH)/fs/fat16
 SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 GDT_IMPORT := $(MODPATH)/kernel/gdt
 TSS_IMPORT := $(MODPATH)/kernel/tss
+SYSCALL_IMPORT := $(MODPATH)/kernel/syscall
 
 KERNEL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/*.go))
 USER_HELLO_SRC := user/hello.s
@@ -47,6 +48,7 @@ FAT16_SRCS := fs/fat16/fat16.go
 SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard kernel/scheduler/*.go))
 GDT_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/gdt/*.go))
 TSS_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/tss/*.go))
+SYSCALL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/syscall/*.go))
 SCH_SWITCH_SRC := asm/switch.s
 TEST_PKGS := $(shell find . -name '*_test.go' -not -path './build/*' -exec dirname {} \; | sed 's|^\./|./|' | sort -u)
 
@@ -70,10 +72,12 @@ FAT16_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/fs/fat16.gox
 SCHEDULER_OBJ := $(BUILD_DIR)/scheduler.o
 GDT_OBJ := $(BUILD_DIR)/gdt.o
 TSS_OBJ := $(BUILD_DIR)/tss.o
+SYSCALL_OBJ := $(BUILD_DIR)/syscall.o
 SCH_SWITCH_OBJ := $(BUILD_DIR)/switch.o
 SCHEDULER_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/scheduler.gox
 GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
 TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
+SYSCALL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/syscall.gox
 
 .PHONY: all kernel iso run clean docker-build docker-shell docker-run test
 
@@ -210,11 +214,21 @@ $(TSS_GOX): $(TSS_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(TSS_GOX))
 	$(OBJCOPY) -j .go_export $(TSS_OBJ) $(TSS_GOX)
 
+$(SYSCALL_OBJ): $(SYSCALL_SRCS) $(TERMINAL_GOX) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-I $(BUILD_DIR) \
+		-fgo-pkgpath=$(SYSCALL_IMPORT) \
+		-c $(SYSCALL_SRCS) -o $(SYSCALL_OBJ)
+
+$(SYSCALL_GOX): $(SYSCALL_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(SYSCALL_GOX))
+	$(OBJCOPY) -j .go_export $(SYSCALL_OBJ) $(SYSCALL_GOX)
+
 $(SCH_SWITCH_OBJ): $(SCH_SWITCH_SRC) | $(BUILD_DIR)
 	$(AS) $(SCH_SWITCH_SRC) -o $(SCH_SWITCH_OBJ)
 
 # --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) $(GDT_GOX) $(TSS_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) $(GDT_GOX) $(TSS_GOX) $(SYSCALL_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
@@ -222,10 +236,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
