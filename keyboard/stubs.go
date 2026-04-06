@@ -2,10 +2,12 @@
 
 package keyboard
 
-type Layout [128]rune
+type Layout interface {
+	GetKey(byte) (rune, bool)
+	GetShiftDigitSymbol(r rune) (rune, bool)
+}
 
-var LayoutIT = Layout{}
-var LayoutUS = Layout{}
+func SetLayout(l Layout) {}
 
 func inb(port uint16) byte {
 	return 0
