@@ -1,3 +1,5 @@
+//go:build !testing
+
 package kernel
 
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}

@@ -24,9 +24,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Run Unit Tests
-        run: |
-          mkdir -p build/.gocache
-          GOCACHE="$PWD/build/.gocache" go test ./kernel/scheduler ./fs
+        run: make test
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3

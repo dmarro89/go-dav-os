@@ -1,3 +1,5 @@
+//go:build !testing
+
 package keyboard
 
 type Layout interface {

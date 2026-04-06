@@ -1,3 +1,5 @@
+//go:build !testing
+
 package keyboard
 
 func inb(port uint16) byte
