@@ -684,19 +684,30 @@ func execute() {
 			return
 		}
 
-		if matchLiteral(a1s, a1e, "us") && switchLayoutFn != nil && switchLayoutFn("us") {
-			currentLayout = "us"
-			terminal.Print("layout: switched to ")
-			terminal.Print("us")
-			terminal.PutRune('\n')
-		} else if matchLiteral(a1s, a1e, "it") && switchLayoutFn != nil && switchLayoutFn("it") {
-			currentLayout = "it"
-			terminal.Print("layout: switched to ")
-			terminal.Print("it")
-			terminal.PutRune('\n')
+		targetLayout := ""
+		if matchLiteral(a1s, a1e, "us") {
+			targetLayout = "us"
+		} else if matchLiteral(a1s, a1e, "it") {
+			targetLayout = "it"
 		} else {
-			terminal.Print("layout: failed to switch\n")
+			terminal.Print("Usage: layout [us|it]\n")
+			return
 		}
+
+		if switchLayoutFn == nil {
+			terminal.Print("layout: switcher not wired\n")
+			return
+		}
+
+		if !switchLayoutFn(targetLayout) {
+			terminal.Print("layout: failed to switch\n")
+			return
+		}
+
+		currentLayout = targetLayout
+		terminal.Print("layout: switched to ")
+		terminal.Print(targetLayout)
+		terminal.PutRune('\n')
 		return
 	}
 
