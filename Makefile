@@ -35,18 +35,18 @@ SCHEDULER_IMPORT := $(MODPATH)/kernel/scheduler
 GDT_IMPORT := $(MODPATH)/kernel/gdt
 TSS_IMPORT := $(MODPATH)/kernel/tss
 
-KERNEL_SRCS := $(filter-out %_test.go, $(wildcard kernel/*.go))
+KERNEL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/*.go))
 USER_HELLO_SRC := user/hello.s
 TERMINAL_SRC := terminal/terminal.go
-KEYBOARD_SRCS := $(filter-out %_test.go, $(wildcard keyboard/*.go))
-SHELL_SRCS := $(filter-out %_test.go, $(wildcard shell/*.go))
-MEM_SRCS       := $(filter-out %_test.go %_stub.go, $(wildcard mem/*.go))
-FS_SRCS   := $(filter-out %_test.go, $(wildcard fs/*.go))
+KEYBOARD_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard keyboard/*.go))
+SHELL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard shell/*.go))
+MEM_SRCS       := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard mem/*.go))
+FS_SRCS   := $(filter-out %_test.go %stubs.go, $(wildcard fs/*.go))
 ATA_SRCS  := drivers/ata/ata.go
 FAT16_SRCS := fs/fat16/fat16.go
-SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go, $(wildcard kernel/scheduler/*.go))
-GDT_SRCS := $(filter-out %_test.go, $(wildcard kernel/gdt/*.go))
-TSS_SRCS := $(filter-out %_test.go, $(wildcard kernel/tss/*.go))
+SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard kernel/scheduler/*.go))
+GDT_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/gdt/*.go))
+TSS_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/tss/*.go))
 SCH_SWITCH_SRC := asm/switch.s
 TEST_PKGS := $(shell find . -name '*_test.go' -not -path './build/*' -exec dirname {} \; | sed 's|^\./|./|' | sort -u)
 
@@ -265,7 +265,7 @@ docker-shell: docker-image
 # -----------------------
 test:
 	mkdir -p $(BUILD_DIR)/.gocache
-	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test $(TEST_PKGS)
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing ./...
 
 # -----------------------
 # User hello
