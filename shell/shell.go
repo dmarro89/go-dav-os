@@ -100,6 +100,8 @@ func FeedRune(r rune) {
 	terminal.PutRune(r)
 }
 
+var targetLayout string
+
 func execute() {
 	start := trimLeft(0, lineLen)
 	end := trimRight(start, lineLen)
@@ -684,7 +686,6 @@ func execute() {
 			return
 		}
 
-		targetLayout := ""
 		if matchLiteral(a1s, a1e, "us") {
 			targetLayout = "us"
 		} else if matchLiteral(a1s, a1e, "it") {
