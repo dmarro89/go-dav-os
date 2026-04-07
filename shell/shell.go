@@ -26,6 +26,8 @@ var (
 	getTicks        func() uint64
 	getSyscallTicks func() uint64
 	runProgram      func(name *[16]byte, nameLen int) (pid int, ok bool)
+	switchLayoutFn  func(string) bool
+	currentLayout   = "it"
 	tmpName         [16]byte
 	tmpData         [4096]byte
 	diskBuf         [512]byte
@@ -47,7 +49,7 @@ const maxHistory = 32
 var commandBuf = [...]string{
 	"help", "clear", "echo", "ticks", "uptime", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", "history", "run",
+	"version", "history", "run", "layout",
 }
 
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
@@ -55,6 +57,8 @@ func SetSyscallTickProvider(fn func() uint64) { getSyscallTicks = fn }
 func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
 	runProgram = fn
 }
+func SetLayoutSwitcher(fn func(string) bool) { switchLayoutFn = fn }
+func SetInitialLayout(name string)           { currentLayout = name }
 
 func Init() {
 	lineLen = 0
@@ -95,6 +99,8 @@ func FeedRune(r rune) {
 	lineLen++
 	terminal.PutRune(r)
 }
+
+var targetLayout string
 
 func execute() {
 	start := trimLeft(0, lineLen)
@@ -168,7 +174,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "help") {
-		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread\n")
+		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout\n")
 		return
 	}
 
@@ -667,6 +673,41 @@ func execute() {
 		for i := uint32(0); i < size && i < 512; i++ {
 			terminal.PutRune(rune(diskBuf[i]))
 		}
+		terminal.PutRune('\n')
+		return
+	}
+
+	if matchLiteral(cmdStart, cmdEnd, "layout") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("current layout: ")
+			terminal.Print(currentLayout)
+			terminal.PutRune('\n')
+			return
+		}
+
+		if matchLiteral(a1s, a1e, "us") {
+			targetLayout = "us"
+		} else if matchLiteral(a1s, a1e, "it") {
+			targetLayout = "it"
+		} else {
+			terminal.Print("Usage: layout [us|it]\n")
+			return
+		}
+
+		if switchLayoutFn == nil {
+			terminal.Print("layout: switcher not wired\n")
+			return
+		}
+
+		if !switchLayoutFn(targetLayout) {
+			terminal.Print("layout: failed to switch\n")
+			return
+		}
+
+		currentLayout = targetLayout
+		terminal.Print("layout: switched to ")
+		terminal.Print(targetLayout)
 		terminal.PutRune('\n')
 		return
 	}

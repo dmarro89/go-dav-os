@@ -26,6 +26,7 @@ LINKER_SCRIPT := boot/linker.ld
 MODPATH          := github.com/dmarro89/go-dav-os
 TERMINAL_IMPORT  := $(MODPATH)/terminal
 KEYBOARD_IMPORT  := $(MODPATH)/keyboard
+KEYBOARD_LAYOUT_IMPORT := $(MODPATH)/keyboard/layout
 SHELL_IMPORT     := $(MODPATH)/shell
 MEM_IMPORT     := $(MODPATH)/mem
 FS_IMPORT := $(MODPATH)/fs
@@ -39,6 +40,7 @@ KERNEL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/*.go))
 USER_HELLO_SRC := user/hello.s
 TERMINAL_SRC := terminal/terminal.go
 KEYBOARD_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard keyboard/*.go))
+KEYBOARD_LAYOUT_SRCS := $(filter-out %_test.go, $(wildcard keyboard/layout/*.go))
 SHELL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard shell/*.go))
 MEM_SRCS       := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard mem/*.go))
 FS_SRCS   := $(filter-out %_test.go %stubs.go, $(wildcard fs/*.go))
@@ -57,6 +59,8 @@ TERMINAL_OBJ := $(BUILD_DIR)/terminal.o
 TERMINAL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/terminal.gox
 KEYBOARD_OBJ   := $(BUILD_DIR)/keyboard.o
 KEYBOARD_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/keyboard.gox
+KEYBOARD_LAYOUT_OBJ := $(BUILD_DIR)/keyboard_layout.o
+KEYBOARD_LAYOUT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/keyboard/layout.gox
 SHELL_OBJ   := $(BUILD_DIR)/shell.o
 SHELL_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/shell.gox
 MEM_OBJ   := $(BUILD_DIR)/mem.o
@@ -128,6 +132,18 @@ $(KEYBOARD_OBJ): $(KEYBOARD_SRCS) | $(BUILD_DIR)
 $(KEYBOARD_GOX): $(KEYBOARD_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(KEYBOARD_GOX))
 	$(OBJCOPY) -j .go_export $(KEYBOARD_OBJ) $(KEYBOARD_GOX)
+
+# --- 5b. Compile keyboard/layout (package layout, depends on keyboard) ---
+$(KEYBOARD_LAYOUT_OBJ): $(KEYBOARD_LAYOUT_SRCS) $(KEYBOARD_GOX) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-I $(BUILD_DIR) \
+		-fgo-pkgpath=$(KEYBOARD_LAYOUT_IMPORT) \
+		-c $(KEYBOARD_LAYOUT_SRCS) -o $(KEYBOARD_LAYOUT_OBJ)
+
+# --- 5c. Extract .go_export into keyboard/layout.gox ---
+$(KEYBOARD_LAYOUT_GOX): $(KEYBOARD_LAYOUT_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(KEYBOARD_LAYOUT_GOX))
+	$(OBJCOPY) -j .go_export $(KEYBOARD_LAYOUT_OBJ) $(KEYBOARD_LAYOUT_GOX)
 
 $(MEM_OBJ): $(MEM_SRCS) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
@@ -214,7 +230,7 @@ $(SCH_SWITCH_OBJ): $(SCH_SWITCH_SRC) | $(BUILD_DIR)
 	$(AS) $(SCH_SWITCH_SRC) -o $(SCH_SWITCH_OBJ)
 
 # --- 8. Compile kernel.go (package kernel, imports "github.com/dmarro89/go-dav-os/terminal") ---
-$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) $(GDT_GOX) $(TSS_GOX) | $(BUILD_DIR)
+$(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(KEYBOARD_LAYOUT_GOX) $(SHELL_GOX) $(MEM_GOX) $(FS_GOX) $(SCHEDULER_GOX) $(GDT_GOX) $(TSS_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-c $(KERNEL_SRCS) -o $(KERNEL_OBJ)
@@ -222,10 +238,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(SHELL_GOX) $(MEM
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(SHELL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB
