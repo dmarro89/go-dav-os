@@ -1,9 +1,9 @@
 package syscall
 
 const (
-	SYS_WRITE    = 1
-	SYS_EXIT     = 2
-	SYS_GETTICKS = 3
+	SysWrite    = 1
+	SysExit     = 2
+	SysGetTicks = 3
 )
 
 type TrapFrame struct {

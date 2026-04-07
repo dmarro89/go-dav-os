@@ -8,12 +8,12 @@ import (
 
 func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 	switch uint32(tf.RAX) {
-	case SYS_WRITE:
+	case SysWrite:
 		fd := tf.RDI
 		buf := uintptr(tf.RSI)
 		n := tf.RDX
 		tf.RAX = sysWrite(fd, buf, n)
-	case SYS_EXIT:
+	case SysExit:
 		status := int(tf.RDI)
 		if tf.CS&3 == 3 {
 			terminal.Print("Process exited with status ")
@@ -29,7 +29,7 @@ func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 		terminal.PrintInt(status)
 		terminal.Print(")\n")
 		tf.RAX = ^uint64(0)
-	case SYS_GETTICKS:
+	case SysGetTicks:
 		if getTicks == nil {
 			tf.RAX = 0
 			return

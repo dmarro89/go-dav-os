@@ -31,7 +31,7 @@ func TestEnableSCESetsBitZero(t *testing.T) {
 func TestDispatchWriteUsesSyscallABIRegisters(t *testing.T) {
 	buf := []byte("test")
 	tf := TrapFrame{
-		RAX: SYS_WRITE,
+		RAX: SysWrite,
 		RDI: 1,
 		RSI: uint64(uintptr(unsafe.Pointer(&buf[0]))),
 		RDX: uint64(len(buf)),
@@ -48,7 +48,7 @@ func TestDispatchWriteUsesSyscallABIRegisters(t *testing.T) {
 
 func TestDispatchKernelExitRejected(t *testing.T) {
 	tf := TrapFrame{
-		RAX: SYS_EXIT,
+		RAX: SysExit,
 		RDI: 7,
 		CS:  0x08,
 	}
@@ -61,7 +61,7 @@ func TestDispatchKernelExitRejected(t *testing.T) {
 }
 
 func TestDispatchGetTicksUsesHook(t *testing.T) {
-	tf := TrapFrame{RAX: SYS_GETTICKS}
+	tf := TrapFrame{RAX: SysGetTicks}
 
 	Dispatch(&tf, func() uint64 { return 1234 }, nil)
 
