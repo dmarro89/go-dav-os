@@ -106,7 +106,6 @@ func TestWriteFailure(t *testing.T) {
 
 	// Mock pfaReady to fail
 	pfaReady = func() bool { return false }
-	
 
 	name, nameLen := makeName("new.txt")
 	data := []byte("hello")
@@ -134,7 +133,7 @@ func TestWriteSuccess(t *testing.T) {
 	// We'll mock allocPage to return an address to a local slice.
 	fakePage := make([]byte, 4096)
 	pfaReady = func() bool { return true }
-	
+
 	// WARNING: In fs.go we do runtime casting from uint64 address to memory pointers.
 	// We must return a valid memory address.
 	allocPage = func() uint64 {

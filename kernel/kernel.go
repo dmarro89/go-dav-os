@@ -43,6 +43,11 @@ func Main(multibootInfoAddr uint64) {
 
 	fs.Init()
 
+	InitKeyboard()
+
+	shell.SetLayoutSwitcher(SwitchLayout)
+	shell.SetInitialLayout(GetCurrentLayoutName())
+
 	EnableInterrupts()
 	shell.Init()
 

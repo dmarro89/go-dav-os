@@ -26,6 +26,12 @@ var (
 	capsLockOn     bool
 )
 
+var currentLayout Layout
+
+func SetLayout(l Layout) {
+	currentLayout = l
+}
+
 func readScancode() byte {
 	for {
 		status := inb(portStatus)
@@ -45,12 +51,8 @@ func translateScancode(sc byte) (rune, bool) {
 		return 0, false
 	}
 
-	if int(sc) >= len(LayoutIT) {
-		return 0, false
-	}
-
-	r := LayoutIT[sc]
-	if r == 0 {
+	r, valid := currentLayout.GetKey(sc)
+	if !valid {
 		return 0, false
 	}
 
@@ -64,7 +66,7 @@ func translateScancode(sc byte) (rune, bool) {
 	}
 
 	if isASCIIDigit(r) && shiftActive() {
-		if sym, ok := toSymbol(r); ok {
+		if sym, ok := currentLayout.GetShiftDigitSymbol(r); ok {
 			return sym, true
 		}
 	}
@@ -105,4 +107,26 @@ func ReadKey() rune {
 			return r
 		}
 	}
+}
+
+func isASCIILetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+}
+
+func isASCIIDigit(r rune) bool {
+	return r >= '0' && r <= '9'
+}
+
+func toUpperASCII(r rune) rune {
+	if r >= 'a' && r <= 'z' {
+		return r - 'a' + 'A'
+	}
+	return r
+}
+
+func toLowerASCII(r rune) rune {
+	if r >= 'A' && r <= 'Z' {
+		return r - 'A' + 'a'
+	}
+	return r
 }
