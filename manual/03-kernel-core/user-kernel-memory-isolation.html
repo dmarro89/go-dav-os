@@ -11,7 +11,7 @@
         <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/03-kernel-core/user-kernel-memory-isolation.html">
       
       
-        <link rel="prev" href="privilege-transition-gdt-tss-rsp0.html">
+        <link rel="prev" href="syscall-entry-and-abi.html">
       
       
       
@@ -366,6 +366,33 @@
     
   
     Privilege Transition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="syscall-entry-and-abi.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syscall Entry And ABI
   
 
     
@@ -739,9 +766,10 @@
 <li>adding it to <code>USER_VA_BASE</code></li>
 </ul>
 <p>This keeps runtime entry addresses in the user VA window even though payload bytes are linked into the kernel image physically.</p>
+<p>User-mode <code>SYS_WRITE</code> and <code>SYS_EXIT</code> then flow through the syscall entry stub in <code>boot/stubs_amd64.s</code> and the Go dispatcher in <code>kernel/syscall/</code>.</p>
 <p><code>kernel/task_runner.go</code> then dispatches:</p>
 <ul>
-<li><code>run hello</code> -&gt; normal user syscall demo</li>
+<li><code>run hello</code> -&gt; normal user syscall demo (<code>syscall</code> entry, <code>SYS_WRITE</code>, <code>SYS_EXIT</code>)</li>
 <li><code>run kread</code> -&gt; intentional ring3 read from kernel address</li>
 <li><code>run kwrite</code> -&gt; intentional ring3 write to kernel address</li>
 </ul>
@@ -752,6 +780,7 @@
 <ul>
 <li><code>boot/stubs_amd64.s</code> provides <code>PFaultStub</code> and emits <code>PF</code> on debug port <code>0xE9</code></li>
 <li><code>kernel/idt.go</code> installs vector <code>0x0E</code> with <code>getPFaultStubAddr()</code></li>
+<li><code>kernel/syscall/</code> remains unchanged by the fault itself because the violation is trapped before any user pointer is accepted as trusted kernel memory</li>
 </ul>
 <p>This gives an unambiguous marker in QEMU debug logs when isolation works as intended.</p>
 <h2 id="6-automated-verification">6. Automated verification</h2>

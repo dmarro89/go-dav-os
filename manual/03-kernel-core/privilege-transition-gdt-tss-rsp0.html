@@ -14,7 +14,7 @@
         <link rel="prev" href="../02-boot/linker-and-initial-memory-layout.html">
       
       
-        <link rel="next" href="user-kernel-memory-isolation.html">
+        <link rel="next" href="syscall-entry-and-abi.html">
       
       
         
@@ -602,10 +602,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-end-to-end-flow-intended-ring3-path" class="md-nav__link">
+  <a href="#6-end-to-end-flow-for-the-interrupt-gate-path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. End-to-end flow (intended ring3 path)
+        6. End-to-end flow for the interrupt-gate path
       
     </span>
   </a>
@@ -638,6 +638,33 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="syscall-entry-and-abi.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syscall Entry And ABI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -878,10 +905,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#6-end-to-end-flow-intended-ring3-path" class="md-nav__link">
+  <a href="#6-end-to-end-flow-for-the-interrupt-gate-path" class="md-nav__link">
     <span class="md-ellipsis">
       
-        6. End-to-end flow (intended ring3 path)
+        6. End-to-end flow for the interrupt-gate path
       
     </span>
   </a>
@@ -1032,7 +1059,7 @@
 <li>Loads <code>DS/ES/SS/FS/GS</code> from selector in <code>DI</code></li>
 </ul>
 <p>These are minimal privileged instructions exposed to Go.</p>
-<h2 id="6-end-to-end-flow-intended-ring3-path">6. End-to-end flow (intended ring3 path)</h2>
+<h2 id="6-end-to-end-flow-for-the-interrupt-gate-path">6. End-to-end flow for the interrupt-gate path</h2>
 <p>When a real ring3 context executes <code>int 0x80</code>:</p>
 <ol>
 <li>CPU sees IDT gate with DPL allowing ring3 call</li>
@@ -1046,11 +1073,15 @@
 </ol>
 <p>The crucial safety property is step 4: handler logic runs on a trusted kernel stack, not user-controlled memory.</p>
 <h2 id="7-current-scope-and-limitation-in-this-repo">7. Current scope and limitation in this repo</h2>
-<p>This work enables safe stack switching for user→kernel transitions, but it is only the foundation.</p>
-<p>At the moment, the sample task (<code>user/hello.s</code>) is linked into the kernel image and scheduled like a normal kernel task unless a full ring3 launcher is added (with <code>iretq</code> to user selectors and user stack).</p>
-<p>So:
-- GDT/TSS/RSP0 infrastructure is now correct and ready
-- full user-mode process entry is a separate next step</p>
+<p>This work still matters, but it is no longer the whole syscall story.</p>
+<p>Current state:</p>
+<ul>
+<li>ring3 launch is implemented</li>
+<li>primary user syscall entry now uses <code>syscall</code></li>
+<li><code>int 0x80</code> remains available as a compatibility path</li>
+<li>TSS <code>RSP0</code> remains relevant for interrupt/trap-gate transitions from user mode</li>
+<li>Go-side syscall ABI and dispatch now live under <code>kernel/syscall/</code></li>
+</ul>
 <h2 id="8-why-this-design-is-robust">8. Why this design is robust</h2>
 <ul>
 <li>Uses explicit selectors and descriptors instead of implicit bootstrap state</li>
@@ -1058,6 +1089,7 @@
 <li>Loads <code>TR</code> explicitly with a valid 64-bit TSS descriptor</li>
 <li>Keeps <code>RSP0</code> programmable via <code>SetKernelRSP0()</code> for future per-task kernel stacks</li>
 </ul>
+<p>For the current syscall ABI and <code>syscall</code> entry path, see <code>docs/manual/03-kernel-core/syscall-entry-and-abi.md</code>.</p>
 
 
 

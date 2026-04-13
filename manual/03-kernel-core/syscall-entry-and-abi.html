@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/00-introduction/glossary.html">
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/03-kernel-core/syscall-entry-and-abi.html">
       
       
-        <link rel="prev" href="index.html">
+        <link rel="prev" href="privilege-transition-gdt-tss-rsp0.html">
       
       
-        <link rel="next" href="../01-overview/architecture.html">
+        <link rel="next" href="user-kernel-memory-isolation.html">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>Glossary - Go DAV OS</title>
+        <title>Syscall Entry And ABI - Go DAV OS</title>
       
     
     
@@ -66,7 +66,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#minimal-glossary" class="md-skip">
+        <a href="#syscall-entry-and-abi" class="md-skip">
           Skip to content
         </a>
       
@@ -102,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Glossary
+              Syscall Entry And ABI
             
           </span>
         </div>
@@ -225,7 +225,7 @@
   
   
     <li class="md-nav__item">
-      <a href="index.html" class="md-nav__link">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -249,37 +249,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Glossary
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="glossary.html" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -295,147 +268,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#bootloader" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Bootloader
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multiboot2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiboot2
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#long-mode" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Long mode
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#idt-interrupt-descriptor-table" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IDT (Interrupt Descriptor Table)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#irq" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        IRQ
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pic-pit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PIC / PIT
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#syscall" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Syscall
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#page-frame" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Page frame
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pfa-page-frame-allocator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PFA (Page Frame Allocator)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ata-pio" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ATA PIO
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fat16" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        FAT16
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -528,7 +360,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
+      <a href="privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -552,10 +384,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../03-kernel-core/syscall-entry-and-abi.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syscall Entry And ABI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="syscall-entry-and-abi.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -571,6 +430,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. What changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-why-syscall-is-not-the-same-as-int-0x80" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Why syscall is not the same as int 0x80
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-msr-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. MSR configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-current-syscall-abi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Current syscall ABI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-trapframe-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Trapframe shape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-why-return-uses-iretq-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Why return uses iretq today
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Validation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-next-step-if-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Next step if needed
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -582,7 +549,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../03-kernel-core/user-kernel-memory-isolation.html" class="md-nav__link">
+      <a href="user-kernel-memory-isolation.html" class="md-nav__link">
         
   
   
@@ -629,10 +596,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#bootloader" class="md-nav__link">
+  <a href="#1-what-changed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Bootloader
+        1. What changed
       
     </span>
   </a>
@@ -640,10 +607,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multiboot2" class="md-nav__link">
+  <a href="#2-why-syscall-is-not-the-same-as-int-0x80" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multiboot2
+        2. Why syscall is not the same as int 0x80
       
     </span>
   </a>
@@ -651,10 +618,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#long-mode" class="md-nav__link">
+  <a href="#3-msr-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Long mode
+        3. MSR configuration
       
     </span>
   </a>
@@ -662,10 +629,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#idt-interrupt-descriptor-table" class="md-nav__link">
+  <a href="#4-current-syscall-abi" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IDT (Interrupt Descriptor Table)
+        4. Current syscall ABI
       
     </span>
   </a>
@@ -673,10 +640,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#irq" class="md-nav__link">
+  <a href="#5-trapframe-shape" class="md-nav__link">
     <span class="md-ellipsis">
       
-        IRQ
+        5. Trapframe shape
       
     </span>
   </a>
@@ -684,10 +651,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pic-pit" class="md-nav__link">
+  <a href="#6-why-return-uses-iretq-today" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PIC / PIT
+        6. Why return uses iretq today
       
     </span>
   </a>
@@ -695,10 +662,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#syscall" class="md-nav__link">
+  <a href="#7-validation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Syscall
+        7. Validation
       
     </span>
   </a>
@@ -706,43 +673,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#page-frame" class="md-nav__link">
+  <a href="#8-next-step-if-needed" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Page frame
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pfa-page-frame-allocator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PFA (Page Frame Allocator)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ata-pio" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ATA PIO
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#fat16" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        FAT16
+        8. Next step if needed
       
     </span>
   </a>
@@ -766,32 +700,116 @@
 
 
 
-<h1 id="minimal-glossary">Minimal Glossary</h1>
-<h2 id="bootloader">Bootloader</h2>
-<p>Program that loads the kernel into memory and transfers control to its entrypoint.</p>
-<h2 id="multiboot2">Multiboot2</h2>
-<p>Specification used by GRUB to pass boot information to the kernel (for example memory map).</p>
-<h2 id="long-mode">Long mode</h2>
-<p>64-bit execution mode on x86_64 CPUs.</p>
-<h2 id="idt-interrupt-descriptor-table">IDT (Interrupt Descriptor Table)</h2>
-<p>Table telling the CPU which handler to call for each interrupt/exception.</p>
-<h2 id="irq">IRQ</h2>
-<p>Hardware interrupt (for example timer or keyboard).</p>
-<h2 id="pic-pit">PIC / PIT</h2>
+<h1 id="syscall-entry-and-abi">Syscall Entry And ABI</h1>
+<p>This page explains the current x86_64 syscall path in <code>go-dav-os</code>.</p>
+<p>It covers:</p>
 <ul>
-<li>PIC: legacy interrupt controller.</li>
-<li>PIT: periodic hardware timer.</li>
+<li>how user code enters the kernel with <code>syscall</code></li>
+<li>how the kernel configures <code>STAR</code>, <code>LSTAR</code>, <code>SFMASK</code>, and <code>EFER.SCE</code></li>
+<li>the current syscall ABI</li>
+<li>why the return path currently uses <code>iretq</code> instead of <code>sysretq</code></li>
 </ul>
-<h2 id="syscall">Syscall</h2>
-<p>Controlled request from task/user code to kernel services.</p>
-<h2 id="page-frame">Page frame</h2>
-<p>Physical memory block (4 KiB in this project).</p>
-<h2 id="pfa-page-frame-allocator">PFA (Page Frame Allocator)</h2>
-<p>Allocator that assigns and frees physical page frames.</p>
-<h2 id="ata-pio">ATA PIO</h2>
-<p>Simple disk I/O mode using I/O ports.</p>
-<h2 id="fat16">FAT16</h2>
-<p>Classic on-disk filesystem, used here in a minimal implementation.</p>
+<p>Code layout for this subsystem is now split as follows:</p>
+<ul>
+<li><code>boot/stubs_amd64.s</code>: low-level syscall entry/return assembly and MSR helpers</li>
+<li><code>kernel/syscall/</code>: Go-side ABI types, MSR setup logic, and syscall dispatcher</li>
+<li><code>kernel/syscall_bridge.go</code>: thin bridge between assembly entrypoints and the Go package</li>
+</ul>
+<h2 id="1-what-changed">1. What changed</h2>
+<p>User-mode programs no longer use <code>int 0x80</code> as the primary syscall path.</p>
+<p>Instead:</p>
+<ul>
+<li>user code executes <code>syscall</code></li>
+<li>CPU jumps to the kernel entrypoint from <code>LSTAR</code></li>
+<li>the assembly entry stub builds a 64-bit trapframe</li>
+<li>Go dispatches the syscall through <code>kernel/syscall</code></li>
+<li>the stub returns to ring3 with <code>iretq</code></li>
+</ul>
+<p>The older <code>int 0x80</code> path is still present as a compatibility/fallback path.</p>
+<h2 id="2-why-syscall-is-not-the-same-as-int-0x80">2. Why <code>syscall</code> is not the same as <code>int 0x80</code></h2>
+<p>Important architectural difference:</p>
+<ul>
+<li><code>int 0x80</code> can switch to <code>TSS.RSP0</code> automatically on a ring3 -&gt; ring0 transition</li>
+<li><code>syscall</code> does <strong>not</strong> switch to a kernel stack automatically</li>
+</ul>
+<p>Because of that, the kernel must switch stacks explicitly in the syscall entry stub before calling Go code.</p>
+<h2 id="3-msr-configuration">3. MSR configuration</h2>
+<p>The runtime syscall setup writes these MSRs:</p>
+<ul>
+<li><code>IA32_STAR</code> (<code>0xC0000081</code>)</li>
+<li><code>IA32_LSTAR</code> (<code>0xC0000082</code>)</li>
+<li><code>IA32_SFMASK</code> (<code>0xC0000084</code>)</li>
+<li><code>IA32_EFER</code> (<code>0xC0000080</code>) with <code>SCE=1</code></li>
+</ul>
+<p>In this repo, the Go-side setup lives in <code>kernel/syscall/runtime.go</code>.</p>
+<p>Current policy:</p>
+<ul>
+<li><code>STAR</code> selects the kernel code segment for entry and the user code segment for future syscall/sysret pairing</li>
+<li><code>LSTAR</code> points to the kernel syscall entry stub</li>
+<li><code>SFMASK</code> currently clears <code>IF</code> on entry</li>
+<li><code>EFER.SCE</code> enables the <code>syscall</code> instruction family</li>
+</ul>
+<h2 id="4-current-syscall-abi">4. Current syscall ABI</h2>
+<p>Current ABI is:</p>
+<ul>
+<li><code>RAX</code>: syscall number</li>
+<li><code>RDI</code>, <code>RSI</code>, <code>RDX</code>, <code>R10</code>, <code>R8</code>, <code>R9</code>: arguments</li>
+<li><code>RAX</code>: return value</li>
+<li><code>RCX</code>, <code>R11</code>: clobbered by CPU on entry</li>
+</ul>
+<p>Implemented syscalls:</p>
+<ul>
+<li><code>SYS_WRITE</code></li>
+<li><code>RDI = fd</code></li>
+<li><code>RSI = buf</code></li>
+<li><code>RDX = len</code></li>
+<li><code>SYS_EXIT</code></li>
+<li><code>RDI = status</code></li>
+<li><code>SYS_GETTICKS</code></li>
+<li>no arguments</li>
+</ul>
+<p>The syscall numbers and <code>TrapFrame</code> type are defined in <code>kernel/syscall/abi.go</code>.</p>
+<h2 id="5-trapframe-shape">5. Trapframe shape</h2>
+<p>The syscall entry stub synthesizes the same general trapframe layout used by the interrupt-gate path:</p>
+<ul>
+<li>general registers</li>
+<li>saved user <code>RIP</code></li>
+<li>saved <code>CS</code></li>
+<li>saved user <code>RFLAGS</code></li>
+<li>saved user <code>RSP</code></li>
+<li>saved <code>SS</code></li>
+</ul>
+<p>This keeps the Go dispatcher independent from whether the call came from <code>int 0x80</code> or <code>syscall</code>.</p>
+<p>The shared dispatcher itself lives in <code>kernel/syscall/dispatch.go</code>.</p>
+<h2 id="6-why-return-uses-iretq-today">6. Why return uses <code>iretq</code> today</h2>
+<p>Although entry now uses <code>syscall</code>, the return path still uses <code>iretq</code>.</p>
+<p>Reason:</p>
+<ul>
+<li><code>iretq</code> is easier to integrate with the shared trapframe layout</li>
+<li>it avoids early <code>sysretq</code> corner cases while the ABI and stack-switch logic are still minimal</li>
+<li>it works cleanly with the current <code>SYS_EXIT</code> path, which can unwind directly back to the kernel launcher</li>
+</ul>
+<p>So the current model is:</p>
+<ul>
+<li>entry via <code>syscall</code></li>
+<li>return via <code>iretq</code></li>
+</ul>
+<p>That is intentional for simplicity and robustness in this stage of the kernel.</p>
+<h2 id="7-validation">7. Validation</h2>
+<p>Current checks:</p>
+<ul>
+<li>unit tests cover syscall MSR packing and Go-side dispatcher behavior</li>
+<li>boot tests verify <code>run hello</code> prints through <code>SYS_WRITE</code> and returns through <code>SYS_EXIT</code></li>
+<li>protection-fault probes (<code>run kread</code>, <code>run kwrite</code>) still verify user/kernel isolation</li>
+</ul>
+<h2 id="8-next-step-if-needed">8. Next step if needed</h2>
+<p>The natural next refinement is a true <code>sysretq</code> return path.</p>
+<p>Before doing that, the kernel should first:</p>
+<ol>
+<li>finalize selector assumptions for <code>STAR</code></li>
+<li>harden the syscall entry stack strategy</li>
+<li>verify return semantics for user <code>RCX</code>/<code>R11</code> and flags masking</li>
+</ol>
 
 
 
