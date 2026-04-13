@@ -5,12 +5,13 @@ import (
 	"unsafe"
 )
 
-func TestSTARValueUsesKernelAndUserSelectors(t *testing.T) {
+func TestSTARValueUsesKernelAndSYSRETBaseSelectors(t *testing.T) {
 	const kernelCS = uint16(0x08)
 	const userCS = uint16(0x1B)
 
 	got := STARValue(kernelCS, userCS)
-	want := uint64(kernelCS&^3)<<32 | uint64(userCS)<<48
+	wantUserBase := (userCS - 16) &^ uint16(3)
+	want := uint64(kernelCS&^3)<<32 | uint64(wantUserBase)<<48
 	if got != want {
 		t.Fatalf("STAR mismatch: got=0x%016x want=0x%016x", got, want)
 	}

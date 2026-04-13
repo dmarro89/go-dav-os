@@ -11,7 +11,10 @@ const (
 )
 
 func STARValue(kernelCS, userCS uint16) uint64 {
-	return uint64(kernelCS&^3)<<32 | uint64(userCS)<<48
+	// In 64-bit mode, SYSRET sets CS to IA32_STAR[63:48] + 16 (RPL forced)
+	// Encode the SYSRET selector base so a future sysretq return lands on userCS
+	userSYSRETBase := (userCS - 16) &^ uint16(3)
+	return uint64(kernelCS&^3)<<32 | uint64(userSYSRETBase)<<48
 }
 
 func SFMASKValue() uint64 {
