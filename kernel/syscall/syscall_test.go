@@ -1,9 +1,6 @@
 package syscall
 
-import (
-	"testing"
-	"unsafe"
-)
+import "testing"
 
 func TestSTARValueUsesKernelAndSYSRETBaseSelectors(t *testing.T) {
 	const kernelCS = uint16(0x08)
@@ -30,20 +27,83 @@ func TestEnableSCESetsBitZero(t *testing.T) {
 }
 
 func TestDispatchWriteUsesSyscallABIRegisters(t *testing.T) {
-	buf := []byte("test")
+	const userBuf = uintptr(userVAStart)
+
+	previousCopyFromUser := copyFromUser
+	copyFromUser = func(dst []byte, src uintptr) bool {
+		if src != userBuf {
+			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
+		}
+		copy(dst, "test")
+		return true
+	}
+	t.Cleanup(func() {
+		copyFromUser = previousCopyFromUser
+	})
+
 	tf := TrapFrame{
 		RAX: SysWrite,
 		RDI: 1,
-		RSI: uint64(uintptr(unsafe.Pointer(&buf[0]))),
-		RDX: uint64(len(buf)),
+		RSI: uint64(userBuf),
+		RDX: 4,
 		RBX: 99,
 		RCX: 88,
 	}
 
 	Dispatch(&tf, nil, nil)
 
-	if tf.RAX != uint64(len(buf)) {
-		t.Fatalf("sys_write return mismatch: got=%d want=%d", tf.RAX, len(buf))
+	if tf.RAX != 4 {
+		t.Fatalf("sys_write return mismatch: got=%d want=4", tf.RAX)
+	}
+}
+
+func TestSysWriteRejectsInvalidUserPointer(t *testing.T) {
+	if got := sysWrite(1, 0, 1); got != syscallError {
+		t.Fatalf("sys_write invalid pointer mismatch: got=0x%016x want=0x%016x", got, syscallError)
+	}
+}
+
+func TestSysWriteClampsLargeWrites(t *testing.T) {
+	const userBuf = uintptr(userVAStart)
+
+	previousCopyFromUser := copyFromUser
+	copyFromUser = func(dst []byte, src uintptr) bool {
+		if src != userBuf {
+			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
+		}
+		if len(dst) != maxSysWriteBytes {
+			t.Fatalf("copy_from_user length mismatch: got=%d want=%d", len(dst), maxSysWriteBytes)
+		}
+		return true
+	}
+	t.Cleanup(func() {
+		copyFromUser = previousCopyFromUser
+	})
+
+	if got := sysWrite(1, userBuf, maxSysWriteBytes+1); got != maxSysWriteBytes {
+		t.Fatalf("sys_write clamp mismatch: got=%d want=%d", got, maxSysWriteBytes)
+	}
+}
+
+func TestValidUserRange(t *testing.T) {
+	cases := []struct {
+		name   string
+		start  uintptr
+		length uintptr
+		valid  bool
+	}{
+		{name: "zero length", start: 0, length: 0, valid: true},
+		{name: "full user window", start: userVAStart, length: userVAEnd - userVAStart, valid: true},
+		{name: "last byte", start: userVAEnd - 1, length: 1, valid: true},
+		{name: "before window", start: userVAStart - 1, length: 1, valid: false},
+		{name: "at end", start: userVAEnd, length: 1, valid: false},
+		{name: "crosses end", start: userVAEnd - 1, length: 2, valid: false},
+	}
+
+	for _, tc := range cases {
+		if got := validUserRange(tc.start, tc.length); got != tc.valid {
+			t.Fatalf("%s: got=%v want=%v", tc.name, got, tc.valid)
+		}
 	}
 }
 

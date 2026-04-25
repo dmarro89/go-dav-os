@@ -6,6 +6,16 @@ import (
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
+const (
+	userVAStart      uintptr = 0x40000000
+	userVAEnd        uintptr = 0x40002000
+	maxSysWriteBytes         = 4096
+	syscallError             = ^uint64(0)
+)
+
+var sysWriteBuffer [maxSysWriteBytes]byte
+var copyFromUser = copyFromUserBytes
+
 func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 	switch uint32(tf.RAX) {
 	case SysWrite:
@@ -43,12 +53,45 @@ func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 
 func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
 	if fd != 1 {
-		return ^uint64(0)
+		return syscallError
+	}
+	if n == 0 {
+		return 0
+	}
+	if n > maxSysWriteBytes {
+		n = maxSysWriteBytes
 	}
 
-	for i := uint64(0); i < n; i++ {
-		b := *(*byte)(unsafe.Pointer(buf + uintptr(i)))
+	count := int(n)
+	kbuf := sysWriteBuffer[:count]
+	if !copyFromUser(kbuf, buf) {
+		return syscallError
+	}
+
+	for i := 0; i < count; i++ {
+		b := kbuf[i]
 		terminal.PutRune(rune(b))
 	}
 	return n
+}
+
+func copyFromUserBytes(dst []byte, userPtr uintptr) bool {
+	if !validUserRange(userPtr, uintptr(len(dst))) {
+		return false
+	}
+
+	for i := range dst {
+		dst[i] = *(*byte)(unsafe.Pointer(userPtr + uintptr(i)))
+	}
+	return true
+}
+
+func validUserRange(start, length uintptr) bool {
+	if length == 0 {
+		return true
+	}
+	if start < userVAStart || start >= userVAEnd {
+		return false
+	}
+	return length <= userVAEnd-userVAStart && start <= userVAEnd-length
 }
