@@ -30,6 +30,7 @@ graph TD
     
     LLM --> |Synthesized Multimedia Output| User
 ```
+![System Architecture Diagram](./arch.png)
 
 ### Core Components Analogy
 In the LLM OS model, traditional hardware and software abstractions are mapped to AI-driven equivalents:
@@ -76,6 +77,7 @@ sequenceDiagram
     A->>A: Synthesize and analyze raw logs
     A-->>U: "I found 3 large log files. Here is the summary of errors..."
 ```
+![Workflow Sequence Diagram](./seq.png)
 
 ## Implementation Architecture for Go-Dav-OS
 To implement this in `go-dav-os` starting from v0.4.0, a modular architecture must be designed to bridge the Go kernel and the AI agent:
