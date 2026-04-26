@@ -32,7 +32,7 @@ jobs:
           fi
 
       - name: Run go vet
-        run: go vet -unsafeptr=false ./kernel/scheduler ./fs
+        run: go vet -unsafeptr=false ./...
       
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
