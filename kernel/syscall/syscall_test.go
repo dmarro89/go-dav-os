@@ -29,31 +29,22 @@ func TestEnableSCESetsBitZero(t *testing.T) {
 func TestDispatchWriteUsesSyscallABIRegisters(t *testing.T) {
 	const userBuf = uintptr(userVAStart)
 
-	previousCopyFromUser := copyFromUser
-	copyFromUser = func(dst []byte, src uintptr) bool {
+	copier := func(dst *[maxSysWriteBytes]byte, count int, src uintptr) bool {
 		if src != userBuf {
 			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
 		}
-		copy(dst, "test")
+		if count != 4 {
+			t.Fatalf("copy_from_user length mismatch: got=%d want=4", count)
+		}
+		dst[0] = 't'
+		dst[1] = 'e'
+		dst[2] = 's'
+		dst[3] = 't'
 		return true
 	}
-	t.Cleanup(func() {
-		copyFromUser = previousCopyFromUser
-	})
 
-	tf := TrapFrame{
-		RAX: SysWrite,
-		RDI: 1,
-		RSI: uint64(userBuf),
-		RDX: 4,
-		RBX: 99,
-		RCX: 88,
-	}
-
-	Dispatch(&tf, nil, nil)
-
-	if tf.RAX != 4 {
-		t.Fatalf("sys_write return mismatch: got=%d want=4", tf.RAX)
+	if got := sysWriteWithCopier(1, userBuf, 4, copier); got != 4 {
+		t.Fatalf("sys_write return mismatch: got=%d want=4", got)
 	}
 }
 
@@ -66,21 +57,17 @@ func TestSysWriteRejectsInvalidUserPointer(t *testing.T) {
 func TestSysWriteClampsLargeWrites(t *testing.T) {
 	const userBuf = uintptr(userVAStart)
 
-	previousCopyFromUser := copyFromUser
-	copyFromUser = func(dst []byte, src uintptr) bool {
+	copier := func(dst *[maxSysWriteBytes]byte, count int, src uintptr) bool {
 		if src != userBuf {
 			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
 		}
-		if len(dst) != maxSysWriteBytes {
-			t.Fatalf("copy_from_user length mismatch: got=%d want=%d", len(dst), maxSysWriteBytes)
+		if count != maxSysWriteBytes {
+			t.Fatalf("copy_from_user length mismatch: got=%d want=%d", count, maxSysWriteBytes)
 		}
 		return true
 	}
-	t.Cleanup(func() {
-		copyFromUser = previousCopyFromUser
-	})
 
-	if got := sysWrite(1, userBuf, maxSysWriteBytes+1); got != maxSysWriteBytes {
+	if got := sysWriteWithCopier(1, userBuf, maxSysWriteBytes+1, copier); got != maxSysWriteBytes {
 		t.Fatalf("sys_write clamp mismatch: got=%d want=%d", got, maxSysWriteBytes)
 	}
 }

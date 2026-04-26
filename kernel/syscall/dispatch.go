@@ -14,7 +14,6 @@ const (
 )
 
 var sysWriteBuffer [maxSysWriteBytes]byte
-var copyFromUser = copyFromUserBytes
 
 func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 	switch uint32(tf.RAX) {
@@ -52,6 +51,10 @@ func Dispatch(tf *TrapFrame, getTicks func() uint64, returnToKernel func()) {
 }
 
 func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
+	return sysWriteWithCopier(fd, buf, n, copyFromUserBytes)
+}
+
+func sysWriteWithCopier(fd uint64, buf uintptr, n uint64, copier func(*[maxSysWriteBytes]byte, int, uintptr) bool) uint64 {
 	if fd != 1 {
 		return syscallError
 	}
@@ -63,24 +66,26 @@ func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
 	}
 
 	count := int(n)
-	kbuf := sysWriteBuffer[:count]
-	if !copyFromUser(kbuf, buf) {
+	if !copier(&sysWriteBuffer, count, buf) {
 		return syscallError
 	}
 
 	for i := 0; i < count; i++ {
-		b := kbuf[i]
+		b := sysWriteBuffer[i]
 		terminal.PutRune(rune(b))
 	}
 	return n
 }
 
-func copyFromUserBytes(dst []byte, userPtr uintptr) bool {
-	if !validUserRange(userPtr, uintptr(len(dst))) {
+func copyFromUserBytes(dst *[maxSysWriteBytes]byte, count int, userPtr uintptr) bool {
+	if count < 0 || count > maxSysWriteBytes {
+		return false
+	}
+	if !validUserRange(userPtr, uintptr(count)) {
 		return false
 	}
 
-	for i := range dst {
+	for i := 0; i < count; i++ {
 		dst[i] = *(*byte)(unsafe.Pointer(userPtr + uintptr(i)))
 	}
 	return true
