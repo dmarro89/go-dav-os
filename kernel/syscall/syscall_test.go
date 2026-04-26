@@ -1,9 +1,6 @@
 package syscall
 
-import (
-	"testing"
-	"unsafe"
-)
+import "testing"
 
 func TestSTARValueUsesKernelAndSYSRETBaseSelectors(t *testing.T) {
 	const kernelCS = uint16(0x08)
@@ -30,20 +27,70 @@ func TestEnableSCESetsBitZero(t *testing.T) {
 }
 
 func TestDispatchWriteUsesSyscallABIRegisters(t *testing.T) {
-	buf := []byte("test")
-	tf := TrapFrame{
-		RAX: SysWrite,
-		RDI: 1,
-		RSI: uint64(uintptr(unsafe.Pointer(&buf[0]))),
-		RDX: uint64(len(buf)),
-		RBX: 99,
-		RCX: 88,
+	const userBuf = uintptr(userVAStart)
+
+	copier := func(dst *[maxSysWriteBytes]byte, count int, src uintptr) bool {
+		if src != userBuf {
+			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
+		}
+		if count != 4 {
+			t.Fatalf("copy_from_user length mismatch: got=%d want=4", count)
+		}
+		dst[0] = 't'
+		dst[1] = 'e'
+		dst[2] = 's'
+		dst[3] = 't'
+		return true
 	}
 
-	Dispatch(&tf, nil, nil)
+	if got := sysWriteWithCopier(1, userBuf, 4, copier); got != 4 {
+		t.Fatalf("sys_write return mismatch: got=%d want=4", got)
+	}
+}
 
-	if tf.RAX != uint64(len(buf)) {
-		t.Fatalf("sys_write return mismatch: got=%d want=%d", tf.RAX, len(buf))
+func TestSysWriteRejectsInvalidUserPointer(t *testing.T) {
+	if got := sysWrite(1, 0, 1); got != syscallError {
+		t.Fatalf("sys_write invalid pointer mismatch: got=0x%016x want=0x%016x", got, syscallError)
+	}
+}
+
+func TestSysWriteClampsLargeWrites(t *testing.T) {
+	const userBuf = uintptr(userVAStart)
+
+	copier := func(dst *[maxSysWriteBytes]byte, count int, src uintptr) bool {
+		if src != userBuf {
+			t.Fatalf("copy_from_user source mismatch: got=0x%x want=0x%x", src, userBuf)
+		}
+		if count != maxSysWriteBytes {
+			t.Fatalf("copy_from_user length mismatch: got=%d want=%d", count, maxSysWriteBytes)
+		}
+		return true
+	}
+
+	if got := sysWriteWithCopier(1, userBuf, maxSysWriteBytes+1, copier); got != maxSysWriteBytes {
+		t.Fatalf("sys_write clamp mismatch: got=%d want=%d", got, maxSysWriteBytes)
+	}
+}
+
+func TestValidUserRange(t *testing.T) {
+	cases := []struct {
+		name   string
+		start  uintptr
+		length uintptr
+		valid  bool
+	}{
+		{name: "zero length", start: 0, length: 0, valid: true},
+		{name: "full user window", start: userVAStart, length: userVAEnd - userVAStart, valid: true},
+		{name: "last byte", start: userVAEnd - 1, length: 1, valid: true},
+		{name: "before window", start: userVAStart - 1, length: 1, valid: false},
+		{name: "at end", start: userVAEnd, length: 1, valid: false},
+		{name: "crosses end", start: userVAEnd - 1, length: 2, valid: false},
+	}
+
+	for _, tc := range cases {
+		if got := validUserRange(tc.start, tc.length); got != tc.valid {
+			t.Fatalf("%s: got=%v want=%v", tc.name, got, tc.valid)
+		}
 	}
 }
 
