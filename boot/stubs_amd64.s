@@ -289,6 +289,30 @@ go_0kernel.LoadDataSegments:
 	ret
 .size go_0kernel.LoadDataSegments, . - go_0kernel.LoadDataSegments
 
+# uint64 go_0kernel.ReadMSR(uint32 msr)
+.global go_0kernel.ReadMSR
+.type   go_0kernel.ReadMSR, @function
+go_0kernel.ReadMSR:
+	movl %edi, %ecx
+	rdmsr
+	shlq $32, %rdx
+	movl %eax, %eax
+	orq %rdx, %rax
+	ret
+.size go_0kernel.ReadMSR, . - go_0kernel.ReadMSR
+
+# void go_0kernel.WriteMSR(uint32 msr, uint64 value)
+.global go_0kernel.WriteMSR
+.type   go_0kernel.WriteMSR, @function
+go_0kernel.WriteMSR:
+	movl %edi, %ecx
+	movq %rsi, %rax
+	movq %rsi, %rdx
+	shrq $32, %rdx
+	wrmsr
+	ret
+.size go_0kernel.WriteMSR, . - go_0kernel.WriteMSR
+
 # void go_0kernel.StoreIDT(void *idtr)
 .global go_0kernel.StoreIDT
 .type   go_0kernel.StoreIDT, @function
@@ -311,6 +335,35 @@ go_0kernel.Int80Stub:
 	iretq
 .size go_0kernel.Int80Stub, . - go_0kernel.Int80Stub
 
+# void go_0kernel.SyscallEntryStub()
+.global go_0kernel.SyscallEntryStub
+.type   go_0kernel.SyscallEntryStub, @function
+go_0kernel.SyscallEntryStub:
+	# SYSCALL does not switch stacks 
+	#Save the user return state into static scratch slots, then pivot onto the dedicated kernel syscall stack
+	movq %rsp, __syscall_saved_user_rsp(%rip)
+	movq %rcx, __syscall_saved_user_rip(%rip)
+	movq %r11, __syscall_saved_user_rflags(%rip)
+	leaq __syscall_entry_stack_top(%rip), %rsp
+
+	# Synthesize the same return frame shape used by the int 0x80 path so the
+	# dispatcher can share a single 64-bit trapframe layout
+	pushq $0x23
+	pushq __syscall_saved_user_rsp(%rip)
+	pushq __syscall_saved_user_rflags(%rip)
+	pushq $0x1B
+	pushq __syscall_saved_user_rip(%rip)
+	PUSH_REGS
+	mov %rsp, %rbp
+	andq $-16, %rsp
+	subq $8, %rsp
+	mov %rbp, %rdi
+	call  go_0kernel.SyscallHandler
+	mov %rbp, %rsp
+	POP_REGS
+	iretq
+.size go_0kernel.SyscallEntryStub, . - go_0kernel.SyscallEntryStub
+
 # uint64 go_0kernel.getInt80StubAddr()
 .global go_0kernel.getInt80StubAddr
 .type   go_0kernel.getInt80StubAddr, @function
@@ -318,6 +371,14 @@ go_0kernel.getInt80StubAddr:
 	leaq go_0kernel.Int80Stub(%rip), %rax
 	ret
 .size go_0kernel.getInt80StubAddr, . - go_0kernel.getInt80StubAddr
+
+# uint64 go_0kernel.getSyscallEntryAddr()
+.global go_0kernel.getSyscallEntryAddr
+.type   go_0kernel.getSyscallEntryAddr, @function
+go_0kernel.getSyscallEntryAddr:
+	leaq go_0kernel.SyscallEntryStub(%rip), %rax
+	ret
+.size go_0kernel.getSyscallEntryAddr, . - go_0kernel.getSyscallEntryAddr
 
 # uint16 go_0kernel.GetCS()
 .global go_0kernel.GetCS
@@ -691,3 +752,12 @@ __kernel_saved_r13: .quad 0
 __kernel_saved_r14: .quad 0
 __kernel_saved_r15: .quad 0
 __kernel_saved_rflags: .quad 0
+__syscall_saved_user_rsp: .quad 0
+__syscall_saved_user_rip: .quad 0
+__syscall_saved_user_rflags: .quad 0
+
+.section .bss
+.align 16
+__syscall_entry_stack:
+	.skip 4096
+__syscall_entry_stack_top:

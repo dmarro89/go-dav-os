@@ -24,6 +24,7 @@ func Main(multibootInfoAddr uint64) {
 	terminal.Clear()
 
 	InitGDTAndTSS()
+	InitSyscall()
 	InitIDT()
 
 	PICRemap(0x20, 0x28)

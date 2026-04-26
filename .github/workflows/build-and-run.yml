@@ -33,6 +33,12 @@ jobs:
 
       - name: Run go vet
         run: go vet -unsafeptr=false ./kernel/scheduler ./fs
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.11.4
+          args: --timeout=5m
 
   build-run:
     runs-on: ubuntu-latest
