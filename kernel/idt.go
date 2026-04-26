@@ -35,9 +35,12 @@ type TrapFrame struct {
 	RDX    uint64
 	RCX    uint64
 	RAX    uint64
+	ErrorCode uint64
 	RIP    uint64
 	CS     uint64
 	RFLAGS uint64
+	UserRSP uint64
+	UserSS  uint64
 }
 
 // 16 bytes (x86_64 IDT entry)
@@ -60,10 +63,12 @@ func StoreIDT(p *[10]byte)
 
 func getInt80StubAddr() uint64
 func getGPFaultStubAddr() uint64
+func getPFaultStubAddr() uint64
 func getDFaultStubAddr() uint64
 func Int80Stub()
 func TriggerInt80()
 func GetCS() uint16
+func GetCR2() uint64
 func getIRQ0StubAddr() uint64
 func getIRQ1StubAddr() uint64
 
@@ -91,6 +96,49 @@ func Int80Handler(tf *TrapFrame) {
 		terminal.Print("unknown syscall\n")
 		tf.RAX = ^uint64(0) // return -1
 	}
+}
+
+func GPFaultHandler(tf *TrapFrame) {
+	if tf.CS&3 == 3 {
+		terminal.Print("\n#GP in user mode\n")
+		printFaultDiagnostics("General Protection Fault", tf)
+		scheduler.Exit()
+	} else {
+		terminal.Print("\n#GP in kernel mode\n")
+		printFaultDiagnostics("General Protection Fault", tf)
+		for {
+		} // Halt
+	}
+}
+
+func PFaultHandler(tf *TrapFrame) {
+	cr2 := GetCR2()
+	if tf.CS&3 == 3 {
+		terminal.Print("\n#PF in user mode\n")
+		printFaultDiagnostics("Page Fault", tf)
+		terminal.Print("CR2: ")
+		terminal.PrintHex(cr2)
+		terminal.Print("\n")
+		scheduler.Exit()
+	} else {
+		terminal.Print("\n#PF in kernel mode\n")
+		printFaultDiagnostics("Page Fault", tf)
+		terminal.Print("CR2: ")
+		terminal.PrintHex(cr2)
+		terminal.Print("\n")
+		for {
+		} // Halt
+	}
+}
+
+func printFaultDiagnostics(name string, tf *TrapFrame) {
+	terminal.Print("Fault: ")
+	terminal.Print(name)
+	terminal.Print("\nRIP: ")
+	terminal.PrintHex(tf.RIP)
+	terminal.Print("\nError Code: ")
+	terminal.PrintHex(tf.ErrorCode)
+	terminal.Print("\n")
 }
 
 func sysWrite(fd uint64, buf uintptr, n uint64) uint64 {
@@ -143,6 +191,7 @@ func InitIDT() {
 	// Install emergency handlers first
 	setIDTEntry(0x08, getDFaultStubAddr(), kernelCodeSelector, intGateKernelFlags)  // #DF
 	setIDTEntry(0x0D, getGPFaultStubAddr(), kernelCodeSelector, intGateKernelFlags) // #GP
+	setIDTEntry(0x0E, getPFaultStubAddr(), kernelCodeSelector, intGateKernelFlags) // #PF
 
 	// Install IRQ handlers
 	setIDTEntry(0x20, getIRQ0StubAddr(), kernelCodeSelector, intGateKernelFlags) // IRQ0
