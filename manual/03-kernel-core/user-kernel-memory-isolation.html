@@ -767,6 +767,7 @@
 </ul>
 <p>This keeps runtime entry addresses in the user VA window even though payload bytes are linked into the kernel image physically.</p>
 <p>User-mode <code>SYS_WRITE</code> and <code>SYS_EXIT</code> then flow through the syscall entry stub in <code>boot/stubs_amd64.s</code> and the Go dispatcher in <code>kernel/syscall/</code>.</p>
+<p><code>SYS_WRITE</code> validates user buffers against the static user VA window before reading them, clamps each request to 4 KiB, and copies bytes into a kernel-owned buffer before printing.</p>
 <p><code>kernel/task_runner.go</code> then dispatches:</p>
 <ul>
 <li><code>run hello</code> -&gt; normal user syscall demo (<code>syscall</code> entry, <code>SYS_WRITE</code>, <code>SYS_EXIT</code>)</li>
@@ -809,7 +810,7 @@
 <li>Allocate separate user page tables per task/process.</li>
 <li>Add a recoverable user <code>#PF</code> path (kill task, keep kernel alive).</li>
 <li>Move from static user pages to allocator-backed mappings.</li>
-<li>Add syscall validation for user pointers against mapped user ranges.</li>
+<li>Grow syscall pointer validation beyond the current static user window when per-task mappings are introduced.</li>
 </ol>
 
 
