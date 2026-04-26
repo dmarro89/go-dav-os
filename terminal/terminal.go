@@ -4,9 +4,6 @@ package terminal
 
 import "unsafe"
 
-func outb(port uint16, value byte)
-func debugChar(c byte)
-
 const (
 	VGAWidth  = 80
 	VGAHeight = 25

@@ -15,7 +15,7 @@ Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the p
 
 - Terminal: `terminal/` writes to VGA text mode 80x25, manages cursor, scroll, and backspace
 
-- Keyboard: `keyboard/` reads from PS/2 and maps keys with the Italian layout only (temporary)
+- Keyboard: `keyboard/` reads from PS/2 and supports both Italian (`it`) and US (`us`) layouts. Switch at runtime with the `layout` command.
 
 - Tiny shell: interactive prompt + basic line editing, commands are mostly for debugging
 
@@ -78,6 +78,16 @@ qemu-system-x86_64 -cdrom build/dav-go-os.iso
 
 To force cross binaries: `make CROSS=x86_64-elf`
 
+## Troubleshooting
+
+If you run into issues while building or running the project, check these common pitfalls:
+
+- **`command not found: x86_64-elf-as` or `x86_64-elf-gccgo`**: Your cross-compiler toolchain is missing or not in your `$PATH`. You must build/install an `x86_64-elf` toolchain natively.
+- **ISO creation fails (`grub-mkrescue` errors)**: The build requires `grub-mkrescue`, `xorriso`, and `mtools` to pack the ISO. Install them via your package manager (e.g., `apt install grub-common grub-pc-bin xorriso mtools`).
+- **QEMU is missing or cannot launch**: Ensure `qemu-system-x86_64` is installed (usually part of the `qemu-system-x86` package). If QEMU fails to launch a display, ensure your host supports graphical windows.
+
+**When in doubt, use the Docker workflow!** It is the recommended path and pre-packages all necessary build dependencies. Just ensure your Docker platform is set to `linux/amd64` (especially important on Apple Silicon Macs).
+
 ## What you’ll see on screen
 
 - On boot the prompt `> ` shows up
@@ -126,6 +136,13 @@ At the moment, the supported launch names are:
 **Example:**
 ```bash
 run hello
+```
+
+### Shell commands
+The current command list (from `shell/shell.go`) is:
+
+```
+Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout
 ```
 
 ## Other folder layout
