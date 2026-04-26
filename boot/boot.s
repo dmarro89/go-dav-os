@@ -18,6 +18,7 @@
  */
 .set MULTIBOOT_MAGIC, 0xE85250D6
 .set MULTIBOOT_ARCH,  0
+.set USER_VA_BASE,    0x40000000
 
 .section .multiboot2
 .align 8
@@ -60,6 +61,11 @@ stack_bottom:
 	.skip 16384              # 16 KB di stack
 stack_top:
 
+.align 16
+.global tss
+tss:
+	.skip 104
+
 # Long mode paging structures (4 KiB aligned, zero-initialized).
 .align 4096
 pml4:
@@ -79,6 +85,13 @@ pd2:
 .align 4096
 pd3:
 	.skip 4096
+.align 4096
+pt_user:
+	.skip 4096
+
+.align 4096
+user_stack_page:
+	.skip 4096
 .global __bootstrap_end
 __bootstrap_end:
 
@@ -86,16 +99,22 @@ __bootstrap_end:
 multiboot_info_ptr:
 	.long 0
 
-.section .rodata
+.section .data
 .align 8
+.global gdt64
 gdt64:
 	.quad 0x0000000000000000
 	.quad 0x00AF9A000000FFFF
 	.quad 0x00CF92000000FFFF
+	.quad 0x00AFFA000000FFFF  # Index 3: User Code (0x18 | 3 = 0x1B)
+	.quad 0x00CFF2000000FFFF  # Index 4: User Data (0x20 | 3 = 0x23)
+	.quad 0  # TSS low
+	.quad 0  # TSS high
 
 gdt64_desc:
 	.word (gdt64_end - gdt64 - 1)
 	.long gdt64
+	.long 0
 
 gdt64_end:
 
@@ -128,10 +147,11 @@ _start:
 .size _start, . - _start
 
 setup_long_mode:
-# Build minimal identity-mapped paging (4 GiB via 2 MiB pages).
+# Build identity-mapped paging (4 GiB via 2 MiB pages).
+# Kernel mappings stay supervisor-only (U/S=0).
 	lea pml4, %edi
 	movl $pdpt, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 
@@ -141,7 +161,7 @@ setup_long_mode:
 	movl %eax, (%edi)
 	movl $0, 4(%edi)
 	movl $pd1, %eax
-	orl $0x03, %eax
+	orl $0x07, %eax
 	movl %eax, 8(%edi)
 	movl $0, 12(%edi)
 	movl $pd2, %eax
@@ -153,7 +173,7 @@ setup_long_mode:
 	movl %eax, 24(%edi)
 	movl $0, 28(%edi)
 
-	movl $0x83, %edx           # present|rw|ps
+	movl $0x83, %edx           # present|rw|ps (supervisor)
 
 	lea pd0, %edi
 	xorl %ecx, %ecx
@@ -219,6 +239,47 @@ setup_long_mode:
 	cmpl $512, %ecx
 	jne .Lmap_2m_pd3
 
+# User virtual window:
+#   0x40000000 -> user program page
+#   0x40001000 -> user stack page
+# PDPT[1] already points to pd1 with U/S=1. Replace pd1[0] with a PT.
+	lea pd1, %edi
+	movl $pt_user, %eax
+	orl $0x07, %eax            # present|rw|user
+	movl %eax, (%edi)
+	movl $0, 4(%edi)
+
+	# Keep the old 2 MiB identity map semantics via 4 KiB PTEs:
+	# map 0x40000000..0x401FFFFF as supervisor identity first.
+	lea pt_user, %edi
+	xorl %ecx, %ecx
+	movl $0x40000000, %ebx
+
+.Lmap_4k_pt_user_identity:
+	movl %ecx, %eax
+	shll $12, %eax             # ecx * 4 KiB
+	addl %ebx, %eax
+	orl $0x03, %eax            # present|rw (supervisor)
+	movl %eax, (%edi)
+	movl $0, 4(%edi)
+	addl $8, %edi
+	incl %ecx
+	cmpl $512, %ecx
+	jne .Lmap_4k_pt_user_identity
+
+	# Override first two pages as user mappings.
+	movl $__user_program_page, %eax
+	andl $0xFFFFF000, %eax
+	orl $0x05, %eax            # present|user (read-only)
+	movl %eax, pt_user
+	movl $0, pt_user+4
+
+	movl $user_stack_page, %eax
+	andl $0xFFFFF000, %eax
+	orl $0x07, %eax            # present|rw|user
+	movl %eax, pt_user+8
+	movl $0, pt_user+12
+
 # Load PML4 and enable PAE.
 	movl $pml4, %eax
 	movl %eax, %cr3
@@ -274,10 +335,10 @@ long_mode_entry:
 .type   go_0kernel.TriggerSysWrite, @function
 
 go_0kernel.TriggerSysWrite:
-    mov  %rdi, %rcx      # buf
     mov  %rsi, %rdx      # n
+    mov  %rdi, %rsi      # buf
+    mov  $1, %edi        # fd=1
     mov  $1, %eax        # SYS_WRITE
-    mov  $1, %ebx        # fd=1
     int  $0x80
     ret
 .size go_0kernel.TriggerSysWrite, . - go_0kernel.TriggerSysWrite
@@ -287,7 +348,6 @@ go_0kernel.TriggerSysWrite:
 .type   go_0kernel.TriggerSysExit, @function
 
 go_0kernel.TriggerSysExit:
-    mov  %edi, %ebx      # status
     mov  $2, %eax        # SYS_EXIT
     int  $0x80
     ret

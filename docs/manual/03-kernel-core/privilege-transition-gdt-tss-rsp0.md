@@ -144,7 +144,7 @@ Three new helper entry points were added:
 
 These are minimal privileged instructions exposed to Go.
 
-## 6. End-to-end flow (intended ring3 path)
+## 6. End-to-end flow for the interrupt-gate path
 
 When a real ring3 context executes `int 0x80`:
 
@@ -161,13 +161,15 @@ The crucial safety property is step 4: handler logic runs on a trusted kernel st
 
 ## 7. Current scope and limitation in this repo
 
-This work enables safe stack switching for user→kernel transitions, but it is only the foundation.
+This work still matters, but it is no longer the whole syscall story.
 
-At the moment, the sample task (`user/hello.s`) is linked into the kernel image and scheduled like a normal kernel task unless a full ring3 launcher is added (with `iretq` to user selectors and user stack).
+Current state:
 
-So:
-- GDT/TSS/RSP0 infrastructure is now correct and ready
-- full user-mode process entry is a separate next step
+- ring3 launch is implemented
+- primary user syscall entry now uses `syscall`
+- `int 0x80` remains available as a compatibility path
+- TSS `RSP0` remains relevant for interrupt/trap-gate transitions from user mode
+- Go-side syscall ABI and dispatch now live under `kernel/syscall/`
 
 ## 8. Why this design is robust
 
@@ -175,3 +177,5 @@ So:
 - Uses raw-byte TSS encoding to avoid layout bugs
 - Loads `TR` explicitly with a valid 64-bit TSS descriptor
 - Keeps `RSP0` programmable via `SetKernelRSP0()` for future per-task kernel stacks
+
+For the current syscall ABI and `syscall` entry path, see `docs/manual/03-kernel-core/syscall-entry-and-abi.md`.

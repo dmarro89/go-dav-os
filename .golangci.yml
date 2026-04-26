@@ -1,0 +1,78 @@
+version: "2"
+
+run:
+  build-tags:
+    - testing
+  timeout: 5m
+  go: "1.25"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - unconvert
+    - goconst
+    - revive
+
+  settings:
+    govet:
+      disable:
+        - fieldalignment   # not useful for memory-mapped kernel structs
+        - unsafeptr        # kernel code does intentional unsafe.Pointer arithmetic
+    staticcheck:
+      checks:
+        - "all"
+        - "-SA1019"        # allow deprecated symbols (runtime stubs may trigger this)
+        - "-SA5002"        # allow intentional spin loops (OS scheduler idle/run loops)
+        - "-ST1000"        # package comments not enforced (all packages are internal)
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    revive:
+      rules:
+        - name: unused-parameter
+        - name: var-declaration
+        - name: empty-block
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+          - unconvert
+          - revive
+
+      # Stub files must keep unused params to match the real (gccgo) signatures.
+      - path: stubs\.go
+        linters:
+          - unused
+          - revive
+
+      # CpuSwitch name is dictated by the assembly symbol in asm/switch.s;
+      # renaming to CPUSwitch would break the linker.
+      - path: kernel/scheduler/
+        text: "ST1003"
+
+      # Scheduler spin loops are intentional OS halt patterns.
+      - path: kernel/scheduler/
+        text: "empty-block"
+
+    paths:
+      - build
+      - iso
+      - docs
+      - asm
+      - boot
+      - user
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

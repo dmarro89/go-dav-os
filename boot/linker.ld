@@ -54,5 +54,11 @@ SECTIONS
         *(.bootstrap_stack)
     }
 
+  /* User program blob mapped into the user virtual range */
+  .user_prog BLOCK(4K) : ALIGN(4K)
+    {
+        *(.user_prog)
+    }
+
   __kernel_end = .;
 }

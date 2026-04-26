@@ -154,7 +154,7 @@ Rendered image:
 
 Current design intentionally favors clarity over feature breadth.
 
-- No user/kernel virtual address split
+- Single shared page-table template with a fixed user window (no per-process address spaces yet)
 - No SMP support
 - Minimal syscall surface
 - Legacy PIC/PIT path (didactic and simple)

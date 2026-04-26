@@ -1,3 +1,5 @@
+//go:build !testing
+
 package kernel
 
 import (
@@ -5,14 +7,6 @@ import (
 
 	gdtlib "github.com/dmarro89/go-dav-os/kernel/gdt"
 	tsslib "github.com/dmarro89/go-dav-os/kernel/tss"
-)
-
-const (
-	kernelCodeSelector uint16 = 0x08
-	kernelDataSelector uint16 = 0x10
-	userCodeSelector   uint16 = 0x1B
-	userDataSelector   uint16 = 0x23
-	tssSelector        uint16 = 0x28
 )
 
 const (
