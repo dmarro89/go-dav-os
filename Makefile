@@ -291,11 +291,11 @@ docker-shell: docker-image
 	  -v "$(CURDIR)":/work -w /work $(DOCKER_IMAGE) bash
 
 # -----------------------
-# Unit tests
+# Unit tests and vet
 # -----------------------
-test:
+vet:
 	mkdir -p $(BUILD_DIR)/.gocache
-	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing ./...
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go vet -tags testing -unsafeptr=false ./...
 
 # -----------------------
 # User hello

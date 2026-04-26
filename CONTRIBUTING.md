@@ -73,10 +73,9 @@ gofmt -l .
 
 **Run go vet:**
 ```bash
-go vet -unsafeptr=false ./kernel/scheduler ./fs
-```
+go vet -tags testing -unsafeptr=false ./...
 
-The `-unsafeptr=false` flag is intentional: several packages use raw unsafe pointer arithmetic for physical memory access in the OS kernel, which is flagged as "possible misuse" but is correct in a freestanding context. The scope is limited to the packages that compile with the standard Go toolchain (the gccgo freestanding packages like `keyboard`, `terminal`, and `drivers/ata` cannot be built with `go vet`).
+```
 
 Fix any other issues reported before opening a PR. `go vet` catches common mistakes like incorrect format strings, unreachable code, and misuse of sync primitives.
 

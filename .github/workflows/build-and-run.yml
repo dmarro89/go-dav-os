@@ -32,7 +32,7 @@ jobs:
           fi
 
       - name: Run go vet
-        run: go vet -unsafeptr=false ./...
+        run: go vet -tags testing -unsafeptr=false ./...
       
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
