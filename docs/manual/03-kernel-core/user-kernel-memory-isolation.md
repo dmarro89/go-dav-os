@@ -74,9 +74,13 @@ Result:
 
 This keeps runtime entry addresses in the user VA window even though payload bytes are linked into the kernel image physically.
 
+User-mode `SYS_WRITE` and `SYS_EXIT` then flow through the syscall entry stub in `boot/stubs_amd64.s` and the Go dispatcher in `kernel/syscall/`.
+
+`SYS_WRITE` validates user buffers against the static user VA window before reading them, clamps each request to 4 KiB, and copies bytes into a kernel-owned buffer before printing.
+
 `kernel/task_runner.go` then dispatches:
 
-- `run hello` -> normal user syscall demo
+- `run hello` -> normal user syscall demo (`syscall` entry, `SYS_WRITE`, `SYS_EXIT`)
 - `run kread` -> intentional ring3 read from kernel address
 - `run kwrite` -> intentional ring3 write to kernel address
 
@@ -90,6 +94,7 @@ Implementation:
 
 - `boot/stubs_amd64.s` provides `PFaultStub` and emits `PF` on debug port `0xE9`
 - `kernel/idt.go` installs vector `0x0E` with `getPFaultStubAddr()`
+- `kernel/syscall/` remains unchanged by the fault itself because the violation is trapped before any user pointer is accepted as trusted kernel memory
 
 This gives an unambiguous marker in QEMU debug logs when isolation works as intended.
 
@@ -123,4 +128,4 @@ Practical next steps if you want stronger isolation:
 1. Allocate separate user page tables per task/process.
 2. Add a recoverable user `#PF` path (kill task, keep kernel alive).
 3. Move from static user pages to allocator-backed mappings.
-4. Add syscall validation for user pointers against mapped user ranges.
+4. Grow syscall pointer validation beyond the current static user window when per-task mappings are introduced.

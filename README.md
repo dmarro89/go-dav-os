@@ -121,7 +121,7 @@ At the moment, the supported launch names are:
 - `run kread` (ring3 read probe against kernel memory, should page-fault)
 - `run kwrite` (ring3 write probe against kernel memory, should page-fault)
 
-`run hello` starts `user/hello.s`, which calls `SYS_WRITE` and then `SYS_EXIT`.
+`run hello` starts `user/hello.s`, which enters the kernel via `syscall`, calls `SYS_WRITE`, and then `SYS_EXIT`.
 
 **Example:**
 ```bash

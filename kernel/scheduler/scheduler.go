@@ -25,7 +25,7 @@ var (
 	tasks       [MaxTasks]*Task
 	taskCount   int
 	currentTask *Task
-	nextID      int = 1
+	nextID      = 1
 
 	// Static allocation for tasks to avoid 'newobject' heap allocation
 	taskPool [MaxTasks]Task

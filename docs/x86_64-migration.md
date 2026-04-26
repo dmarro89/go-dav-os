@@ -59,8 +59,10 @@ Goal: `GOARCH=amd64`
     *   **Handlers**: Assembly interrupt stubs (`boot/boot.s`) must use `iretq` (64-bit return) and save/restore 64-bit registers (`rax`, `rbx`... `r15`).
 
 5.  **Syscalls**:
-    *   (Future Work): Once the kernel is stable in 64-bit, switch system calls to use `syscall`/`sysret` instructions instead of `int 0x80`.
-    *   This will require updating the userspace/kernel boundary ABI.
+    *   Primary user syscall entry now uses `syscall`.
+    *   Return currently uses `iretq` for simplicity; `sysretq` remains a possible later refinement.
+    *   The userspace/kernel boundary ABI is now explicitly defined around x86_64 syscall registers.
+    *   Go-side syscall code now lives in `kernel/syscall/`, while low-level entry/return stays in `boot/stubs_amd64.s`.
 
 ## 3. Architecture Independent Parts (No Change Needed)
 The following components are largely high-level and should remain mostly untouched, assuming `int` / `uint` behave as expected (Go `int` becomes 64-bit on amd64):

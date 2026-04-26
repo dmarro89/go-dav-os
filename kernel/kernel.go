@@ -1,3 +1,5 @@
+//go:build !testing
+
 package kernel
 
 import (
@@ -22,6 +24,7 @@ func Main(multibootInfoAddr uint64) {
 	terminal.Clear()
 
 	InitGDTAndTSS()
+	InitSyscall()
 	InitIDT()
 
 	PICRemap(0x20, 0x28)
@@ -39,6 +42,11 @@ func Main(multibootInfoAddr uint64) {
 	scheduler.Init()
 
 	fs.Init()
+
+	InitKeyboard()
+
+	shell.SetLayoutSwitcher(SwitchLayout)
+	shell.SetInitialLayout(GetCurrentLayoutName())
 
 	EnableInterrupts()
 	shell.Init()

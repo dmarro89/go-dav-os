@@ -27,6 +27,7 @@ docs/manual/
 │   ├── main-loop.md
 │   ├── interrupts-and-syscalls.md
 │   ├── privilege-transition-gdt-tss-rsp0.md
+│   ├── syscall-entry-and-abi.md
 │   ├── user-kernel-memory-isolation.md
 │   ├── scheduler-and-tasks.md
 │   └── theory-reference.md
@@ -52,7 +53,7 @@ docs/manual/
 | Code | Topic | Manual section |
 | --- | --- | --- |
 | `boot/`, `iso/grub/` | Boot and long mode transition | `02-boot/` |
-| `kernel/`, `asm/switch.s` | Kernel init, interrupts, scheduler | `03-kernel-core/` |
+| `kernel/`, `kernel/syscall/`, `asm/switch.s` | Kernel init, interrupts, scheduler, syscall dispatch | `03-kernel-core/` |
 | `mem/` | Multiboot2 memory map and page allocator | `04-memory/` |
 | `terminal/`, `keyboard/`, `drivers/ata/` | Basic I/O (video, input, disk) | `05-io/` |
 | `fs/`, `fs/fat16/` | In-memory FS and persistent FAT16 | `06-filesystem/` |
