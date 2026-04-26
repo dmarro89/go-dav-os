@@ -22,6 +22,18 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Check formatting
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not formatted (run 'gofmt -w .' to fix):"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet -tags testing -unsafeptr=false ./...
+      
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
