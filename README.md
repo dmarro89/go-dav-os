@@ -15,7 +15,7 @@ Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the p
 
 - Terminal: `terminal/` writes to VGA text mode 80x25, manages cursor, scroll, and backspace
 
-- Keyboard: `keyboard/` reads from PS/2 and maps keys with the Italian layout only (temporary)
+- Keyboard: `keyboard/` reads from PS/2 and supports both Italian (`it`) and US (`us`) layouts. Switch at runtime with the `layout` command.
 
 - Tiny shell: interactive prompt + basic line editing, commands are mostly for debugging
 
@@ -126,6 +126,13 @@ At the moment, the supported launch names are:
 **Example:**
 ```bash
 run hello
+```
+
+### Shell commands
+The current command list (from `shell/shell.go`) is:
+
+```
+Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout
 ```
 
 ## Other folder layout
