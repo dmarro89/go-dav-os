@@ -5,6 +5,8 @@ As proposed in [Issue #102](https://github.com/dmarro89/go-dav-os/issues/102), t
 
 This concept is heavily inspired by Andrej Karpathy's "LLM OS" vision, which reimagines the traditional operating system architecture by positioning a Large Language Model (LLM) at the core, serving as the central orchestrator (CPU).
 
+This document describes the target architecture and an incremental path toward it. The diagrams below represent the long-term direction, not the exact feature set already available in `go-dav-os` v0.4.0.
+
 ## Architectural Paradigm Shift
 Traditional operating systems are deterministic, relying on strict code execution paths. The Agentic OS introduces a probabilistic paradigm, where execution is driven by language understanding, reasoning, and inference. This makes the OS highly flexible, allowing it to interpret ambiguous user requests and plan complex, multi-step actions autonomously.
 
@@ -59,19 +61,24 @@ The primary interaction model shifts from a Command Line Interface (CLI) or Grap
 - **Intent vs. Command:** The user states what they want to achieve (e.g., "Find all large log files and summarize the errors"), and the Agentic OS determines the necessary steps (`find`, `grep`, `awk`), executes them invisibly, and presents the final summary.
 - **Contextual Awareness:** The OS maintains the context of the user's workspace, knowing which files are open, what the previous commands were, and what the user's overall goals are.
 
-### Workflow Sequence Diagram
+### Workflow Sequence Diagram (v0.5.0 Minimum Working Agent)
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant A as Agentic OS (LLM)
-    participant C as Context Manager
-    participant S as Shell/Tools
+    participant A as Agent Daemon
+    participant C as Minimal Context Layer
+    participant G as Safety Gate
+    participant S as Allowed Shell Commands
     
     U->>A: "Find large log files and summarize errors"
     A->>C: Request current workspace state
-    C-->>A: Context (pwd, active processes)
+    C-->>A: Minimal context (cwd, recent commands, task state)
+    A->>G: Proposed command plan
+    G-->>A: Allow / require confirmation
     A->>S: Execute `find . -name "*.log" -size +100M`
     S-->>A: List of large files
+    A->>G: Proposed follow-up command
+    G-->>A: Allow / require confirmation
     A->>S: Execute `grep -i error <files>`
     S-->>A: Raw error logs
     A->>A: Synthesize and analyze raw logs
@@ -80,21 +87,69 @@ sequenceDiagram
 ![Workflow Sequence Diagram](./seq.png)
 
 ## Implementation Architecture for Go-Dav-OS
-To implement this in `go-dav-os` starting from v0.4.0, a modular architecture must be designed to bridge the Go kernel and the AI agent:
+For `go-dav-os` v0.5.0 and beyond, the Agentic OS vision can be approached through a modular architecture that gradually bridges the Go kernel and the AI agent:
 
 1.  **Agent Daemon (User-mode Process):** 
-    Introduce an AI agent daemon running as a privileged user-mode task. This daemon handles natural language processing, interacts with the LLM API, and orchestrates tasks.
+    Introduce an initial AI agent daemon running as a user-mode task. In its first iteration, this daemon can focus on intent parsing, basic task orchestration, and invoking a constrained set of existing shell capabilities.
     
 2.  **Syscall / Shell Interception:** 
-    The agent requires a mechanism to securely invoke internal OS APIs and shell built-ins. Instead of typing commands, the daemon communicates directly with the shell runtime via Inter-Process Communication (IPC).
+    In later iterations, the agent will require a mechanism to securely invoke internal OS APIs and shell built-ins. Because `go-dav-os` does not currently provide an IPC layer for this, the first versions should rely on simpler command mediation before evolving toward direct structured communication with the shell runtime.
     
 3.  **Context Management Subsystem:** 
-    Develop a lightweight context aggregator that constantly tracks the system state (memory usage, open file descriptors, active processes) and formatting it into a JSON or prompt-friendly structure to be injected into the LLM's context window.
+    Develop a lightweight context aggregator that captures a minimal but useful view of system state, then expand it over time. Early versions can expose only stable essentials such as the current working context, active task metadata, and command history before growing toward richer runtime information.
     
 4.  **Vector Storage (VFS Extension):** 
-    Integrate a minimal vector search capability within the Virtual File System (VFS). This allows files and past commands to be indexed locally using embeddings, enabling the LLM to search for files by intent rather than exact paths.
+    Integrate vector search as a later-stage VFS extension. This would allow files and past commands to be indexed locally using embeddings, enabling the LLM to search for files by intent rather than exact paths once the base agent flow is stable.
 
 5.  **Security, Sandboxing & Permissions:** 
     Because LLMs are probabilistic and prone to hallucinations, commands generated by the LLM must be sandboxed.
     *   **Dry-run execution:** The LLM proposes commands which are evaluated for safety before execution.
     *   **Privilege boundaries:** The agent should run with least privilege, prompting the user via the UI for permission before performing destructive operations (e.g., `rm`, writing over system files).
+
+## Iterative Delivery Approach
+To keep the vision aligned with the current maturity of `go-dav-os`, it is useful to define an incremental roadmap instead of targeting the full Agentic OS model in a single release.
+
+### Iterative Roadmap Diagram
+```mermaid
+flowchart LR
+    A["v0.5.0<br/>Minimum Working Agent"] --> B["v0.6.0<br/>Better Context + Safer Execution"]
+    B --> C["Later Releases<br/>Deeper OS Integration"]
+
+    A1["Natural language -> constrained shell actions"] --- A
+    A2["Explicit confirmation for risky actions"] --- A
+    A3["Lightweight task + command context"] --- A
+
+    B1["Richer context manager metadata"] --- B
+    B2["Stronger dry-run + validation pipeline"] --- B
+    B3["Improved multi-step planning traces"] --- B
+
+    C1["Structured IPC / shell-runtime layer"] --- C
+    C2["Vector-backed memory + semantic retrieval"] --- C
+    C3["Expanded tools and multimodal workflows"] --- C
+```
+
+### v0.5.0: Minimum Working Agent
+The first step can be a minimal agent that proves the interaction model without requiring every long-term subsystem:
+
+*   Accept natural-language input and translate it into a small, predefined set of shell actions.
+*   Operate with a constrained command surface and explicit user confirmation for risky actions.
+*   Maintain lightweight conversational context such as the current task, recent commands, and recent outputs.
+*   Return structured, human-readable responses instead of raw shell output whenever possible.
+
+This stage establishes the user experience of a conversational operating system while staying compatible with the primitive state of the current OS.
+
+### v0.6.0: Better Context and Safer Execution
+Once the minimal agent exists, the next release can improve the quality and safety of orchestration:
+
+*   Expand the context manager with richer system metadata.
+*   Improve command validation, dry-run inspection, and permission gating.
+*   Add better planning for multi-step tasks and clearer execution traces for the user.
+
+### Later Releases: Deeper OS Integration
+After the basic agent loop is reliable, later versions can move toward the full Agentic OS target:
+
+*   Introduce a dedicated IPC or structured shell-runtime communication layer.
+*   Add vector-backed memory and semantic file retrieval.
+*   Explore multimodal inputs, richer tools, and deeper kernel-aware integrations.
+
+With this iterative approach, each release delivers a usable step forward while preserving the long-term architectural direction described in this document.
