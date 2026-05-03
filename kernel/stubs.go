@@ -48,6 +48,10 @@ func GetCS() uint16 {
 	return 0
 }
 
+func GetCR2() uint64 {
+	return 0
+}
+
 func getIRQ0StubAddr() uint64 {
 	return 0
 }

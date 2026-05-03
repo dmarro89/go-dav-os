@@ -324,6 +324,7 @@ go_0kernel.StoreIDT:
 .global go_0kernel.Int80Stub
 .type   go_0kernel.Int80Stub, @function
 go_0kernel.Int80Stub:
+	pushq $0            # dummy error code
 	PUSH_REGS
 	mov %rsp, %rbp
 	andq $-16, %rsp
@@ -332,6 +333,7 @@ go_0kernel.Int80Stub:
 	call  go_0kernel.Int80Handler
 	mov %rbp, %rsp
 	POP_REGS
+	addq $8, %rsp      # pop dummy error code
 	iretq
 .size go_0kernel.Int80Stub, . - go_0kernel.Int80Stub
 
@@ -353,6 +355,7 @@ go_0kernel.SyscallEntryStub:
 	pushq __syscall_saved_user_rflags(%rip)
 	pushq $0x1B
 	pushq __syscall_saved_user_rip(%rip)
+	pushq $0            # dummy error code
 	PUSH_REGS
 	mov %rsp, %rbp
 	andq $-16, %rsp
@@ -361,6 +364,7 @@ go_0kernel.SyscallEntryStub:
 	call  go_0kernel.SyscallHandler
 	mov %rbp, %rsp
 	POP_REGS
+	addq $8, %rsp       # pop dummy error code
 	iretq
 .size go_0kernel.SyscallEntryStub, . - go_0kernel.SyscallEntryStub
 
@@ -388,6 +392,14 @@ go_0kernel.GetCS:
 	ret
 .size go_0kernel.GetCS, . - go_0kernel.GetCS
 
+# uint64 go_0kernel.GetCR2()
+.global go_0kernel.GetCR2
+.type   go_0kernel.GetCR2, @function
+go_0kernel.GetCR2:
+	mov %cr2, %rax
+	ret
+.size go_0kernel.GetCR2, . - go_0kernel.GetCR2
+
 # void go_0kernel.TriggerInt80()
 .global go_0kernel.TriggerInt80
 .type   go_0kernel.TriggerInt80, @function
@@ -400,15 +412,33 @@ go_0kernel.TriggerInt80:
 .global go_0kernel.GPFaultStub
 .type   go_0kernel.GPFaultStub, @function
 go_0kernel.GPFaultStub:
-	movb $'G', %al
-	cli
-	mov $0xb8000, %rdi
-	movb $'G', (%rdi)
-	movb $0x1f, 1(%rdi)
-1:
-	hlt
-	jmp 1b
+	PUSH_REGS
+	mov %rsp, %rbp
+	andq $-16, %rsp
+	subq $8, %rsp
+	mov %rbp, %rdi
+	call  go_0kernel.GPFaultHandler
+	mov %rbp, %rsp
+	POP_REGS
+	addq $8, %rsp      # pop error code
+	iretq
 .size go_0kernel.GPFaultStub, . - go_0kernel.GPFaultStub
+
+# void go_0kernel.PFaultStub()
+.global go_0kernel.PFaultStub
+.type   go_0kernel.PFaultStub, @function
+go_0kernel.PFaultStub:
+	PUSH_REGS
+	mov %rsp, %rbp
+	andq $-16, %rsp
+	subq $8, %rsp
+	mov %rbp, %rdi
+	call  go_0kernel.PFaultHandler
+	mov %rbp, %rsp
+	POP_REGS
+	addq $8, %rsp      # pop error code
+	iretq
+.size go_0kernel.PFaultStub, . - go_0kernel.PFaultStub
 
 # void go_0kernel.DFaultStub()
 .global go_0kernel.DFaultStub
@@ -424,59 +454,6 @@ go_0kernel.DFaultStub:
 	jmp 1b
 .size go_0kernel.DFaultStub, . - go_0kernel.DFaultStub
 
-# void go_0kernel.PFaultStub()
-.global go_0kernel.PFaultStub
-.type   go_0kernel.PFaultStub, @function
-go_0kernel.PFaultStub:
-	# Debug marker + faulting linear address from CR2.
-	movb $'P', %al
-	outb %al, $0xe9
-	movb $'F', %al
-	outb %al, $0xe9
-	movb $' ', %al
-	outb %al, $0xe9
-	movb $'C', %al
-	outb %al, $0xe9
-	movb $'R', %al
-	outb %al, $0xe9
-	movb $'2', %al
-	outb %al, $0xe9
-	movb $'=', %al
-	outb %al, $0xe9
-	movb $'0', %al
-	outb %al, $0xe9
-	movb $'x', %al
-	outb %al, $0xe9
-
-	movq %cr2, %rbx
-	movl $16, %ecx
-
-.Lpf_hex_loop:
-	movq %rbx, %rdx
-	shrq $60, %rdx
-	andb $0x0F, %dl
-	cmpb $10, %dl
-	jb .Lpf_hex_digit
-	addb $('a' - 10), %dl
-	jmp .Lpf_hex_emit
-
-.Lpf_hex_digit:
-	addb $'0', %dl
-
-.Lpf_hex_emit:
-	movb %dl, %al
-	outb %al, $0xe9
-	shlq $4, %rbx
-	decl %ecx
-	jnz .Lpf_hex_loop
-
-	movb $'\n', %al
-	outb %al, $0xe9
-	cli
-1:
-	hlt
-	jmp 1b
-.size go_0kernel.PFaultStub, . - go_0kernel.PFaultStub
 
 # uint64 go_0kernel.getGPFaultStubAddr()
 .global go_0kernel.getGPFaultStubAddr
@@ -486,6 +463,14 @@ go_0kernel.getGPFaultStubAddr:
 	ret
 .size go_0kernel.getGPFaultStubAddr, . - go_0kernel.getGPFaultStubAddr
 
+# uint64 go_0kernel.getPFaultStubAddr()
+.global go_0kernel.getPFaultStubAddr
+.type   go_0kernel.getPFaultStubAddr, @function
+go_0kernel.getPFaultStubAddr:
+	leaq go_0kernel.PFaultStub(%rip), %rax
+	ret
+.size go_0kernel.getPFaultStubAddr, . - go_0kernel.getPFaultStubAddr
+
 # uint64 go_0kernel.getDFaultStubAddr()
 .global go_0kernel.getDFaultStubAddr
 .type   go_0kernel.getDFaultStubAddr, @function
@@ -494,13 +479,6 @@ go_0kernel.getDFaultStubAddr:
 	ret
 .size go_0kernel.getDFaultStubAddr, . - go_0kernel.getDFaultStubAddr
 
-# uint64 go_0kernel.getPFaultStubAddr()
-.global go_0kernel.getPFaultStubAddr
-.type   go_0kernel.getPFaultStubAddr, @function
-go_0kernel.getPFaultStubAddr:
-	leaq go_0kernel.PFaultStub(%rip), %rax
-	ret
-.size go_0kernel.getPFaultStubAddr, . - go_0kernel.getPFaultStubAddr
 
 # void go_0kernel.DebugChar(byte)
 .global go_0kernel.DebugChar
@@ -554,6 +532,7 @@ go_0kernel.Halt:
 .global go_0kernel.IRQ0Stub
 .type   go_0kernel.IRQ0Stub, @function
 go_0kernel.IRQ0Stub:
+	pushq $0            # dummy error code
 	PUSH_REGS
 	mov %rsp, %rbp
 	andq $-16, %rsp
@@ -561,6 +540,7 @@ go_0kernel.IRQ0Stub:
 	call go_0kernel.IRQ0Handler
 	mov %rbp, %rsp
 	POP_REGS
+	addq $8, %rsp      # pop dummy error code
 	iretq
 .size go_0kernel.IRQ0Stub, . - go_0kernel.IRQ0Stub
 
@@ -574,6 +554,7 @@ go_0kernel.getIRQ0StubAddr:
 .global go_0kernel.IRQ1Stub
 .type   go_0kernel.IRQ1Stub, @function
 go_0kernel.IRQ1Stub:
+	pushq $0            # dummy error code
 	PUSH_REGS
 	mov %rsp, %rbp
 	andq $-16, %rsp
@@ -581,6 +562,7 @@ go_0kernel.IRQ1Stub:
 	call go_0kernel.IRQ1Handler
 	mov %rbp, %rsp
 	POP_REGS
+	addq $8, %rsp      # pop dummy error code
 	iretq
 .size go_0kernel.IRQ1Stub, . - go_0kernel.IRQ1Stub
 
