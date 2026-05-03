@@ -140,7 +140,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
         stop_qemu(process)
 
 
-def run_fault_probe(iso_path, disk_img, cmd_text, log_file):
+def run_fault_probe(iso_path, disk_img, cmd_text, log_file, fault_marker="PF"):
     last_process = None
     for attempt in range(1, 4):
         if os.path.exists(log_file):
@@ -157,14 +157,14 @@ def run_fault_probe(iso_path, disk_img, cmd_text, log_file):
             print("Boot successful.")
             send_shell_command(process, cmd_text)
 
-            print("Waiting for ring3 protection fault marker ('PF')...")
-            if not check_log_for("PF", log_file, timeout=6):
+            print(f"Waiting for ring3 protection fault marker ('{fault_marker}')...")
+            if not check_log_for(fault_marker, log_file, timeout=6):
                 fail_with_log(
-                    f"Did not observe PF marker after '{cmd_text}'.",
+                    f"Did not observe {fault_marker} marker after '{cmd_text}'.",
                     process,
                     log_file,
                 )
-            print(f"Test Passed: '{cmd_text}' triggered PF as expected.")
+            print(f"Test Passed: '{cmd_text}' triggered {fault_marker} as expected.")
             return
         finally:
             stop_qemu(process)
@@ -193,10 +193,13 @@ def main():
     # Each probe must run in its own VM instance because a #PF is terminal here.
     kread_disk = "disk_kread.img"
     kwrite_disk = "disk_kwrite.img"
+    kpriv_disk = "disk_kpriv.img"
     create_disk_image(kread_disk)
     create_disk_image(kwrite_disk)
-    run_fault_probe(iso_path, kread_disk, "run kread", "qemu_kread.log")
-    run_fault_probe(iso_path, kwrite_disk, "run kwrite", "qemu_kwrite.log")
+    create_disk_image(kpriv_disk)
+    run_fault_probe(iso_path, kread_disk, "run kread", "qemu_kread.log", "PF")
+    run_fault_probe(iso_path, kwrite_disk, "run kwrite", "qemu_kwrite.log", "PF")
+    run_fault_probe(iso_path, kpriv_disk, "run kpriv", "qemu_kpriv.log", "GP")
 
     print("All QEMU checks passed.")
 

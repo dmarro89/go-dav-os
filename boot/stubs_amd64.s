@@ -716,6 +716,17 @@ go_0kernel.GetUserProgramKernelWriteProbeAddr:
 	ret
 .size go_0kernel.GetUserProgramKernelWriteProbeAddr, . - go_0kernel.GetUserProgramKernelWriteProbeAddr
 
+# uint64 go_0kernel.GetUserProgramPrivilegedProbeAddr()
+.global go_0kernel.GetUserProgramPrivilegedProbeAddr
+.type   go_0kernel.GetUserProgramPrivilegedProbeAddr, @function
+go_0kernel.GetUserProgramPrivilegedProbeAddr:
+	leaq go_0kernel.userProbePrivilegedStart(%rip), %rax
+	leaq __user_program_page(%rip), %rdx
+	subq %rdx, %rax
+	addq $USER_VA_BASE, %rax
+	ret
+.size go_0kernel.GetUserProgramPrivilegedProbeAddr, . - go_0kernel.GetUserProgramPrivilegedProbeAddr
+
 # uint64 go_0kernel.GetUserStackTopAddr()
 .global go_0kernel.GetUserStackTopAddr
 .type   go_0kernel.GetUserStackTopAddr, @function

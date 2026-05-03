@@ -5,11 +5,13 @@ package kernel
 var helloProgramName = [...]byte{'h', 'e', 'l', 'l', 'o'}
 var kernelReadProbeProgramName = [...]byte{'k', 'r', 'e', 'a', 'd'}
 var kernelWriteProbeProgramName = [...]byte{'k', 'w', 'r', 'i', 't', 'e'}
+var privilegedProbeProgramName = [...]byte{'k', 'p', 'r', 'i', 'v'}
 
 func ExecuteUserTask(rip, rsp uint64)
 func GetUserProgramHelloAddr() uint64
 func GetUserProgramKernelReadProbeAddr() uint64
 func GetUserProgramKernelWriteProbeAddr() uint64
+func GetUserProgramPrivilegedProbeAddr() uint64
 func GetUserStackTopAddr() uint64
 
 func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
@@ -21,6 +23,8 @@ func RunProgram(name *[16]byte, nameLen int) (pid int, ok bool) {
 		rip = GetUserProgramKernelReadProbeAddr()
 	case matchProgramName(name, nameLen, kernelWriteProbeProgramName[:]):
 		rip = GetUserProgramKernelWriteProbeAddr()
+	case matchProgramName(name, nameLen, privilegedProbeProgramName[:]):
+		rip = GetUserProgramPrivilegedProbeAddr()
 	default:
 		return -1, false
 	}
