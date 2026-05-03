@@ -4,9 +4,6 @@ package terminal
 
 import "unsafe"
 
-func outb(port uint16, value byte)
-func debugChar(c byte)
-
 const (
 	VGAWidth  = 80
 	VGAHeight = 25
@@ -199,6 +196,27 @@ func PrintInt(v int) {
 	for val > 0 {
 		buf[i] = byte('0' + (val % 10))
 		val /= 10
+		i++
+	}
+	for i > 0 {
+		i--
+		PutRune(rune(buf[i]))
+	}
+}
+
+// PrintHex prints a 64-bit value in hexadecimal format
+func PrintHex(v uint64) {
+	Print("0x")
+	if v == 0 {
+		Print("0")
+		return
+	}
+	digits := "0123456789ABCDEF"
+	var buf [16]byte
+	i := 0
+	for v > 0 {
+		buf[i] = digits[v%16]
+		v /= 16
 		i++
 	}
 	for i > 0 {

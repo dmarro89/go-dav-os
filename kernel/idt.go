@@ -4,6 +4,9 @@ package kernel
 
 import (
 	"unsafe"
+
+	"github.com/dmarro89/go-dav-os/kernel/syscall"
+	"github.com/dmarro89/go-dav-os/terminal"
 )
 
 const (
@@ -32,13 +35,57 @@ func StoreIDT(p *[10]byte)
 
 func getInt80StubAddr() uint64
 func getGPFaultStubAddr() uint64
-func getDFaultStubAddr() uint64
 func getPFaultStubAddr() uint64
+func getDFaultStubAddr() uint64
 func Int80Stub()
 func TriggerInt80()
 func GetCS() uint16
+func GetCR2() uint64
 func getIRQ0StubAddr() uint64
 func getIRQ1StubAddr() uint64
+
+func GPFaultHandler(tf *syscall.TrapFrame) {
+	if tf.CS&3 == 3 {
+		terminal.Print("\n#GP in user mode\n")
+		printFaultDiagnostics("General Protection Fault", tf)
+		ReturnToKernel()
+	} else {
+		terminal.Print("\n#GP in kernel mode\n")
+		printFaultDiagnostics("General Protection Fault", tf)
+		for {
+		} // Halt
+	}
+}
+
+func PFaultHandler(tf *syscall.TrapFrame) {
+	cr2 := GetCR2()
+	if tf.CS&3 == 3 {
+		terminal.Print("\n#PF in user mode\n")
+		printFaultDiagnostics("Page Fault", tf)
+		terminal.Print("CR2: ")
+		terminal.PrintHex(cr2)
+		terminal.Print("\n")
+		ReturnToKernel()
+	} else {
+		terminal.Print("\n#PF in kernel mode\n")
+		printFaultDiagnostics("Page Fault", tf)
+		terminal.Print("CR2: ")
+		terminal.PrintHex(cr2)
+		terminal.Print("\n")
+		for {
+		} // Halt
+	}
+}
+
+func printFaultDiagnostics(name string, tf *syscall.TrapFrame) {
+	terminal.Print("Fault: ")
+	terminal.Print(name)
+	terminal.Print("\nRIP: ")
+	terminal.PrintHex(tf.RIP)
+	terminal.Print("\nError Code: ")
+	terminal.PrintHex(tf.ErrorCode)
+	terminal.Print("\n")
+}
 
 func packIDTR(limit uint16, base uint64, out *[10]byte) {
 	out[0] = byte(limit)
@@ -52,15 +99,6 @@ func packIDTR(limit uint16, base uint64, out *[10]byte) {
 	out[8] = byte(base >> 48)
 	out[9] = byte(base >> 56)
 }
-
-// func unpackIDTR(in *[6]byte) (limit uint16, base uint32) {
-// 	limit = uint16(in[0]) | uint16(in[1])<<8
-// 	base = uint32(in[2]) |
-// 		uint32(in[3])<<8 |
-// 		uint32(in[4])<<16 |
-// 		uint32(in[5])<<24
-// 	return
-// }
 
 func setIDTEntry(vec uint8, handler uint64, selector uint16, flags uint8) {
 	e := &idt[vec]
@@ -95,32 +133,4 @@ func InitIDT() {
 	packIDTR(limit, base, &idtr)
 
 	LoadIDT(&idtr)
-
-	// For testing purposes, read back from CPU (sidt) and print the results
-	// storedLimit, storedBase := readIDTR()
-	// terminal.Print("IDT limit=")
-	// printHex16(storedLimit)
-	// terminal.Print(" base=")
-	// printHex32(storedBase)
-	// terminal.Print("\n")
 }
-
-// func readIDTR() (limit uint16, base uint32) {
-// 	StoreIDT(&idtr)
-// 	return unpackIDTR(&idtr)
-// }
-
-// func DumpIDTEntryHW(vec uint8) {
-// _, base := readIDTR()
-
-// 	addr := uintptr(base) + uintptr(vec)*8
-// 	p := (*[8]byte)(unsafe.Pointer(addr))
-
-// 	terminal.Print("IDT[0x")
-// 	printHex8(vec)
-// 	terminal.Print("] = ")
-// 	for i := 0; i < 8; i++ {
-// 		printHex8(p[i])
-// 	}
-// 	terminal.Print("\n")
-// }
