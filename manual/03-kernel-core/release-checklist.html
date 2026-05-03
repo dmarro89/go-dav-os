@@ -8,24 +8,26 @@
       
       
       
-        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/x86_64-migration.html">
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/03-kernel-core/release-checklist.html">
       
+      
+        <link rel="prev" href="user-kernel-memory-isolation.html">
       
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>x86_64 Migration Plan - Go DAV OS</title>
+        <title>Release Checklist - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
       
 
@@ -44,7 +46,7 @@
       
     
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -62,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#x86_64-migration-plan" class="md-skip">
+        <a href="#release-checklist-for-v040" class="md-skip">
           Skip to content
         </a>
       
@@ -78,7 +80,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -98,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              x86_64 Migration Plan
+              Release Checklist
             
           </span>
         </div>
@@ -176,7 +178,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -194,7 +196,7 @@
   
   
     <li class="md-nav__item">
-      <a href="index.html" class="md-nav__link">
+      <a href="../../index.html" class="md-nav__link">
         
   
   
@@ -221,7 +223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/00-introduction/index.html" class="md-nav__link">
+      <a href="../00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -248,7 +250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/00-introduction/glossary.html" class="md-nav__link">
+      <a href="../00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -275,7 +277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/01-overview/architecture.html" class="md-nav__link">
+      <a href="../01-overview/architecture.html" class="md-nav__link">
         
   
   
@@ -302,7 +304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/02-boot/boot-and-grub.html" class="md-nav__link">
+      <a href="../02-boot/boot-and-grub.html" class="md-nav__link">
         
   
   
@@ -329,7 +331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
+      <a href="../02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
         
   
   
@@ -356,7 +358,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
+      <a href="privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -383,7 +385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/03-kernel-core/syscall-entry-and-abi.html" class="md-nav__link">
+      <a href="syscall-entry-and-abi.html" class="md-nav__link">
         
   
   
@@ -410,7 +412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="manual/03-kernel-core/user-kernel-memory-isolation.html" class="md-nav__link">
+      <a href="user-kernel-memory-isolation.html" class="md-nav__link">
         
   
   
@@ -434,10 +436,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="manual/03-kernel-core/release-checklist.html" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Checklist
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="release-checklist.html" class="md-nav__link md-nav__link--active">
         
   
   
@@ -453,6 +482,81 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-build-the-os" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Build the OS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-test-normal-user-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Test Normal User Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-test-isolation-kernel-read-fault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Test Isolation (Kernel Read Fault)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-test-isolation-kernel-write-fault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Test Isolation (Kernel Write Fault)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-automated-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Automated Verification
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -484,66 +588,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-bootloader-changes-long-mode-setup" class="md-nav__link">
+  <a href="#1-build-the-os" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Bootloader Changes (Long Mode Setup)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="1. Bootloader Changes (Long Mode Setup)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#steps" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Steps:
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-kernel-changes-go-runtime" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Kernel Changes (Go Runtime)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. Kernel Changes (Go Runtime)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#steps_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Steps:
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-architecture-independent-parts-no-change-needed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Architecture Independent Parts (No Change Needed)
+        1. Build the OS
       
     </span>
   </a>
@@ -551,10 +599,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-minimal-roadmap-checklist" class="md-nav__link">
+  <a href="#2-test-normal-user-execution" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Minimal Roadmap Checklist
+        2. Test Normal User Execution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-test-isolation-kernel-read-fault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Test Isolation (Kernel Read Fault)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-test-isolation-kernel-write-fault" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Test Isolation (Kernel Write Fault)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-automated-verification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Automated Verification
       
     </span>
   </a>
@@ -578,139 +659,45 @@
 
 
 
-<h1 id="x86_64-migration-plan">x86_64 Migration Plan</h1>
-<p>This document outlines the steps required to migrate <code>go-dav-os</code> from 32-bit protected mode to 64-bit long mode (x86_64).</p>
-<h2 id="1-bootloader-changes-long-mode-setup">1. Bootloader Changes (Long Mode Setup)</h2>
-<p>Current state: Boots via Multiboot 1 (32-bit protected mode).
-Goal: Reach 64-bit Long Mode.</p>
-<p><strong>Note</strong>: Multiboot v1 is 32-bit only. We should switch to <strong>Multiboot2</strong> to support modern 64-bit loading properly, or use a trampoline. This plan assumes moving to Multiboot2.</p>
-<h3 id="steps">Steps:</h3>
-<ol>
-<li>
-<p><strong>Paging Setup</strong>:</p>
-<ul>
-<li>Create a Page Map Level 4 (PML4) table.</li>
-<li>Create a Page Directory Pointer Table (PDPT).</li>
-<li>Create a Page Directory (PD).</li>
-<li>Identity map the first 1GB (or enough for kernel + boot structures) using huge pages (2MB) for simplicity.</li>
-<li>Update <code>boot.s</code> header to use <strong>Multiboot2</strong> tags.</li>
-<li>Load clean CR3 with the address of PML4.</li>
-</ul>
-</li>
-<li>
-<p><strong>Enable Long Mode</strong>:</p>
-<ul>
-<li>Set PAE bit in CR4.</li>
-<li>Set LME (Long Mode Enable) bit in EFER MSR (Model Specific Register <code>0xC0000080</code>).</li>
-<li>Enable Paging (PG bit in CR0).</li>
-</ul>
-</li>
-<li>
-<p><strong>GDT Update</strong>:</p>
-<ul>
-<li>Define a 64-bit GDT (Global Descriptor Table). The code segment descriptor must have the 'L' bit set (Long mode).</li>
-<li>Load the new GDT (<code>lgdt</code>).</li>
-</ul>
-</li>
-<li>
-<p><strong>Jump</strong>:</p>
-<ul>
-<li>Perform a long jump to the 64-bit code segment to update <code>CS</code>.</li>
-</ul>
-</li>
-</ol>
-<h2 id="2-kernel-changes-go-runtime">2. Kernel Changes (Go Runtime)</h2>
-<p>Current state: <code>GOARCH=386</code>
-Goal: <code>GOARCH=amd64</code></p>
-<h3 id="steps_1">Steps:</h3>
-<ol>
-<li>
-<p><strong>Compiler Target</strong>:</p>
-<ul>
-<li>Update <code>Makefile</code> to set <code>GOARCH=amd64</code> for <code>gccgo</code>.</li>
-<li>Ensure cross-compiler <code>x86_64-elf-gcc</code> / <code>x86_64-elf-gccgo</code> is used.</li>
-<li>Update <code>linker.ld</code> to output <code>elf64-x86-64</code> and handle 64-bit sections.</li>
-</ul>
-</li>
-<li>
-<p><strong>Entry Point</strong>:</p>
-<ul>
-<li><strong>Assembly Stub Contract</strong>: Since we use a custom runtime, the entry point contract must be explicitly defined.</li>
-<li>Create a 64-bit assembly stub in <code>boot.s</code> (or <code>entry64.s</code>) to setup the stack and registers.</li>
-<li>The stub effectively defines the calling convention for jumping into Go.</li>
-<li>Update <code>kernel.Main</code> signature in <code>kernel/kernel.go</code> to match this contract:
-    <code>go
-    // from func Main(addr uint32)
-    func Main(addr uint64) // Argument passed from asm stub (e.g. in RDI or on stack)</code></li>
-</ul>
-</li>
-<li>
-<p><strong>Memory Management (<code>mem/</code>)</strong>:</p>
-<ul>
-<li>Refactor <code>allocator.go</code> to use <code>uint64</code> or <code>uintptr</code> for physical addresses.</li>
-<li>The current bitmap allocator assumes 32-bit addresses. It needs to handle &gt;4GB memory ranges if available from Multiboot memory map.</li>
-<li>Struct <code>mmapEntry</code> in <code>mem/multiboot.go</code> may ideally remain compatible if we parse the raw bytes correctly, but internal representation should standardise on 64-bit types.</li>
-</ul>
-</li>
-<li>
-<p><strong>Interrupts (<code>kernel/idt.go</code>, <code>kernel/pic.go</code>)</strong>:</p>
-<ul>
-<li><strong>IDT</strong>: In 64-bit mode, IDT entries are 16 bytes (was 8 bytes). This requires a new struct definition and loader logic.</li>
-<li><strong>Handlers</strong>: Assembly interrupt stubs (<code>boot/boot.s</code>) must use <code>iretq</code> (64-bit return) and save/restore 64-bit registers (<code>rax</code>, <code>rbx</code>... <code>r15</code>).</li>
-</ul>
-</li>
-<li>
-<p><strong>Syscalls</strong>:</p>
-<ul>
-<li>Primary user syscall entry now uses <code>syscall</code>.</li>
-<li>Return currently uses <code>iretq</code> for simplicity; <code>sysretq</code> remains a possible later refinement.</li>
-<li>The userspace/kernel boundary ABI is now explicitly defined around x86_64 syscall registers.</li>
-<li>Go-side syscall code now lives in <code>kernel/syscall/</code>, while low-level entry/return stays in <code>boot/stubs_amd64.s</code>.</li>
-</ul>
-</li>
-</ol>
-<h2 id="3-architecture-independent-parts-no-change-needed">3. Architecture Independent Parts (No Change Needed)</h2>
-<p>The following components are largely high-level and should remain mostly untouched, assuming <code>int</code> / <code>uint</code> behave as expected (Go <code>int</code> becomes 64-bit on amd64):</p>
-<ul>
-<li><strong>Filesystem (<code>fs/</code>)</strong>: FAT driver logic is independent of CPU bit-mode.</li>
-<li><strong>Shell (<code>shell/</code>)</strong>: Command parsing and logic are generic.</li>
-<li><strong>Keyboard (<code>keyboard/</code>)</strong>: Logic for scancodes is the same, though port I/O wrappers <code>inb</code>/<code>outb</code> assembly needs 64-bit register usage updates (e.g. <code>mov dx, [rsp+...]</code>).</li>
-<li><strong>Terminal (<code>terminal/</code>)</strong>: VGA buffer manipulation (0xB8000) is standard, though pointer arithmetic will be 64-bit.</li>
-</ul>
-<h2 id="4-minimal-roadmap-checklist">4. Minimal Roadmap Checklist</h2>
-<ul>
-<li>
-<p>[x] <strong>Phase 1: Toolchain &amp; Build</strong></p>
-<ul>
-<li>[x] Update <code>Makefile</code> variables for <code>x86_64</code> toolchain.</li>
-<li>[x] Update <code>Dockerfile</code> to include <code>x86_64-elf-gcc</code> and <code>qemu-system-x86_64</code>.</li>
-<li>[x] Update <code>linker.ld</code> for 64-bit output.</li>
-</ul>
-</li>
-<li>
-<p>[ ] <strong>Phase 2: Bootloader</strong></p>
-<ul>
-<li>[x] Modify <code>boot.s</code> to implement paging and long mode switch.</li>
-<li>[ ] Stub out the Go kernel entry for a simple "Hello 64-bit" asm check.</li>
-</ul>
-</li>
-<li>
-<p>[x] <strong>Phase 3: Kernel Port</strong></p>
-<ul>
-<li>[x] Update <code>kernel.Main</code> and <code>allocator</code> to 64-bit.</li>
-<li>[x] Fix assembly stubs (<code>inb</code>, <code>outb</code>, <code>lidt</code>, <code>lgdt</code>) for 64-bit registers.</li>
-<li>[x] Get "Hello World" from Go kernel on screen.</li>
-</ul>
-</li>
-<li>
-<p>[x] <strong>Phase 4: Interrupts &amp; Input</strong></p>
-<ul>
-<li>[x] Implement 64-bit IDT.</li>
-<li>[x] Port PIT and Keyboard drivers.</li>
-<li>[x] Verify Shell works.</li>
-</ul>
-</li>
-</ul>
+<h1 id="release-checklist-for-v040">Release Checklist for v0.4.0</h1>
+<p>This checklist provides a quick way to validate that ring3 execution and memory isolation are working as expected before a release.</p>
+<h2 id="1-build-the-os">1. Build the OS</h2>
+<p>Ensure the ISO is built successfully:</p>
+<pre><code class="language-bash">make clean
+make iso
+</code></pre>
+<h2 id="2-test-normal-user-execution">2. Test Normal User Execution</h2>
+<p>Run QEMU with the newly built ISO:</p>
+<pre><code class="language-bash">qemu-system-x86_64 -cdrom build/dav-go-os.iso -serial stdio
+</code></pre>
+<p><strong>Steps:</strong>
+1. Wait for the <code>DavOS &gt;</code> prompt.
+2. Run the command: <code>run hello</code>
+3. <strong>Expected Output:</strong>
+   - <code>hello from userland</code>
+   - <code>Process exited with status 0</code>
+   - The shell prompt <code>&gt;</code> should return normally.</p>
+<h2 id="3-test-isolation-kernel-read-fault">3. Test Isolation (Kernel Read Fault)</h2>
+<p><strong>Steps:</strong>
+1. In the DavOS shell, run: <code>run kread</code>
+2. <strong>Expected Output:</strong>
+   - A protection fault (<code>#PF</code>) should be triggered.
+   - A <code>PF</code> marker should be visible in the debug log.
+   - The QEMU instance should halt (or the kernel should trap and halt as implemented).</p>
+<h2 id="4-test-isolation-kernel-write-fault">4. Test Isolation (Kernel Write Fault)</h2>
+<p><strong>Steps:</strong>
+1. Restart the OS and at the prompt, run: <code>run kwrite</code>
+2. <strong>Expected Output:</strong>
+   - A protection fault (<code>#PF</code>) should be triggered.
+   - A <code>PF</code> marker should be visible in the debug log.
+   - The QEMU instance should halt.</p>
+<h2 id="5-automated-verification">5. Automated Verification</h2>
+<p>For automated validation, run the boot test suite:</p>
+<pre><code class="language-bash">python3 scripts/test_boot.py
+</code></pre>
+<p><strong>Expected Output:</strong>
+- <code>All QEMU checks passed.</code></p>
+<p>If all the above tests pass, ring3 execution and kernel memory isolation are functioning correctly.</p>
 
 
 
@@ -760,10 +747,10 @@ Goal: <code>GOARCH=amd64</code></p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": [], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
