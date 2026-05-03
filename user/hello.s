@@ -43,3 +43,8 @@ hello_msg:
 	.ascii "hello from userland\n"
 hello_msg_end:
 	.set hello_msg_len, hello_msg_end - hello_msg
+
+.global go_0kernel.userProbePrivilegedStart
+go_0kernel.userProbePrivilegedStart:
+	cli              # Privileged instruction, must #GP in ring 3
+	hlt

@@ -13,3 +13,4 @@ nav:
   - Privilege Transition: manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.md
   - Syscall Entry And ABI: manual/03-kernel-core/syscall-entry-and-abi.md
   - User/Kernel Memory Isolation: manual/03-kernel-core/user-kernel-memory-isolation.md
+  - Release Checklist: manual/03-kernel-core/release-checklist.md
