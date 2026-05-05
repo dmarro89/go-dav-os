@@ -1,3 +1,4 @@
+import argparse
 import os
 import subprocess
 import sys
@@ -177,7 +178,33 @@ def run_fault_probe(iso_path, disk_img, cmd_text, log_file, fault_marker="PF"):
     )
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run the QEMU-based boot verification for go-dav-os. "
+            "By default, runs the full functional shell suite followed by the "
+            "fault probes (kread, kwrite, kpriv)."
+        ),
+    )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--functional-only",
+        action="store_true",
+        help="Run only the functional shell suite; skip the fault probes.",
+    )
+    group.add_argument(
+        "--fault-only",
+        action="store_true",
+        help="Run only the fault probes (kread, kwrite, kpriv); skip the functional suite.",
+    )
+    return parser.parse_args(argv)
+
+
 def main():
+    args = parse_args()
+    run_functional = not args.fault_only
+    run_fault = not args.functional_only
+
     iso_path = "build/dav-go-os.iso"
     disk_img = "disk.img"
 
@@ -185,21 +212,22 @@ def main():
         print(f"ERROR: ISO not found at {iso_path}. Build it first.")
         sys.exit(1)
 
-    create_disk_image(disk_img)
+    if run_functional:
+        create_disk_image(disk_img)
+        print(f"Starting QEMU verification for {iso_path}...")
+        run_functional_suite(iso_path, disk_img, "qemu.log")
 
-    print(f"Starting QEMU verification for {iso_path}...")
-    run_functional_suite(iso_path, disk_img, "qemu.log")
-
-    # Each probe must run in its own VM instance because a #PF is terminal here.
-    kread_disk = "disk_kread.img"
-    kwrite_disk = "disk_kwrite.img"
-    kpriv_disk = "disk_kpriv.img"
-    create_disk_image(kread_disk)
-    create_disk_image(kwrite_disk)
-    create_disk_image(kpriv_disk)
-    run_fault_probe(iso_path, kread_disk, "run kread", "qemu_kread.log", "PF")
-    run_fault_probe(iso_path, kwrite_disk, "run kwrite", "qemu_kwrite.log", "PF")
-    run_fault_probe(iso_path, kpriv_disk, "run kpriv", "qemu_kpriv.log", "GP")
+    if run_fault:
+        # Each probe must run in its own VM instance because a #PF is terminal here.
+        kread_disk = "disk_kread.img"
+        kwrite_disk = "disk_kwrite.img"
+        kpriv_disk = "disk_kpriv.img"
+        create_disk_image(kread_disk)
+        create_disk_image(kwrite_disk)
+        create_disk_image(kpriv_disk)
+        run_fault_probe(iso_path, kread_disk, "run kread", "qemu_kread.log", "PF")
+        run_fault_probe(iso_path, kwrite_disk, "run kwrite", "qemu_kwrite.log", "PF")
+        run_fault_probe(iso_path, kpriv_disk, "run kpriv", "qemu_kpriv.log", "GP")
 
     print("All QEMU checks passed.")
 

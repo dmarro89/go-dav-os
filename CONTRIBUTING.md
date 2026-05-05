@@ -30,6 +30,12 @@ go test ./fs ./kernel/scheduler ./kernel/gdt ./kernel/tss
 
 # Run integration tests (requires QEMU)
 python3 scripts/test_boot.py
+
+# Or run only the functional shell suite
+python3 scripts/test_boot.py --functional-only
+
+# Or run only the fault probes (kread, kwrite, kpriv)
+python3 scripts/test_boot.py --fault-only
 ```
 
 All tests must pass in CI. The `make test` command automatically discovers and runs all packages containing `*_test.go` files.
