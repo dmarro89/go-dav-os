@@ -6,6 +6,8 @@ This is a hobby project and it’s still in a very early stage. The main idea is
 
 If you’re not sure where to start, open a Discussion and we’ll align quickly.
 
+Reviewers run [`REVIEW.md`](REVIEW.md) on every PR; coding agents (Claude Code, Codex, Cursor, automated PR bots) should also read [`AGENTS.md`](AGENTS.md) before opening a PR.
+
 ## What you can contribute
 Anything that helps the project move forward, especially:
 
