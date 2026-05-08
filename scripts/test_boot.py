@@ -123,6 +123,9 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("fatcreate test hi", ["File created"]),
             ("fatls", ["TEST"]),
             ("fatread test", ["hi"]),
+            ("layout", ["current layout:"]),
+            ("layout us", ["layout: switched to us"]),
+            ("layout it", ["layout: switched to it"]),
             ("run hello", ["hello from userland", "Process exited with status 0"]),
         ]
 
