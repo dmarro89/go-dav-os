@@ -297,6 +297,10 @@ vet:
 	mkdir -p $(BUILD_DIR)/.gocache
 	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go vet -tags testing -unsafeptr=false ./...
 
+test:
+	mkdir -p $(BUILD_DIR)/.gocache
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing $(TEST_PKGS)
+
 # -----------------------
 # User hello
 # -----------------------
