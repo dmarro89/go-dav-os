@@ -39,7 +39,7 @@ SYSCALL_IMPORT := $(MODPATH)/kernel/syscall
 
 KERNEL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard kernel/*.go))
 USER_HELLO_SRC := user/hello.s
-TERMINAL_SRC := terminal/terminal.go terminal/terminal_gccgo.go
+TERMINAL_SRC := terminal/format.go terminal/terminal.go terminal/terminal_gccgo.go
 KEYBOARD_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard keyboard/*.go))
 KEYBOARD_LAYOUT_SRCS := $(filter-out %_test.go, $(wildcard keyboard/layout/*.go))
 SHELL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard shell/*.go))
