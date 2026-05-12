@@ -1,0 +1,866 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/v0.5.0/agentic_os.html">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Agentic OS (LLM OS) Architecture Concept - Go DAV OS</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#agentic-os-llm-os-architecture-concept" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Go DAV OS
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agentic OS (LLM OS) Architecture Concept
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Go DAV OS
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/00-introduction/index.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/00-introduction/glossary.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/01-overview/architecture.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/02-boot/boot-and-grub.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boot & GRUB
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Layout
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Privilege Transition
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/03-kernel-core/syscall-entry-and-abi.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Syscall Entry And ABI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/03-kernel-core/user-kernel-memory-isolation.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User/Kernel Memory Isolation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/03-kernel-core/release-checklist.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-paradigm-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural Paradigm Shift
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architectural Paradigm Shift">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-architecture-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Architecture Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-components-analogy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Components Analogy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-experience-ux-execution-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Experience (UX) &amp; Execution Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Experience (UX) &amp; Execution Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-sequence-diagram-v050-minimum-working-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow Sequence Diagram (v0.5.0 Minimum Working Agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-architecture-for-go-dav-os" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Architecture for Go-Dav-OS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iterative-delivery-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterative Delivery Approach
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Iterative Delivery Approach">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iterative-roadmap-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterative Roadmap Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-minimum-working-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0: Minimum Working Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v060-better-context-and-safer-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0: Better Context and Safer Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#later-releases-deeper-os-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Later Releases: Deeper OS Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="agentic-os-llm-os-architecture-concept">Agentic OS (LLM OS) Architecture Concept</h1>
+<h2 id="overview">Overview</h2>
+<p>As proposed in <a href="https://github.com/dmarro89/go-dav-os/issues/102">Issue #102</a>, the vision for v0.5.0 and beyond is to explore the concept of an "Agentic OS." In an Agentic OS, the user interacts with the operating system through an open conversation, using natural language to express intent rather than formulating rigid terminal commands. The OS Agent leverages contextual awareness of existing commands to execute tasks and provide structured, human-readable outputs.</p>
+<p>This concept is heavily inspired by Andrej Karpathy's "LLM OS" vision, which reimagines the traditional operating system architecture by positioning a Large Language Model (LLM) at the core, serving as the central orchestrator (CPU).</p>
+<p>This document describes the target architecture and an incremental path toward it. The diagrams below represent the long-term direction, not the exact feature set already available in <code>go-dav-os</code> v0.4.0.</p>
+<h2 id="architectural-paradigm-shift">Architectural Paradigm Shift</h2>
+<p>Traditional operating systems are deterministic, relying on strict code execution paths. The Agentic OS introduces a probabilistic paradigm, where execution is driven by language understanding, reasoning, and inference. This makes the OS highly flexible, allowing it to interpret ambiguous user requests and plan complex, multi-step actions autonomously.</p>
+<h3 id="system-architecture-diagram">System Architecture Diagram</h3>
+<pre><code class="language-mermaid">graph TD
+    User([User / Human Intent]) --&gt; |Natural Language / Audio / Video| LLM[LLM Engine / Central Processing Unit]
+
+    subgraph Agentic OS Core
+        LLM &lt;--&gt; |Read / Write Context| RAM[Context Window / Short-term Memory]
+        LLM &lt;--&gt; |Semantic Search| VectorDB[(Vector DB / Long-term Storage)]
+    end
+
+    subgraph Peripherals &amp; Tools
+        LLM --&gt; |Evaluate logic| Interpreter[Code Interpreter]
+        LLM --&gt; |System commands| Shell[Shell / OS Syscalls]
+        LLM --&gt; |Fetch external info| Browser[Web Browser]
+    end
+
+    Interpreter --&gt; |Results| LLM
+    Shell --&gt; |Stdout/Stderr| LLM
+    Browser --&gt; |Page Content| LLM
+
+    LLM --&gt; |Synthesized Multimedia Output| User
+</code></pre>
+<p><img alt="System Architecture Diagram" src="arch.png" /></p>
+<h3 id="core-components-analogy">Core Components Analogy</h3>
+<p>In the LLM OS model, traditional hardware and software abstractions are mapped to AI-driven equivalents:</p>
+<ul>
+<li>
+<p><strong>CPU (Central Processing Unit) -&gt; The LLM Engine</strong>
+    The core logic engine is the Large Language Model itself (e.g., GPT-4, Llama). It interprets natural language instructions, acts as a task planner, orchestrates interactions between components, and generates final responses.</p>
+</li>
+<li>
+<p><strong>RAM (Random Access Memory) -&gt; Context Window</strong>
+    The LLM's context window acts as the active memory. It holds the current conversation history, immediate instructions, and relevant system state required for the active processing cycle.</p>
+</li>
+<li>
+<p><strong>File System (Storage) -&gt; Vector Databases / Embeddings</strong>
+    Long-term memory and the file system are managed via vector databases. System documentation, user files, and historical interactions are stored as embeddings (e.g., Ada-002), allowing the LLM to search and retrieve relevant data using semantic similarity.</p>
+</li>
+<li>
+<p><strong>Peripherals &amp; Userland -&gt; Agentic Tools</strong>
+    The OS is equipped with tools that the LLM can invoke to perform concrete actions. These include:</p>
+<ul>
+<li><strong>Shell/Terminal Execution:</strong> To run underlying system commands safely.</li>
+<li><strong>Code Interpreter:</strong> To write and execute scripts dynamically.</li>
+<li><strong>Web Browser:</strong> To fetch external information.</li>
+<li><strong>Calculators/APIs:</strong> For deterministic computations.</li>
+</ul>
+</li>
+<li>
+<p><strong>I/O (Input/Output) -&gt; Multimodal Interfaces</strong>
+    Sensory inputs (audio, video, text) and outputs replace traditional keyboards and monitors. The user can speak to the OS, provide images, and receive rich, multimodal feedback.</p>
+</li>
+</ul>
+<h2 id="user-experience-ux-execution-flow">User Experience (UX) &amp; Execution Flow</h2>
+<p>The primary interaction model shifts from a Command Line Interface (CLI) or Graphical User Interface (GUI) to a <strong>Conversational User Interface (CUI)</strong>. 
+- <strong>Intent vs. Command:</strong> The user states what they want to achieve (e.g., "Find all large log files and summarize the errors"), and the Agentic OS determines the necessary steps (<code>find</code>, <code>grep</code>, <code>awk</code>), executes them invisibly, and presents the final summary.
+- <strong>Contextual Awareness:</strong> The OS maintains the context of the user's workspace, knowing which files are open, what the previous commands were, and what the user's overall goals are.</p>
+<h3 id="workflow-sequence-diagram-v050-minimum-working-agent">Workflow Sequence Diagram (v0.5.0 Minimum Working Agent)</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant U as User
+    participant A as Agent Daemon
+    participant C as Minimal Context Layer
+    participant G as Safety Gate
+    participant S as Allowed Shell Commands
+
+    U-&gt;&gt;A: &quot;Find large log files and summarize errors&quot;
+    A-&gt;&gt;C: Request current workspace state
+    C--&gt;&gt;A: Minimal context (cwd, recent commands, task state)
+    A-&gt;&gt;G: Proposed command plan
+    G--&gt;&gt;A: Allow / require confirmation
+    A-&gt;&gt;S: Execute `find . -name &quot;*.log&quot; -size +100M`
+    S--&gt;&gt;A: List of large files
+    A-&gt;&gt;G: Proposed follow-up command
+    G--&gt;&gt;A: Allow / require confirmation
+    A-&gt;&gt;S: Execute `grep -i error &lt;files&gt;`
+    S--&gt;&gt;A: Raw error logs
+    A-&gt;&gt;A: Synthesize and analyze raw logs
+    A--&gt;&gt;U: &quot;I found 3 large log files. Here is the summary of errors...&quot;
+</code></pre>
+<p><img alt="Workflow Sequence Diagram" src="seq.png" /></p>
+<h2 id="implementation-architecture-for-go-dav-os">Implementation Architecture for Go-Dav-OS</h2>
+<p>For <code>go-dav-os</code> v0.5.0 and beyond, the Agentic OS vision can be approached through a modular architecture that gradually bridges the Go kernel and the AI agent:</p>
+<ol>
+<li>
+<p><strong>Agent Daemon (User-mode Process):</strong> 
+    Introduce an initial AI agent daemon running as a user-mode task. In its first iteration, this daemon can focus on intent parsing, basic task orchestration, and invoking a constrained set of existing shell capabilities.</p>
+</li>
+<li>
+<p><strong>Syscall / Shell Interception:</strong> 
+    In later iterations, the agent will require a mechanism to securely invoke internal OS APIs and shell built-ins. Because <code>go-dav-os</code> does not currently provide an IPC layer for this, the first versions should rely on simpler command mediation before evolving toward direct structured communication with the shell runtime.</p>
+</li>
+<li>
+<p><strong>Context Management Subsystem:</strong> 
+    Develop a lightweight context aggregator that captures a minimal but useful view of system state, then expand it over time. Early versions can expose only stable essentials such as the current working context, active task metadata, and command history before growing toward richer runtime information.</p>
+</li>
+<li>
+<p><strong>Vector Storage (VFS Extension):</strong> 
+    Integrate vector search as a later-stage VFS extension. This would allow files and past commands to be indexed locally using embeddings, enabling the LLM to search for files by intent rather than exact paths once the base agent flow is stable.</p>
+</li>
+<li>
+<p><strong>Security, Sandboxing &amp; Permissions:</strong> 
+    Because LLMs are probabilistic and prone to hallucinations, commands generated by the LLM must be sandboxed.</p>
+<ul>
+<li><strong>Dry-run execution:</strong> The LLM proposes commands which are evaluated for safety before execution.</li>
+<li><strong>Privilege boundaries:</strong> The agent should run with least privilege, prompting the user via the UI for permission before performing destructive operations (e.g., <code>rm</code>, writing over system files).</li>
+</ul>
+</li>
+</ol>
+<h2 id="iterative-delivery-approach">Iterative Delivery Approach</h2>
+<p>To keep the vision aligned with the current maturity of <code>go-dav-os</code>, it is useful to define an incremental roadmap instead of targeting the full Agentic OS model in a single release.</p>
+<h3 id="iterative-roadmap-diagram">Iterative Roadmap Diagram</h3>
+<pre><code class="language-mermaid">flowchart LR
+    A[&quot;v0.5.0&lt;br/&gt;Minimum Working Agent&quot;] --&gt; B[&quot;v0.6.0&lt;br/&gt;Better Context + Safer Execution&quot;]
+    B --&gt; C[&quot;Later Releases&lt;br/&gt;Deeper OS Integration&quot;]
+
+    A1[&quot;Natural language -&gt; constrained shell actions&quot;] --- A
+    A2[&quot;Explicit confirmation for risky actions&quot;] --- A
+    A3[&quot;Lightweight task + command context&quot;] --- A
+
+    B1[&quot;Richer context manager metadata&quot;] --- B
+    B2[&quot;Stronger dry-run + validation pipeline&quot;] --- B
+    B3[&quot;Improved multi-step planning traces&quot;] --- B
+
+    C1[&quot;Structured IPC / shell-runtime layer&quot;] --- C
+    C2[&quot;Vector-backed memory + semantic retrieval&quot;] --- C
+    C3[&quot;Expanded tools and multimodal workflows&quot;] --- C
+</code></pre>
+<h3 id="v050-minimum-working-agent">v0.5.0: Minimum Working Agent</h3>
+<p>The first step can be a minimal agent that proves the interaction model without requiring every long-term subsystem:</p>
+<ul>
+<li>Accept natural-language input and translate it into a small, predefined set of shell actions.</li>
+<li>Operate with a constrained command surface and explicit user confirmation for risky actions.</li>
+<li>Maintain lightweight conversational context such as the current task, recent commands, and recent outputs.</li>
+<li>Return structured, human-readable responses instead of raw shell output whenever possible.</li>
+</ul>
+<p>This stage establishes the user experience of a conversational operating system while staying compatible with the primitive state of the current OS.</p>
+<h3 id="v060-better-context-and-safer-execution">v0.6.0: Better Context and Safer Execution</h3>
+<p>Once the minimal agent exists, the next release can improve the quality and safety of orchestration:</p>
+<ul>
+<li>Expand the context manager with richer system metadata.</li>
+<li>Improve command validation, dry-run inspection, and permission gating.</li>
+<li>Add better planning for multi-step tasks and clearer execution traces for the user.</li>
+</ul>
+<h3 id="later-releases-deeper-os-integration">Later Releases: Deeper OS Integration</h3>
+<p>After the basic agent loop is reliable, later versions can move toward the full Agentic OS target:</p>
+<ul>
+<li>Introduce a dedicated IPC or structured shell-runtime communication layer.</li>
+<li>Add vector-backed memory and semantic file retrieval.</li>
+<li>Explore multimodal inputs, richer tools, and deeper kernel-aware integrations.</li>
+</ul>
+<p>With this iterative approach, each release delivers a usable step forward while preserving the long-term architectural direction described in this document.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
