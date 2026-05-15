@@ -2,7 +2,7 @@ package agent
 
 type DeterministicPlanner struct{}
 
-func (DeterministicPlanner) Plan(input string, context *Context) PlanningResult {
+func (DeterministicPlanner) Plan(input string, _ *Context) PlanningResult {
 	if contains(input, "ls") || contains(input, "files") || contains(input, "file") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
 	}
@@ -20,9 +20,11 @@ type LLMPlanner struct {
 	Bridge BridgeClient
 }
 
+const errLLMBridgeNotConfigured = "agent: llm bridge not configured"
+
 func (p LLMPlanner) Plan(input string, context *Context) PlanningResult {
 	if p.Bridge == nil {
-		return PlanningResult{OK: false, Reason: "agent: llm bridge not configured"}
+		return PlanningResult{OK: false, Reason: errLLMBridgeNotConfigured}
 	}
 
 	result := p.Bridge.Plan(input, context)

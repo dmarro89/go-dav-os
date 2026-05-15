@@ -156,7 +156,7 @@ func validRiskLevel(risk RiskLevel) bool {
 
 type DefaultSafetyGate struct{}
 
-func (DefaultSafetyGate) Evaluate(plan Plan, context *Context) SafetyDecision {
+func (DefaultSafetyGate) Evaluate(plan Plan, _ *Context) SafetyDecision {
 	for i := 0; i < plan.ActionCount; i++ {
 		if plan.Actions[i].Risk == RiskRisky {
 			return SafetyDecision{Status: SafetyConfirmationRequired, Reason: "agent: confirmation required"}
@@ -167,7 +167,7 @@ func (DefaultSafetyGate) Evaluate(plan Plan, context *Context) SafetyDecision {
 
 type DefaultFormatter struct{}
 
-func (DefaultFormatter) Format(plan Plan, results [MaxActions]ActionResult, resultCount int, safety SafetyDecision) ActionResult {
+func (DefaultFormatter) Format(_ Plan, results [MaxActions]ActionResult, resultCount int, _ SafetyDecision) ActionResult {
 	if resultCount <= 0 {
 		return ActionResult{OK: false, Message: "agent: no result"}
 	}

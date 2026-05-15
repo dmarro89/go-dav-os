@@ -13,6 +13,12 @@ type PlannerMode uint8
 const (
 	PlannerModeDeterministic PlannerMode = iota
 	PlannerModeLLM
+
+	stringUnknown    = "unknown"
+	stringReadFile   = "read_file"
+	stringWriteFile  = "write_file"
+	stringDeleteFile = "delete_file"
+	stringNone       = "none"
 )
 
 func (m PlannerMode) String() string {
@@ -22,7 +28,7 @@ func (m PlannerMode) String() string {
 	case PlannerModeLLM:
 		return "llm"
 	default:
-		return "unknown"
+		return stringUnknown
 	}
 }
 
@@ -43,17 +49,17 @@ func (i IntentKind) String() string {
 	case IntentListFiles:
 		return "list_files"
 	case IntentReadFile:
-		return "read_file"
+		return stringReadFile
 	case IntentWriteFile:
-		return "write_file"
+		return stringWriteFile
 	case IntentDeleteFile:
-		return "delete_file"
+		return stringDeleteFile
 	case IntentStatFile:
 		return "stat_file"
 	case IntentShowHelp:
 		return "show_help"
 	default:
-		return "unknown"
+		return stringUnknown
 	}
 }
 
@@ -74,17 +80,17 @@ func (k ActionKind) String() string {
 	case ActionListFiles:
 		return "list_files"
 	case ActionReadFile:
-		return "read_file"
+		return stringReadFile
 	case ActionWriteFile:
-		return "write_file"
+		return stringWriteFile
 	case ActionDeleteFile:
-		return "delete_file"
+		return stringDeleteFile
 	case ActionStatFile:
 		return "stat_file"
 	case ActionShowHelp:
 		return "show_help"
 	default:
-		return "none"
+		return stringNone
 	}
 }
 

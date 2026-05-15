@@ -93,17 +93,17 @@ func TestLLMPlannerFailsWithoutBridge(t *testing.T) {
 	if result.OK {
 		t.Fatalf("expected missing bridge to fail")
 	}
-	if result.Reason != "agent: llm bridge not configured" {
+	if result.Reason != errLLMBridgeNotConfigured {
 		t.Fatalf("unexpected failure reason: %q", result.Reason)
 	}
 }
 
 func TestRuntimeReturnsPlannerError(t *testing.T) {
-	response := Runtime{Planner: failingPlanner{reason: "agent: llm bridge not configured"}}.Run("show files", nil)
+	response := Runtime{Planner: failingPlanner{reason: errLLMBridgeNotConfigured}}.Run("show files", nil)
 	if response.Result.OK {
 		t.Fatalf("expected planner failure response")
 	}
-	if response.Result.Message != "agent: llm bridge not configured" {
+	if response.Result.Message != errLLMBridgeNotConfigured {
 		t.Fatalf("unexpected planner failure message: %q", response.Result.Message)
 	}
 	if response.Safety.Status != SafetyRejected {
@@ -346,13 +346,13 @@ func TestContextRememberRollsRecentItems(t *testing.T) {
 }
 
 func TestEnumStrings(t *testing.T) {
-	if PlannerModeDeterministic.String() != "deterministic" || PlannerModeLLM.String() != "llm" || PlannerMode(99).String() != "unknown" {
+	if PlannerModeDeterministic.String() != "deterministic" || PlannerModeLLM.String() != "llm" || PlannerMode(99).String() != stringUnknown {
 		t.Fatalf("unexpected planner mode strings")
 	}
-	if IntentReadFile.String() != "read_file" || IntentWriteFile.String() != "write_file" || IntentDeleteFile.String() != "delete_file" || IntentKind(99).String() != "unknown" {
+	if IntentReadFile.String() != stringReadFile || IntentWriteFile.String() != stringWriteFile || IntentDeleteFile.String() != stringDeleteFile || IntentKind(99).String() != stringUnknown {
 		t.Fatalf("unexpected intent strings")
 	}
-	if ActionNone.String() != "none" || ActionDeleteFile.String() != "delete_file" || ActionKind(99).String() != "none" {
+	if ActionNone.String() != stringNone || ActionDeleteFile.String() != stringDeleteFile || ActionKind(99).String() != stringNone {
 		t.Fatalf("unexpected action strings")
 	}
 	if RiskSafe.String() != "safe" || RiskRisky.String() != "risky" {
