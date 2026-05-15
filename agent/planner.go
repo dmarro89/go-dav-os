@@ -3,11 +3,11 @@ package agent
 type DeterministicPlanner struct{}
 
 func (DeterministicPlanner) Plan(input string, _ *Context) PlanningResult {
-	if contains(input, "ls") || contains(input, "files") || contains(input, "file") {
-		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
-	}
 	if contains(input, "help") || contains(input, "commands") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
+	}
+	if contains(input, "ls") || contains(input, "files") || contains(input, "file") {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
 	}
 	return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
 }

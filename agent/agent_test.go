@@ -289,6 +289,7 @@ func TestDeterministicPlannerRecognizesHelpAndDefaultsSafely(t *testing.T) {
 	}{
 		{input: "HELP", intent: IntentShowHelp, action: ActionShowHelp},
 		{input: "what can you do?", intent: IntentShowHelp, action: ActionShowHelp},
+		{input: "help with files", intent: IntentShowHelp, action: ActionShowHelp},
 		{input: "LS", intent: IntentListFiles, action: ActionListFiles},
 	}
 
