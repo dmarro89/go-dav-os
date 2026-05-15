@@ -136,6 +136,11 @@ The first step can be a minimal agent that proves the interaction model without 
 *   Maintain lightweight conversational context such as the current task, recent commands, and recent outputs.
 *   Return structured, human-readable responses instead of raw shell output whenever possible.
 
+The concrete v0.5.0 runtime boundary is documented in
+[`agent_runtime.md`](./agent_runtime.md). It defines the `Planner`,
+`Validator`, `Safety Gate`, `Executor`, `Context`, `Formatter`, and host-side
+`Bridge Client` responsibilities used by the initial implementation.
+
 This stage establishes the user experience of a conversational operating system while staying compatible with the primitive state of the current OS.
 
 ### v0.6.0: Better Context and Safer Execution
