@@ -16,6 +16,8 @@ const (
 	osName               = "DavOS"
 	maxDistanceThreshold = 3
 	osVersion            = "0.2.0"
+	commandHelp          = "help"
+	commandHistory       = "history"
 )
 
 var (
@@ -45,9 +47,9 @@ var (
 const maxHistory = 32
 
 var commandBuf = [...]string{
-	"help", "clear", "echo", "ticks", "uptime", "mem", "mmap",
+	commandHelp, "clear", "echo", "ticks", "uptime", "mem", "mmap",
 	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", "history", "run", "layout",
+	"version", commandHistory, "run", "layout",
 }
 
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
@@ -148,7 +150,7 @@ func execute() {
 
 	cmdStart, cmdEnd := firstToken(start, end)
 
-	if matchLiteral(cmdStart, cmdEnd, "history") {
+	if matchLiteral(cmdStart, cmdEnd, commandHistory) {
 		// Print history
 		// We iterate from 0 to historyCount-1.
 		// To print chronologically (oldest first), we calculate the starting index
@@ -171,7 +173,7 @@ func execute() {
 		return
 	}
 
-	if matchLiteral(cmdStart, cmdEnd, "help") {
+	if matchLiteral(cmdStart, cmdEnd, commandHelp) {
 		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout\n")
 		return
 	}
