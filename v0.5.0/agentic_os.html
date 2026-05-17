@@ -11,6 +11,10 @@
         <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/v0.5.0/agentic_os.html">
       
       
+        <link rel="prev" href="../manual/03-kernel-core/release-checklist.html">
+      
+      
+        <link rel="next" href="agent_runtime.html">
       
       
         
@@ -21,7 +25,7 @@
     
     
       
-        <title>Agentic OS (LLM OS) Architecture Concept - Go DAV OS</title>
+        <title>v0.5.0 Agentic OS - Go DAV OS</title>
       
     
     
@@ -98,7 +102,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Agentic OS (LLM OS) Architecture Concept
+              v0.5.0 Agentic OS
             
           </span>
         </div>
@@ -457,6 +461,257 @@
   
 
     
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Agentic OS
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="agentic_os.html" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Agentic OS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-paradigm-shift" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architectural Paradigm Shift
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architectural Paradigm Shift">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#system-architecture-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        System Architecture Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-components-analogy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Components Analogy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-experience-ux-execution-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User Experience (UX) &amp; Execution Flow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="User Experience (UX) &amp; Execution Flow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#workflow-sequence-diagram-v050-minimum-working-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow Sequence Diagram (v0.5.0 Minimum Working Agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implementation-architecture-for-go-dav-os" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Implementation Architecture for Go-Dav-OS
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#iterative-delivery-approach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterative Delivery Approach
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Iterative Delivery Approach">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#iterative-roadmap-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Iterative Roadmap Diagram
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v050-minimum-working-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.5.0: Minimum Working Agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v060-better-context-and-safer-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.6.0: Better Context and Safer Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#later-releases-deeper-os-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Later Releases: Deeper OS Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="agent_runtime.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -791,6 +1046,10 @@
 <li>Maintain lightweight conversational context such as the current task, recent commands, and recent outputs.</li>
 <li>Return structured, human-readable responses instead of raw shell output whenever possible.</li>
 </ul>
+<p>The concrete v0.5.0 runtime boundary is documented in
+<a href="agent_runtime.html"><code>agent_runtime.md</code></a>. It defines the <code>Planner</code>,
+<code>Validator</code>, <code>Safety Gate</code>, <code>Executor</code>, <code>Context</code>, <code>Formatter</code>, and host-side
+<code>Bridge Client</code> responsibilities used by the initial implementation.</p>
 <p>This stage establishes the user experience of a conversational operating system while staying compatible with the primitive state of the current OS.</p>
 <h3 id="v060-better-context-and-safer-execution">v0.6.0: Better Context and Safer Execution</h3>
 <p>Once the minimal agent exists, the next release can improve the quality and safety of orchestration:</p>
