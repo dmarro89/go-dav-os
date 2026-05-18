@@ -2,8 +2,6 @@ package fs
 
 import (
 	"unsafe"
-
-	"github.com/dmarro89/go-dav-os/mem"
 )
 
 const (
@@ -21,12 +19,6 @@ type fileEntry struct {
 }
 
 var files [maxFiles]fileEntry
-
-var (
-	pfaReady  = mem.PFAReady
-	allocPage = mem.AllocPage
-	freePage  = mem.FreePage
-)
 
 // Init resets the in-memory filesystem table
 func Init() {

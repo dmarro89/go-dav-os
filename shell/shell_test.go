@@ -2,6 +2,10 @@ package shell
 
 import (
 	"testing"
+
+	"github.com/dmarro89/go-dav-os/agent"
+	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/terminal"
 )
 
 // Test helper to set lineBuf for testing
@@ -428,6 +432,195 @@ func TestIntegration_CommandParsing(t *testing.T) {
 			t.Errorf("failed to parse message argument: got (%d, %d), expected (7, 12)", msgStart, msgEnd)
 		}
 	})
+}
+
+func TestExecuteAgentCommand(t *testing.T) {
+	fs.Init()
+	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+	historyBuf = [32][maxLine]byte{}
+	historyLen = [32]int{}
+	historyHead = 0
+	historyCount = 0
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "show history",
+			input: "agent show history",
+			want:  "1 agent show history\nagent: history listed\n",
+		},
+		{
+			name:  "missing command",
+			input: "agent",
+			want:  "Usage: agent <show|read|stat|delete|mode|help> [arg]\n",
+		},
+		{
+			name:  "missing show argument",
+			input: "agent show",
+			want:  "Usage: agent show <files|history>\n",
+		},
+		{
+			name:  "missing read argument",
+			input: "agent read",
+			want:  "Usage: agent read <name>\n",
+		},
+		{
+			name:  "read notes",
+			input: "agent read notes",
+			want:  "agent: file not found\n",
+		},
+		{
+			name:  "missing delete argument",
+			input: "agent delete",
+			want:  "Usage: agent delete <name> [confirm]\n",
+		},
+		{
+			name:  "delete notes",
+			input: "agent delete notes",
+			want:  "agent: confirmation required\n",
+		},
+		{
+			name:  "missing stat argument",
+			input: "agent stat",
+			want:  "Usage: agent stat <name>\n",
+		},
+		{
+			name:  "stat notes",
+			input: "agent stat notes",
+			want:  "agent: file not found\n",
+		},
+		{
+			name:  "mode",
+			input: "agent mode",
+			want:  "agent: deterministic mode\n",
+		},
+		{
+			name:  "help",
+			input: "agent help",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
+		},
+	}
+
+	terminal.Init()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			terminal.ResetOutputForTesting()
+			setLineBuf(tt.input)
+
+			execute()
+
+			if got := terminal.OutputForTesting(); got != tt.want {
+				t.Fatalf("execute(%q) output = %q, expected %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExecuteHelpListsImplementedCommands(t *testing.T) {
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("help")
+
+	execute()
+
+	got := terminal.OutputForTesting()
+	want := "Commands: help, history, clear, echo, ticks, uptime, mem, mmap, mmapmax, pfa, alloc, free, ls, write, cat, rm, stat, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout, version, run, agent\n"
+	if got != want {
+		t.Fatalf("help output = %q, expected %q", got, want)
+	}
+}
+
+func TestExecuteAgentShowFilesUsesDefaultRuntime(t *testing.T) {
+	fs.Init()
+	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent show files")
+
+	execute()
+
+	if got := terminal.OutputForTesting(); got != "agent: no files\n" {
+		t.Fatalf("execute(%q) output = %q, expected %q", "agent show files", got, "agent: no files\n")
+	}
+}
+
+func TestExecuteAgentShowFilesRunsConfiguredRuntime(t *testing.T) {
+	calls := 0
+	runtime := agent.NewDeterministicAgent(
+		agent.AllowedActionExecutor{
+			ListFiles: func(action agent.Action, context *agent.Context) agent.ActionResult {
+				calls++
+				if action.Kind != agent.ActionListFiles {
+					t.Fatalf("unexpected action kind: %v", action.Kind)
+				}
+				return agent.ActionResult{OK: true, Message: agent.MessageFilesListed}
+			},
+		},
+	)
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent show files")
+
+	execute()
+
+	if calls != 1 {
+		t.Fatalf("expected list files action to run once, got %d", calls)
+	}
+	if got := terminal.OutputForTesting(); got != "agent: files listed\n" {
+		t.Fatalf("execute(%q) output = %q, expected %q", "agent show files", got, "agent: files listed\n")
+	}
+}
+
+func TestExecuteAgentDeleteConfirmRunsConfiguredRuntime(t *testing.T) {
+	calls := 0
+	runtime := agent.NewDeterministicAgent(
+		agent.AllowedActionExecutor{
+			DeleteFile: func(action agent.Action, context *agent.Context) agent.ActionResult {
+				calls++
+				if action.Kind != agent.ActionDeleteFile {
+					t.Fatalf("unexpected action kind: %v", action.Kind)
+				}
+				if action.Risk != agent.RiskSafe {
+					t.Fatalf("expected confirmed delete to run as safe, got %v", action.Risk)
+				}
+				return agent.ActionResult{OK: true, Message: agent.MessageOK}
+			},
+		},
+	)
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent delete notes confirm")
+
+	execute()
+
+	if calls != 1 {
+		t.Fatalf("expected delete action to run once, got %d", calls)
+	}
+	if got := terminal.OutputForTesting(); got != "ok\n" {
+		t.Fatalf("execute(%q) output = %q, expected %q", "agent delete notes confirm", got, "ok\n")
+	}
 }
 
 // TestEdgeCases tests edge cases and boundary conditions

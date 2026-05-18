@@ -13,24 +13,7 @@ type PlannerMode uint8
 const (
 	PlannerModeDeterministic PlannerMode = iota
 	PlannerModeLLM
-
-	stringUnknown    = "unknown"
-	stringReadFile   = "read_file"
-	stringWriteFile  = "write_file"
-	stringDeleteFile = "delete_file"
-	stringNone       = "none"
 )
-
-func (m PlannerMode) String() string {
-	switch m {
-	case PlannerModeDeterministic:
-		return "deterministic"
-	case PlannerModeLLM:
-		return "llm"
-	default:
-		return stringUnknown
-	}
-}
 
 type IntentKind uint8
 
@@ -42,26 +25,9 @@ const (
 	IntentDeleteFile
 	IntentStatFile
 	IntentShowHelp
+	IntentShowHistory
+	IntentSetMode
 )
-
-func (i IntentKind) String() string {
-	switch i {
-	case IntentListFiles:
-		return "list_files"
-	case IntentReadFile:
-		return stringReadFile
-	case IntentWriteFile:
-		return stringWriteFile
-	case IntentDeleteFile:
-		return stringDeleteFile
-	case IntentStatFile:
-		return "stat_file"
-	case IntentShowHelp:
-		return "show_help"
-	default:
-		return stringUnknown
-	}
-}
 
 type ActionKind uint8
 
@@ -73,24 +39,16 @@ const (
 	ActionDeleteFile
 	ActionStatFile
 	ActionShowHelp
+	ActionShowHistory
+	ActionSetMode
 )
 
-func (k ActionKind) String() string {
+func (k ActionKind) Valid() bool {
 	switch k {
-	case ActionListFiles:
-		return "list_files"
-	case ActionReadFile:
-		return stringReadFile
-	case ActionWriteFile:
-		return stringWriteFile
-	case ActionDeleteFile:
-		return stringDeleteFile
-	case ActionStatFile:
-		return "stat_file"
-	case ActionShowHelp:
-		return "show_help"
+	case ActionListFiles, ActionReadFile, ActionWriteFile, ActionDeleteFile, ActionStatFile, ActionShowHelp, ActionShowHistory, ActionSetMode:
+		return true
 	default:
-		return stringNone
+		return false
 	}
 }
 
@@ -101,15 +59,6 @@ const (
 	RiskRisky
 )
 
-func (r RiskLevel) String() string {
-	switch r {
-	case RiskRisky:
-		return "risky"
-	default:
-		return "safe"
-	}
-}
-
 type SafetyStatus uint8
 
 const (
@@ -118,20 +67,84 @@ const (
 	SafetyConfirmationRequired
 )
 
-func (s SafetyStatus) String() string {
-	switch s {
-	case SafetyAllowed:
-		return "allowed"
-	case SafetyConfirmationRequired:
-		return "confirmation_required"
-	default:
-		return "rejected"
-	}
-}
+type MessageKind uint8
 
-// Action is the only executable unit the agent runtime understands
-// There is deliberately no raw command field here: shell integration must map
-// these typed action kinds onto explicit internal APIs in a later layer
+const (
+	MessageNone MessageKind = iota
+	MessagePlannerFailed
+	MessagePlannerMissing
+	MessageValidationFailed
+	MessagePlanHasNoActions
+	MessagePlanHasTooManyActions
+	MessagePlanContainsUnsupportedAction
+	MessageActionRiskInvalid
+	MessageActionTargetInvalid
+	MessageActionDataInvalid
+	MessageConfirmationRequired
+	MessageExecutorNotConfigured
+	MessageExecutorMissing
+	MessageUnsupportedAction
+	MessageActionUnavailable
+	MessageNoResult
+	MessageCompletedPlan
+	MessageOK
+	MessageFilesListed
+	MessageNoFiles
+	MessageFileRead
+	MessageFileStat
+	MessageMissingFile
+	MessageFileNotFound
+	MessageAgentHelp
+	MessageHistoryListed
+	MessageDeterministicMode
+	MessageLLMModeNotConfigured
+	MessageUnsupportedMode
+	MessageReadFailed
+	MessageHelp
+	MessageOne
+	MessageTwo
+	MessageLLMBridgeNotConfigured
+	MessageLLMBridgeFailed
+	MessageBridgeTimeout
+)
+
+type TraceKind uint8
+
+const (
+	TraceNone TraceKind = iota
+	TracePlanner
+	TraceIntent
+	TraceValidation
+	TraceSafety
+	TraceExecutor
+	TraceFormatter
+)
+
+type TraceDetail uint8
+
+const (
+	TraceDetailNone TraceDetail = iota
+	TraceDetailMissing
+	TraceDetailFailed
+	TraceDetailOK
+	TraceDetailAllowed
+	TraceDetailRejected
+	TraceDetailConfirmationRequired
+	TraceDetailSuccess
+	TraceDetailStructured
+	TraceDetailDeterministic
+	TraceDetailLLM
+	TraceDetailListFiles
+	TraceDetailReadFile
+	TraceDetailWriteFile
+	TraceDetailDeleteFile
+	TraceDetailStatFile
+	TraceDetailShowHelp
+	TraceDetailShowHistory
+	TraceDetailSetMode
+)
+
+// Action is the only executable unit the agent runtime understands.
 type Action struct {
 	Kind      ActionKind
 	Risk      RiskLevel
@@ -152,27 +165,27 @@ type Plan struct {
 type PlanningResult struct {
 	OK     bool
 	Plan   Plan
-	Reason string
+	Reason MessageKind
 }
 
 type ValidationResult struct {
 	OK     bool
-	Reason string
+	Reason MessageKind
 }
 
 type SafetyDecision struct {
 	Status SafetyStatus
-	Reason string
+	Reason MessageKind
 }
 
 type ActionResult struct {
 	OK      bool
-	Message string
+	Message MessageKind
 }
 
 type TraceEntry struct {
-	Stage  string
-	Detail string
+	Stage  TraceKind
+	Detail TraceDetail
 }
 
 type Response struct {
@@ -182,36 +195,26 @@ type Response struct {
 	Safety     SafetyDecision
 }
 
-func (r *Response) AddTrace(stage, detail string) {
+func (r *Response) AddTrace(stage TraceKind, detail TraceDetail) {
 	if r.TraceCount >= MaxTraceEntries {
 		return
 	}
-	r.Trace[r.TraceCount] = TraceEntry{Stage: stage, Detail: detail}
+	r.Trace[r.TraceCount].Stage = stage
+	r.Trace[r.TraceCount].Detail = detail
 	r.TraceCount++
 }
 
 type Context struct {
-	LastIntent    IntentKind
-	RecentInputs  [MaxRecentItems]string
-	RecentResults [MaxRecentItems]string
-	RecentCount   int
+	LastIntent  IntentKind
+	RecentCount int
 }
 
-func (c *Context) Remember(input, result string, intent IntentKind) {
+func (c *Context) Remember(intent IntentKind) {
 	if c == nil {
 		return
 	}
 	c.LastIntent = intent
 	if c.RecentCount < MaxRecentItems {
-		c.RecentInputs[c.RecentCount] = input
-		c.RecentResults[c.RecentCount] = result
 		c.RecentCount++
-		return
 	}
-	for i := 1; i < MaxRecentItems; i++ {
-		c.RecentInputs[i-1] = c.RecentInputs[i]
-		c.RecentResults[i-1] = c.RecentResults[i]
-	}
-	c.RecentInputs[MaxRecentItems-1] = input
-	c.RecentResults[MaxRecentItems-1] = result
 }

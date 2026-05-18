@@ -116,8 +116,18 @@ def run_functional_suite(iso_path, disk_img, log_file):
         wait_for_boot(process, log_file)
 
         test_cases = [
-            ("help", ["Commands:"]),
+            ("help", ["Commands:", "agent"]),
             ("version", ["DavOS 0.2.0 (64bit)"]),
+            ("write notes hi", ["ok"]),
+            ("agent show files", ["agent show files\nnotes  size=2"]),
+            ("agent help", ["agent help\nAgent commands:", "agent delete <name> confirm"]),
+            ("agent show history", ["agent: history listed"]),
+            ("agent read notes", ["agent read notes\nhi"]),
+            ("agent stat notes", ["agent stat notes\npage=0x", "size=2", "agent: file stat"]),
+            ("agent delete notes", ["agent delete notes\nagent: confirmation required"]),
+            ("agent delete notes confirm", ["agent delete notes confirm\nok"]),
+            ("agent show files", ["agent show files\nagent: no files"]),
+            ("agent mode", ["agent mode\nagent: deterministic mode"]),
             ("fatformat", ["FAT16 Formatted"]),
             ("fatinit", ["FAT16 Initialized"]),
             ("fatcreate test hi", ["File created"]),

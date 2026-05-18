@@ -1,88 +1,97 @@
 package agent
 
-type Planner interface {
-	Plan(input string, context *Context) PlanningResult
-}
-
-type Validator interface {
-	Validate(plan Plan) ValidationResult
-}
-
-type SafetyGate interface {
-	Evaluate(plan Plan, context *Context) SafetyDecision
-}
-
-type Executor interface {
-	Execute(action Action, context *Context) ActionResult
-}
-
-type Formatter interface {
-	Format(plan Plan, results [MaxActions]ActionResult, resultCount int, safety SafetyDecision) ActionResult
-}
-
 type Runtime struct {
-	Planner    Planner
-	Validator  Validator
-	SafetyGate SafetyGate
-	Executor   Executor
-	Formatter  Formatter
+	Executor           AllowedActionExecutor
+	ExecutorConfigured bool
 }
 
-// Run executes the shared agent pipeline:
-// planner -> validator -> safety gate -> typed action executor -> formatter
-func (r Runtime) Run(input string, context *Context) Response {
-	var response Response
-	if r.Planner == nil {
-		response.Result = ActionResult{OK: false, Message: "agent: planner not configured"}
-		response.Safety = SafetyDecision{Status: SafetyRejected, Reason: "planner_missing"}
-		response.AddTrace("Planner", "missing")
-		return response
-	}
+func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
+	var runtime Runtime
+	runtime.Executor.ListFiles = executor.ListFiles
+	runtime.Executor.ReadFile = executor.ReadFile
+	runtime.Executor.WriteFile = executor.WriteFile
+	runtime.Executor.DeleteFile = executor.DeleteFile
+	runtime.Executor.StatFile = executor.StatFile
+	runtime.Executor.ShowHelp = executor.ShowHelp
+	runtime.Executor.ShowHistory = executor.ShowHistory
+	runtime.Executor.SetMode = executor.SetMode
+	runtime.ExecutorConfigured = true
+	return runtime
+}
 
-	planning := r.Planner.Plan(input, context)
-	if !planning.OK {
-		reason := planning.Reason
-		if reason == "" {
-			reason = "agent: planner failed"
+func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
+	plan := singleActionPlan(PlannerModeDeterministic, intent, kind, risk)
+	if target != nil && targetLen > 0 {
+		if targetLen > MaxNameLen {
+			targetLen = MaxNameLen
 		}
-		response.Result = ActionResult{OK: false, Message: reason}
-		response.Safety = SafetyDecision{Status: SafetyRejected, Reason: "planner_failed"}
-		response.AddTrace("Planner", reason)
-		return response
+		plan.Actions[0].TargetLen = targetLen
+		for i := 0; i < targetLen; i++ {
+			plan.Actions[0].Target[i] = target[i]
+		}
+	}
+	return r.runPlan(plan, context)
+}
+
+func (r *Runtime) RunActionMessage(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) MessageKind {
+	if !kind.Valid() {
+		return MessagePlanContainsUnsupportedAction
+	}
+	if !validRiskLevel(risk) {
+		return MessageActionRiskInvalid
+	}
+	if targetLen < 0 || targetLen > MaxNameLen {
+		return MessageActionTargetInvalid
+	}
+	if risk == RiskRisky {
+		return MessageConfirmationRequired
+	}
+	if r == nil || !r.ExecutorConfigured {
+		return MessageExecutorNotConfigured
 	}
 
-	plan := planning.Plan
-	response.AddTrace("Planner", plan.Planner.String())
-	response.AddTrace("Intent", plan.Intent.String())
-
-	validator := r.Validator
-	if validator == nil {
-		validator = DefaultValidator{}
+	var action Action
+	action.Kind = kind
+	action.Risk = risk
+	if target != nil && targetLen > 0 {
+		action.TargetLen = targetLen
+		for i := 0; i < targetLen; i++ {
+			action.Target[i] = target[i]
+		}
 	}
-	validation := validator.Validate(plan)
+
+	result := r.Executor.Execute(action, context)
+	if result.OK && context != nil {
+		context.Remember(intent)
+	}
+	return result.Message
+}
+
+func (r Runtime) runPlan(plan Plan, context *Context) Response {
+	var response Response
+	response.AddTrace(TracePlanner, plannerTrace(plan.Planner))
+	response.AddTrace(TraceIntent, intentTrace(plan.Intent))
+
+	validation := validatePlan(plan)
 	if !validation.OK {
-		response.Result = ActionResult{OK: false, Message: validation.Reason}
-		response.Safety = SafetyDecision{Status: SafetyRejected, Reason: "validation_failed"}
-		response.AddTrace("Validation", validation.Reason)
+		setResponseResult(&response, false, validation.Reason)
+		setSafety(&response, SafetyRejected, MessageValidationFailed)
+		response.AddTrace(TraceValidation, traceFromMessage(validation.Reason))
 		return response
 	}
-	response.AddTrace("Validation", "ok")
+	response.AddTrace(TraceValidation, TraceDetailOK)
 
-	gate := r.SafetyGate
-	if gate == nil {
-		gate = DefaultSafetyGate{}
-	}
-	safety := gate.Evaluate(plan, context)
-	response.Safety = safety
-	response.AddTrace("Safety", safety.Status.String())
+	safety := evaluateSafety(plan, context)
+	setSafety(&response, safety.Status, safety.Reason)
+	response.AddTrace(TraceSafety, safetyTrace(safety.Status))
 	if safety.Status != SafetyAllowed {
-		response.Result = ActionResult{OK: false, Message: safety.Reason}
+		setResponseResult(&response, false, safety.Reason)
 		return response
 	}
 
-	if r.Executor == nil {
-		response.Result = ActionResult{OK: false, Message: "agent: executor not configured"}
-		response.AddTrace("Executor", "missing")
+	if !r.ExecutorConfigured {
+		setResponseResult(&response, false, MessageExecutorNotConfigured)
+		response.AddTrace(TraceExecutor, TraceDetailMissing)
 		return response
 	}
 
@@ -90,59 +99,55 @@ func (r Runtime) Run(input string, context *Context) Response {
 	for i := 0; i < plan.ActionCount; i++ {
 		results[i] = r.Executor.Execute(plan.Actions[i], context)
 		if !results[i].OK {
-			response.AddTrace("Executor", "failed")
-			response.Result = results[i]
+			response.AddTrace(TraceExecutor, TraceDetailFailed)
+			setResponseResult(&response, results[i].OK, results[i].Message)
 			return response
 		}
 	}
-	response.AddTrace("Executor", "success")
+	response.AddTrace(TraceExecutor, TraceDetailSuccess)
 
-	formatter := r.Formatter
-	if formatter == nil {
-		formatter = DefaultFormatter{}
-	}
-	response.Result = formatter.Format(plan, results, plan.ActionCount, safety)
-	response.AddTrace("Formatter", "structured")
+	result := formatResult(plan, results, plan.ActionCount, safety)
+	setResponseResult(&response, result.OK, result.Message)
+	response.AddTrace(TraceFormatter, TraceDetailStructured)
 	if context != nil {
-		context.Remember(input, response.Result.Message, plan.Intent)
+		context.Remember(plan.Intent)
 	}
 	return response
 }
 
-type DefaultValidator struct{}
+func setResponseResult(response *Response, ok bool, message MessageKind) {
+	response.Result.OK = ok
+	response.Result.Message = message
+}
 
-func (DefaultValidator) Validate(plan Plan) ValidationResult {
+func setSafety(response *Response, status SafetyStatus, reason MessageKind) {
+	response.Safety.Status = status
+	response.Safety.Reason = reason
+}
+
+func validatePlan(plan Plan) ValidationResult {
 	if plan.ActionCount <= 0 {
-		return ValidationResult{OK: false, Reason: "agent: plan has no actions"}
+		return ValidationResult{OK: false, Reason: MessagePlanHasNoActions}
 	}
 	if plan.ActionCount > MaxActions {
-		return ValidationResult{OK: false, Reason: "agent: plan has too many actions"}
+		return ValidationResult{OK: false, Reason: MessagePlanHasTooManyActions}
 	}
 	for i := 0; i < plan.ActionCount; i++ {
 		action := plan.Actions[i]
-		if !validActionKind(action.Kind) {
-			return ValidationResult{OK: false, Reason: "agent: plan contains unsupported action"}
+		if !action.Kind.Valid() {
+			return ValidationResult{OK: false, Reason: MessagePlanContainsUnsupportedAction}
 		}
 		if !validRiskLevel(action.Risk) {
-			return ValidationResult{OK: false, Reason: "agent: action risk is invalid"}
+			return ValidationResult{OK: false, Reason: MessageActionRiskInvalid}
 		}
 		if action.TargetLen < 0 || action.TargetLen > MaxNameLen {
-			return ValidationResult{OK: false, Reason: "agent: action target is invalid"}
+			return ValidationResult{OK: false, Reason: MessageActionTargetInvalid}
 		}
 		if action.DataLen < 0 || action.DataLen > MaxDataLen {
-			return ValidationResult{OK: false, Reason: "agent: action data is invalid"}
+			return ValidationResult{OK: false, Reason: MessageActionDataInvalid}
 		}
 	}
-	return ValidationResult{OK: true, Reason: "ok"}
-}
-
-func validActionKind(kind ActionKind) bool {
-	switch kind {
-	case ActionListFiles, ActionReadFile, ActionWriteFile, ActionDeleteFile, ActionStatFile, ActionShowHelp:
-		return true
-	default:
-		return false
-	}
+	return ValidationResult{OK: true, Reason: MessageOK}
 }
 
 func validRiskLevel(risk RiskLevel) bool {
@@ -154,25 +159,69 @@ func validRiskLevel(risk RiskLevel) bool {
 	}
 }
 
-type DefaultSafetyGate struct{}
-
-func (DefaultSafetyGate) Evaluate(plan Plan, _ *Context) SafetyDecision {
+func evaluateSafety(plan Plan, _ *Context) SafetyDecision {
 	for i := 0; i < plan.ActionCount; i++ {
 		if plan.Actions[i].Risk == RiskRisky {
-			return SafetyDecision{Status: SafetyConfirmationRequired, Reason: "agent: confirmation required"}
+			return SafetyDecision{Status: SafetyConfirmationRequired, Reason: MessageConfirmationRequired}
 		}
 	}
-	return SafetyDecision{Status: SafetyAllowed, Reason: "ok"}
+	return SafetyDecision{Status: SafetyAllowed, Reason: MessageOK}
 }
 
-type DefaultFormatter struct{}
-
-func (DefaultFormatter) Format(_ Plan, results [MaxActions]ActionResult, resultCount int, _ SafetyDecision) ActionResult {
+func formatResult(_ Plan, results [MaxActions]ActionResult, resultCount int, _ SafetyDecision) ActionResult {
 	if resultCount <= 0 {
-		return ActionResult{OK: false, Message: "agent: no result"}
+		return ActionResult{OK: false, Message: MessageNoResult}
 	}
 	if resultCount == 1 {
 		return results[0]
 	}
-	return ActionResult{OK: true, Message: "agent: completed plan"}
+	return ActionResult{OK: true, Message: MessageCompletedPlan}
+}
+
+func plannerTrace(mode PlannerMode) TraceDetail {
+	if mode == PlannerModeLLM {
+		return TraceDetailLLM
+	}
+	return TraceDetailDeterministic
+}
+
+func intentTrace(intent IntentKind) TraceDetail {
+	switch intent {
+	case IntentListFiles:
+		return TraceDetailListFiles
+	case IntentReadFile:
+		return TraceDetailReadFile
+	case IntentWriteFile:
+		return TraceDetailWriteFile
+	case IntentDeleteFile:
+		return TraceDetailDeleteFile
+	case IntentStatFile:
+		return TraceDetailStatFile
+	case IntentShowHelp:
+		return TraceDetailShowHelp
+	case IntentShowHistory:
+		return TraceDetailShowHistory
+	case IntentSetMode:
+		return TraceDetailSetMode
+	default:
+		return TraceDetailNone
+	}
+}
+
+func safetyTrace(status SafetyStatus) TraceDetail {
+	switch status {
+	case SafetyAllowed:
+		return TraceDetailAllowed
+	case SafetyConfirmationRequired:
+		return TraceDetailConfirmationRequired
+	default:
+		return TraceDetailRejected
+	}
+}
+
+func traceFromMessage(message MessageKind) TraceDetail {
+	if message == MessageOK {
+		return TraceDetailOK
+	}
+	return TraceDetailFailed
 }
