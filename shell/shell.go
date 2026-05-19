@@ -980,7 +980,7 @@ func printHistory() {
 	}
 }
 
-func agentListFiles(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentListFiles(_ agent.Action, _ *agent.Context) agent.ActionResult {
 	count := 0
 	for i := 0; i < fs.MaxFiles(); i++ {
 		used, name, nameLen, size, page := fs.Entry(i)
@@ -1001,7 +1001,7 @@ func agentListFiles(action agent.Action, context *agent.Context) agent.ActionRes
 	return agent.ActionResult{OK: true, Message: agent.MessageFilesListed}
 }
 
-func agentReadFile(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentReadFile(action agent.Action, _ *agent.Context) agent.ActionResult {
 	if action.TargetLen <= 0 {
 		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
 	}
@@ -1017,7 +1017,7 @@ func agentReadFile(action agent.Action, context *agent.Context) agent.ActionResu
 	return agent.ActionResult{OK: true, Message: agent.MessageFileRead}
 }
 
-func agentDeleteFile(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentDeleteFile(action agent.Action, _ *agent.Context) agent.ActionResult {
 	if action.TargetLen <= 0 {
 		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
 	}
@@ -1027,7 +1027,7 @@ func agentDeleteFile(action agent.Action, context *agent.Context) agent.ActionRe
 	return agent.ActionResult{OK: true, Message: agent.MessageOK}
 }
 
-func agentStatFile(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentStatFile(action agent.Action, _ *agent.Context) agent.ActionResult {
 	if action.TargetLen <= 0 {
 		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
 	}
@@ -1043,16 +1043,16 @@ func agentStatFile(action agent.Action, context *agent.Context) agent.ActionResu
 	return agent.ActionResult{OK: true, Message: agent.MessageFileStat}
 }
 
-func agentShowHelp(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentShowHelp(_ agent.Action, _ *agent.Context) agent.ActionResult {
 	return agent.ActionResult{OK: true, Message: agent.MessageAgentHelp}
 }
 
-func agentShowHistory(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentShowHistory(_ agent.Action, _ *agent.Context) agent.ActionResult {
 	printHistory()
 	return agent.ActionResult{OK: true, Message: agent.MessageHistoryListed}
 }
 
-func agentSetMode(action agent.Action, context *agent.Context) agent.ActionResult {
+func agentSetMode(action agent.Action, _ *agent.Context) agent.ActionResult {
 	if action.TargetLen == 0 {
 		return agent.ActionResult{OK: true, Message: agent.MessageDeterministicMode}
 	}

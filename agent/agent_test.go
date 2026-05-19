@@ -421,22 +421,6 @@ func TestEnumStrings(t *testing.T) {
 	}
 }
 
-type staticPlanner struct {
-	plan Plan
-}
-
-func (p staticPlanner) Plan(input string, context *Context) PlanningResult {
-	return successfulPlan(p.plan)
-}
-
-type failingPlanner struct {
-	reason MessageKind
-}
-
-func (p failingPlanner) Plan(input string, context *Context) PlanningResult {
-	return PlanningResult{OK: false, Reason: p.reason}
-}
-
 type fakeBridge struct {
 	plan Plan
 }

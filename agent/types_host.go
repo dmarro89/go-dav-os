@@ -3,19 +3,29 @@
 package agent
 
 const (
-	stringUnknown    = "unknown"
-	stringReadFile   = "read_file"
-	stringWriteFile  = "write_file"
-	stringDeleteFile = "delete_file"
-	stringNone       = "none"
+	stringUnknown              = "unknown"
+	stringDeterministic        = "deterministic"
+	stringLLM                  = "llm"
+	stringListFiles            = "list_files"
+	stringReadFile             = "read_file"
+	stringWriteFile            = "write_file"
+	stringDeleteFile           = "delete_file"
+	stringStatFile             = "stat_file"
+	stringShowHelp             = "show_help"
+	stringShowHistory          = "show_history"
+	stringSetMode              = "set_mode"
+	stringAllowed              = "allowed"
+	stringConfirmationRequired = "confirmation_required"
+	stringRejected             = "rejected"
+	stringNone                 = "none"
 )
 
 func (m PlannerMode) String() string {
 	switch m {
 	case PlannerModeDeterministic:
-		return "deterministic"
+		return stringDeterministic
 	case PlannerModeLLM:
-		return "llm"
+		return stringLLM
 	default:
 		return stringUnknown
 	}
@@ -24,7 +34,7 @@ func (m PlannerMode) String() string {
 func (i IntentKind) String() string {
 	switch i {
 	case IntentListFiles:
-		return "list_files"
+		return stringListFiles
 	case IntentReadFile:
 		return stringReadFile
 	case IntentWriteFile:
@@ -32,13 +42,13 @@ func (i IntentKind) String() string {
 	case IntentDeleteFile:
 		return stringDeleteFile
 	case IntentStatFile:
-		return "stat_file"
+		return stringStatFile
 	case IntentShowHelp:
-		return "show_help"
+		return stringShowHelp
 	case IntentShowHistory:
-		return "show_history"
+		return stringShowHistory
 	case IntentSetMode:
-		return "set_mode"
+		return stringSetMode
 	default:
 		return stringUnknown
 	}
@@ -47,7 +57,7 @@ func (i IntentKind) String() string {
 func (k ActionKind) String() string {
 	switch k {
 	case ActionListFiles:
-		return "list_files"
+		return stringListFiles
 	case ActionReadFile:
 		return stringReadFile
 	case ActionWriteFile:
@@ -55,13 +65,13 @@ func (k ActionKind) String() string {
 	case ActionDeleteFile:
 		return stringDeleteFile
 	case ActionStatFile:
-		return "stat_file"
+		return stringStatFile
 	case ActionShowHelp:
-		return "show_help"
+		return stringShowHelp
 	case ActionShowHistory:
-		return "show_history"
+		return stringShowHistory
 	case ActionSetMode:
-		return "set_mode"
+		return stringSetMode
 	default:
 		return stringNone
 	}
@@ -79,11 +89,11 @@ func (r RiskLevel) String() string {
 func (s SafetyStatus) String() string {
 	switch s {
 	case SafetyAllowed:
-		return "allowed"
+		return stringAllowed
 	case SafetyConfirmationRequired:
-		return "confirmation_required"
+		return stringConfirmationRequired
 	default:
-		return "rejected"
+		return stringRejected
 	}
 }
 
@@ -192,35 +202,35 @@ func (d TraceDetail) String() string {
 	case TraceDetailOK:
 		return "ok"
 	case TraceDetailAllowed:
-		return "allowed"
+		return stringAllowed
 	case TraceDetailRejected:
-		return "rejected"
+		return stringRejected
 	case TraceDetailConfirmationRequired:
-		return "confirmation_required"
+		return stringConfirmationRequired
 	case TraceDetailSuccess:
 		return "success"
 	case TraceDetailStructured:
 		return "structured"
 	case TraceDetailDeterministic:
-		return "deterministic"
+		return stringDeterministic
 	case TraceDetailLLM:
-		return "llm"
+		return stringLLM
 	case TraceDetailListFiles:
-		return "list_files"
+		return stringListFiles
 	case TraceDetailReadFile:
-		return "read_file"
+		return stringReadFile
 	case TraceDetailWriteFile:
-		return "write_file"
+		return stringWriteFile
 	case TraceDetailDeleteFile:
-		return "delete_file"
+		return stringDeleteFile
 	case TraceDetailStatFile:
-		return "stat_file"
+		return stringStatFile
 	case TraceDetailShowHelp:
-		return "show_help"
+		return stringShowHelp
 	case TraceDetailShowHistory:
-		return "show_history"
+		return stringShowHistory
 	case TraceDetailSetMode:
-		return "set_mode"
+		return stringSetMode
 	default:
 		return ""
 	}
