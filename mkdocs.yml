@@ -14,3 +14,5 @@ nav:
   - Syscall Entry And ABI: manual/03-kernel-core/syscall-entry-and-abi.md
   - User/Kernel Memory Isolation: manual/03-kernel-core/user-kernel-memory-isolation.md
   - Release Checklist: manual/03-kernel-core/release-checklist.md
+  - v0.5.0 Agentic OS: v0.5.0/agentic_os.md
+  - v0.5.0 Agent Runtime: v0.5.0/agent_runtime.md
