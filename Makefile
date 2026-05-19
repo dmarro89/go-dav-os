@@ -293,6 +293,10 @@ docker-shell: docker-image
 # -----------------------
 # Unit tests and vet
 # -----------------------
+test:
+	mkdir -p $(BUILD_DIR)/.gocache
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing $(TEST_PKGS)
+
 vet:
 	mkdir -p $(BUILD_DIR)/.gocache
 	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go vet -tags testing -unsafeptr=false ./...
