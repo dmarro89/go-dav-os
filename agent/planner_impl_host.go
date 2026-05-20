@@ -3,8 +3,23 @@
 package agent
 
 func deterministicPlan(input string, _ *Context) PlanningResult {
-	if contains(input, "help") || contains(input, "commands") {
+	if contains(input, "help") || contains(input, "commands") || contains(input, "what can you do") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
+	}
+	if contains(input, "memorymap") || (contains(input, "memory") && contains(input, "map")) {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowMemoryMap, ActionShowMemoryMap, RiskSafe))
+	}
+	if contains(input, "version") {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowVersion, ActionShowVersion, RiskSafe))
+	}
+	if contains(input, "ticks") {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowTicks, ActionShowTicks, RiskSafe))
+	}
+	if contains(input, "history") {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHistory, ActionShowHistory, RiskSafe))
+	}
+	if contains(input, "mode") {
+		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentSetMode, ActionSetMode, RiskSafe, input))
 	}
 	if contains(input, "delete") || contains(input, "remove") {
 		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentDeleteFile, ActionDeleteFile, RiskRisky, input))
@@ -15,16 +30,16 @@ func deterministicPlan(input string, _ *Context) PlanningResult {
 	if contains(input, "stat") || contains(input, "status") {
 		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentStatFile, ActionStatFile, RiskSafe, input))
 	}
-	if contains(input, "history") {
-		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHistory, ActionShowHistory, RiskSafe))
-	}
-	if contains(input, "mode") {
-		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentSetMode, ActionSetMode, RiskSafe, input))
-	}
-	if contains(input, "ls") || contains(input, "files") || contains(input, "file") {
+	if contains(input, "ls") || contains(input, "list") || contains(input, "files") || contains(input, "file") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
 	}
-	return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
+	if contains(input, "show") {
+		plan := singleTargetPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe, input)
+		if plan.Actions[0].TargetLen > 0 {
+			return successfulPlan(plan)
+		}
+	}
+	return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentUnknown, ActionUnknown, RiskSafe))
 }
 
 func singleTargetPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel, input string) Plan {
@@ -97,6 +112,7 @@ func isActionWord(text string, start, end int) bool {
 		tokenEquals(text, start, end, "cat") ||
 		tokenEquals(text, start, end, "delete") ||
 		tokenEquals(text, start, end, "remove") ||
+		tokenEquals(text, start, end, "show") ||
 		tokenEquals(text, start, end, "stat") ||
 		tokenEquals(text, start, end, "status") ||
 		tokenEquals(text, start, end, "mode")
