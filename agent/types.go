@@ -26,13 +26,16 @@ const (
 	IntentStatFile
 	IntentShowHelp
 	IntentShowHistory
+	IntentShowVersion
+	IntentShowTicks
+	IntentShowMemoryMap
 	IntentSetMode
 )
 
 type ActionKind uint8
 
 const (
-	ActionNone ActionKind = iota
+	ActionUnknown ActionKind = iota
 	ActionListFiles
 	ActionReadFile
 	ActionWriteFile
@@ -40,12 +43,17 @@ const (
 	ActionStatFile
 	ActionShowHelp
 	ActionShowHistory
+	ActionShowVersion
+	ActionShowTicks
+	ActionShowMemoryMap
 	ActionSetMode
 )
 
+const ActionNone = ActionUnknown
+
 func (k ActionKind) Valid() bool {
 	switch k {
-	case ActionListFiles, ActionReadFile, ActionWriteFile, ActionDeleteFile, ActionStatFile, ActionShowHelp, ActionShowHistory, ActionSetMode:
+	case ActionListFiles, ActionReadFile, ActionWriteFile, ActionDeleteFile, ActionStatFile, ActionShowHelp, ActionShowHistory, ActionShowVersion, ActionShowTicks, ActionShowMemoryMap, ActionSetMode:
 		return true
 	default:
 		return false
@@ -96,6 +104,9 @@ const (
 	MessageFileNotFound
 	MessageAgentHelp
 	MessageHistoryListed
+	MessageVersionShown
+	MessageTicksShown
+	MessageMemoryMapShown
 	MessageDeterministicMode
 	MessageLLMModeNotConfigured
 	MessageUnsupportedMode
@@ -141,6 +152,9 @@ const (
 	TraceDetailStatFile
 	TraceDetailShowHelp
 	TraceDetailShowHistory
+	TraceDetailShowVersion
+	TraceDetailShowTicks
+	TraceDetailShowMemoryMap
 	TraceDetailSetMode
 )
 

@@ -14,6 +14,9 @@ func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
 	runtime.Executor.StatFile = executor.StatFile
 	runtime.Executor.ShowHelp = executor.ShowHelp
 	runtime.Executor.ShowHistory = executor.ShowHistory
+	runtime.Executor.ShowVersion = executor.ShowVersion
+	runtime.Executor.ShowTicks = executor.ShowTicks
+	runtime.Executor.ShowMemoryMap = executor.ShowMemoryMap
 	runtime.Executor.SetMode = executor.SetMode
 	runtime.ExecutorConfigured = true
 	return runtime
@@ -201,6 +204,12 @@ func intentTrace(intent IntentKind) TraceDetail {
 		return TraceDetailShowHelp
 	case IntentShowHistory:
 		return TraceDetailShowHistory
+	case IntentShowVersion:
+		return TraceDetailShowVersion
+	case IntentShowTicks:
+		return TraceDetailShowTicks
+	case IntentShowMemoryMap:
+		return TraceDetailShowMemoryMap
 	case IntentSetMode:
 		return TraceDetailSetMode
 	default:

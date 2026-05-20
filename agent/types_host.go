@@ -13,11 +13,13 @@ const (
 	stringStatFile             = "stat_file"
 	stringShowHelp             = "show_help"
 	stringShowHistory          = "show_history"
+	stringShowVersion          = "show_version"
+	stringShowTicks            = "show_ticks"
+	stringShowMemoryMap        = "show_memory_map"
 	stringSetMode              = "set_mode"
 	stringAllowed              = "allowed"
 	stringConfirmationRequired = "confirmation_required"
 	stringRejected             = "rejected"
-	stringNone                 = "none"
 )
 
 func (m PlannerMode) String() string {
@@ -47,6 +49,12 @@ func (i IntentKind) String() string {
 		return stringShowHelp
 	case IntentShowHistory:
 		return stringShowHistory
+	case IntentShowVersion:
+		return stringShowVersion
+	case IntentShowTicks:
+		return stringShowTicks
+	case IntentShowMemoryMap:
+		return stringShowMemoryMap
 	case IntentSetMode:
 		return stringSetMode
 	default:
@@ -70,10 +78,16 @@ func (k ActionKind) String() string {
 		return stringShowHelp
 	case ActionShowHistory:
 		return stringShowHistory
+	case ActionShowVersion:
+		return stringShowVersion
+	case ActionShowTicks:
+		return stringShowTicks
+	case ActionShowMemoryMap:
+		return stringShowMemoryMap
 	case ActionSetMode:
 		return stringSetMode
 	default:
-		return stringNone
+		return stringUnknown
 	}
 }
 
@@ -149,6 +163,12 @@ func (m MessageKind) String() string {
 		return "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Request deletion through the agent\n  agent mode <mode>   - Switch agent mode (not implemented yet)"
 	case MessageHistoryListed:
 		return "agent: history listed"
+	case MessageVersionShown:
+		return "agent: version shown"
+	case MessageTicksShown:
+		return "agent: ticks shown"
+	case MessageMemoryMapShown:
+		return "agent: memory map shown"
 	case MessageDeterministicMode:
 		return "agent: deterministic mode"
 	case MessageLLMModeNotConfigured:
@@ -229,6 +249,12 @@ func (d TraceDetail) String() string {
 		return stringShowHelp
 	case TraceDetailShowHistory:
 		return stringShowHistory
+	case TraceDetailShowVersion:
+		return stringShowVersion
+	case TraceDetailShowTicks:
+		return stringShowTicks
+	case TraceDetailShowMemoryMap:
+		return stringShowMemoryMap
 	case TraceDetailSetMode:
 		return stringSetMode
 	default:
