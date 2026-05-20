@@ -11,6 +11,9 @@ import (
 // Test helper to set lineBuf for testing
 func setLineBuf(content string) {
 	lineLen = len(content)
+	for i := 0; i < maxLine; i++ {
+		lineBuf[i] = 0
+	}
 	for i := 0; i < len(content) && i < maxLine; i++ {
 		lineBuf[i] = byte(content[i])
 	}
@@ -436,10 +439,12 @@ func TestIntegration_CommandParsing(t *testing.T) {
 
 func TestExecuteAgentCommand(t *testing.T) {
 	fs.Init()
+	SetTickProvider(func() uint64 { return 123 })
 	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
 	SetAgentRuntime(&runtime)
 	t.Cleanup(func() {
 		SetAgentRuntime(nil)
+		SetTickProvider(nil)
 	})
 	historyBuf = [32][maxLine]byte{}
 	historyLen = [32]int{}
@@ -464,7 +469,22 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing show argument",
 			input: "agent show",
-			want:  "Usage: agent show <files|history>\n",
+			want:  "Usage: agent show <files|history|version|ticks|memorymap>\n",
+		},
+		{
+			name:  "show version",
+			input: "agent show version",
+			want:  "DavOS 0.2.0 (64bit)\nagent: version shown\n",
+		},
+		{
+			name:  "show ticks",
+			input: "agent show ticks",
+			want:  "123\nagent: ticks shown\n",
+		},
+		{
+			name:  "show memory map",
+			input: "agent show memorymap",
+			want:  "agent: memory map shown\n",
 		},
 		{
 			name:  "missing read argument",
@@ -504,7 +524,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
 		},
 	}
 

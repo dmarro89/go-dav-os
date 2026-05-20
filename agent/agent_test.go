@@ -56,10 +56,25 @@ func TestRuntimeRequiresConfirmationForRiskyPlan(t *testing.T) {
 }
 
 func TestValidatorRejectsUnsupportedActionKinds(t *testing.T) {
-	plan := singleActionPlan(PlannerModeLLM, IntentUnknown, ActionKind(99), RiskSafe)
-	result := DefaultValidator{}.Validate(plan)
-	if result.OK {
-		t.Fatalf("expected unsupported action to be rejected")
+	tests := [...]ActionKind{ActionUnknown, ActionKind(99)}
+
+	for _, kind := range tests {
+		plan := singleActionPlan(PlannerModeLLM, IntentUnknown, kind, RiskSafe)
+		result := DefaultValidator{}.Validate(plan)
+		if result.OK {
+			t.Fatalf("expected unsupported action %v to be rejected", kind)
+		}
+	}
+}
+
+func TestIssue153TypedPlanContract(t *testing.T) {
+	plan := singleActionPlan(PlannerModeLLM, IntentShowVersion, ActionShowVersion, RiskSafe)
+
+	if plan.Intent != IntentShowVersion || plan.Actions[0].Kind != ActionShowVersion {
+		t.Fatalf("typed plan did not preserve intent/action: %+v", plan)
+	}
+	if !plan.Actions[0].Kind.Valid() {
+		t.Fatalf("expected issue #153 action to be known")
 	}
 }
 
@@ -163,14 +178,17 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 	}
 
 	executor := AllowedActionExecutor{
-		ListFiles:   handler(ActionListFiles),
-		ReadFile:    handler(ActionReadFile),
-		WriteFile:   handler(ActionWriteFile),
-		DeleteFile:  handler(ActionDeleteFile),
-		StatFile:    handler(ActionStatFile),
-		ShowHelp:    handler(ActionShowHelp),
-		ShowHistory: handler(ActionShowHistory),
-		SetMode:     handler(ActionSetMode),
+		ListFiles:     handler(ActionListFiles),
+		ReadFile:      handler(ActionReadFile),
+		WriteFile:     handler(ActionWriteFile),
+		DeleteFile:    handler(ActionDeleteFile),
+		StatFile:      handler(ActionStatFile),
+		ShowHelp:      handler(ActionShowHelp),
+		ShowHistory:   handler(ActionShowHistory),
+		ShowVersion:   handler(ActionShowVersion),
+		ShowTicks:     handler(ActionShowTicks),
+		ShowMemoryMap: handler(ActionShowMemoryMap),
+		SetMode:       handler(ActionSetMode),
 	}
 
 	actions := [...]ActionKind{
@@ -181,6 +199,9 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 		ActionStatFile,
 		ActionShowHelp,
 		ActionShowHistory,
+		ActionShowVersion,
+		ActionShowTicks,
+		ActionShowMemoryMap,
 		ActionSetMode,
 	}
 	for _, kind := range actions {
@@ -216,11 +237,21 @@ func TestNewDeterministicAgentUsesDeterministicPlanner(t *testing.T) {
 }
 
 func TestAllowedActionExecutorRejectsUnknownAction(t *testing.T) {
-	result := AllowedActionExecutor{}.Execute(Action{Kind: ActionKind(99)}, nil)
+	result := AllowedActionExecutor{}.Execute(Action{Kind: ActionUnknown}, nil)
 	if result.OK {
 		t.Fatalf("expected unknown action to fail")
 	}
 	if result.Message != MessageUnsupportedAction {
+		t.Fatalf("unexpected result: %q", result.Message)
+	}
+}
+
+func TestKnownButUnwiredActionsFailClosed(t *testing.T) {
+	result := AllowedActionExecutor{}.Execute(Action{Kind: ActionShowTicks}, nil)
+	if result.OK {
+		t.Fatalf("expected unwired action to fail")
+	}
+	if result.Message != MessageActionUnavailable {
 		t.Fatalf("unexpected result: %q", result.Message)
 	}
 }
@@ -407,10 +438,10 @@ func TestEnumStrings(t *testing.T) {
 	if PlannerModeDeterministic.String() != "deterministic" || PlannerModeLLM.String() != "llm" || PlannerMode(99).String() != stringUnknown {
 		t.Fatalf("unexpected planner mode strings")
 	}
-	if IntentReadFile.String() != stringReadFile || IntentWriteFile.String() != stringWriteFile || IntentDeleteFile.String() != stringDeleteFile || IntentShowHistory.String() != "show_history" || IntentSetMode.String() != "set_mode" || IntentKind(99).String() != stringUnknown {
+	if IntentReadFile.String() != stringReadFile || IntentWriteFile.String() != stringWriteFile || IntentDeleteFile.String() != stringDeleteFile || IntentShowHistory.String() != "show_history" || IntentShowVersion.String() != "show_version" || IntentShowTicks.String() != "show_ticks" || IntentShowMemoryMap.String() != "show_memory_map" || IntentSetMode.String() != "set_mode" || IntentKind(99).String() != stringUnknown {
 		t.Fatalf("unexpected intent strings")
 	}
-	if ActionNone.String() != stringNone || ActionDeleteFile.String() != stringDeleteFile || ActionShowHistory.String() != "show_history" || ActionSetMode.String() != "set_mode" || ActionKind(99).String() != stringNone {
+	if ActionUnknown.String() != stringUnknown || ActionDeleteFile.String() != stringDeleteFile || ActionShowHistory.String() != "show_history" || ActionShowVersion.String() != "show_version" || ActionShowTicks.String() != "show_ticks" || ActionShowMemoryMap.String() != "show_memory_map" || ActionSetMode.String() != "set_mode" || ActionKind(99).String() != stringUnknown {
 		t.Fatalf("unexpected action strings")
 	}
 	if RiskSafe.String() != "safe" || RiskRisky.String() != "risky" {
@@ -418,6 +449,13 @@ func TestEnumStrings(t *testing.T) {
 	}
 	if SafetyAllowed.String() != "allowed" || SafetyConfirmationRequired.String() != "confirmation_required" || SafetyRejected.String() != "rejected" {
 		t.Fatalf("unexpected safety strings")
+	}
+}
+
+func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
+	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
+	if got := MessageAgentHelp.String(); got != want {
+		t.Fatalf("MessageAgentHelp.String() = %q, expected %q", got, want)
 	}
 }
 

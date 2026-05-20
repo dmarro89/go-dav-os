@@ -73,6 +73,9 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 		runtimeAgent.Executor.StatFile = nil
 		runtimeAgent.Executor.ShowHelp = nil
 		runtimeAgent.Executor.ShowHistory = nil
+		runtimeAgent.Executor.ShowVersion = nil
+		runtimeAgent.Executor.ShowTicks = nil
+		runtimeAgent.Executor.ShowMemoryMap = nil
 		runtimeAgent.Executor.SetMode = nil
 		runtimeAgent.ExecutorConfigured = false
 		return
@@ -84,6 +87,9 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 	runtimeAgent.Executor.StatFile = runtime.Executor.StatFile
 	runtimeAgent.Executor.ShowHelp = runtime.Executor.ShowHelp
 	runtimeAgent.Executor.ShowHistory = runtime.Executor.ShowHistory
+	runtimeAgent.Executor.ShowVersion = runtime.Executor.ShowVersion
+	runtimeAgent.Executor.ShowTicks = runtime.Executor.ShowTicks
+	runtimeAgent.Executor.ShowMemoryMap = runtime.Executor.ShowMemoryMap
 	runtimeAgent.Executor.SetMode = runtime.Executor.SetMode
 	runtimeAgent.ExecutorConfigured = runtime.ExecutorConfigured
 }
@@ -96,6 +102,9 @@ func ConfigureAgentRuntime() {
 	runtimeAgent.Executor.StatFile = agentStatFile
 	runtimeAgent.Executor.ShowHelp = agentShowHelp
 	runtimeAgent.Executor.ShowHistory = agentShowHistory
+	runtimeAgent.Executor.ShowVersion = agentShowVersion
+	runtimeAgent.Executor.ShowTicks = agentShowTicks
+	runtimeAgent.Executor.ShowMemoryMap = agentShowMemoryMap
 	runtimeAgent.Executor.SetMode = agentSetMode
 	runtimeAgent.ExecutorConfigured = true
 }
@@ -108,6 +117,9 @@ func NewAgentExecutor() agent.AllowedActionExecutor {
 	executor.StatFile = agentStatFile
 	executor.ShowHelp = agentShowHelp
 	executor.ShowHistory = agentShowHistory
+	executor.ShowVersion = agentShowVersion
+	executor.ShowTicks = agentShowTicks
+	executor.ShowMemoryMap = agentShowMemoryMap
 	executor.SetMode = agentSetMode
 	return executor
 }
@@ -227,12 +239,9 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "ticks") {
-		if getTicks == nil {
+		if !printTicks() {
 			terminal.Print("ticks: not wired yet\n")
-			return
 		}
-		printUint(getTicks())
-		terminal.PutRune('\n')
 		return
 	}
 
@@ -294,18 +303,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "mmap") {
-		n := mem.MMapCount()
-		for i := 0; i < n; i++ {
-			bLo, bHi, lLo, lHi, typ := mem.MMapEntry(i)
-
-			terminal.Print("base=0x")
-			printHex64(bHi, bLo)
-			terminal.Print(" len=0x")
-			printHex64(lHi, lLo)
-			terminal.Print(" type=")
-			printUint(uint64(typ))
-			terminal.PutRune('\n')
-		}
+		printMemoryMap()
 		return
 	}
 
@@ -747,12 +745,7 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "version") {
-		terminal.Print(osName + " " + osVersion)
-		proof := uint64(0x0123456789ABCDEF)
-		if (proof >> 32) != 0 {
-			terminal.Print(" (64bit)")
-		}
-		terminal.PutRune('\n')
+		printVersion()
 		return
 	}
 
@@ -796,7 +789,7 @@ func execute() {
 		if matchLiteral(a1s, a1e, "show") {
 			a2s, a2e, ok := nextArg(a1e, end)
 			if !ok {
-				terminal.Print("Usage: agent show <files|history>\n")
+				terminal.Print("Usage: agent show <files|history|version|ticks|memorymap>\n")
 				return
 			}
 			if matchLiteral(a2s, a2e, "files") {
@@ -805,8 +798,17 @@ func execute() {
 			} else if matchLiteral(a2s, a2e, "history") {
 				runAgentNoTarget(agent.ActionShowHistory, agent.IntentShowHistory, agent.RiskSafe)
 				return
+			} else if matchLiteral(a2s, a2e, "version") {
+				runAgentNoTarget(agent.ActionShowVersion, agent.IntentShowVersion, agent.RiskSafe)
+				return
+			} else if matchLiteral(a2s, a2e, "ticks") {
+				runAgentNoTarget(agent.ActionShowTicks, agent.IntentShowTicks, agent.RiskSafe)
+				return
+			} else if matchLiteral(a2s, a2e, "memorymap") || matchLiteral(a2s, a2e, "memory_map") {
+				runAgentNoTarget(agent.ActionShowMemoryMap, agent.IntentShowMemoryMap, agent.RiskSafe)
+				return
 			}
-			terminal.Print("Usage: agent show <files|history>\n")
+			terminal.Print("Usage: agent show <files|history|version|ticks|memorymap>\n")
 			return
 		} else if matchLiteral(a1s, a1e, "read") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -947,6 +949,9 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("Agent commands:\n")
 		terminal.Print("  agent show files    - Show files managed by the agent\n")
 		terminal.Print("  agent show history  - Show command history stored by the agent\n")
+		terminal.Print("  agent show version  - Show OS version through the agent\n")
+		terminal.Print("  agent show ticks    - Show PIT ticks through the agent\n")
+		terminal.Print("  agent show memorymap - Show memory map through the agent\n")
 		terminal.Print("  agent read <name>   - Read a file through the agent\n")
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> confirm - Delete a file through the agent\n")
@@ -954,6 +959,12 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent help          - Show agent commands")
 	case agent.MessageHistoryListed:
 		terminal.Print("agent: history listed")
+	case agent.MessageVersionShown:
+		terminal.Print("agent: version shown")
+	case agent.MessageTicksShown:
+		terminal.Print("agent: ticks shown")
+	case agent.MessageMemoryMapShown:
+		terminal.Print("agent: memory map shown")
 	case agent.MessageDeterministicMode:
 		terminal.Print("agent: deterministic mode")
 	case agent.MessageLLMModeNotConfigured:
@@ -976,6 +987,39 @@ func printHistory() {
 		for k := 0; k < l; k++ {
 			terminal.PutRune(rune(historyBuf[idx][k]))
 		}
+		terminal.PutRune('\n')
+	}
+}
+
+func printVersion() {
+	terminal.Print(osName + " " + osVersion)
+	proof := uint64(0x0123456789ABCDEF)
+	if (proof >> 32) != 0 {
+		terminal.Print(" (64bit)")
+	}
+	terminal.PutRune('\n')
+}
+
+func printTicks() bool {
+	if getTicks == nil {
+		return false
+	}
+	printUint(getTicks())
+	terminal.PutRune('\n')
+	return true
+}
+
+func printMemoryMap() {
+	n := mem.MMapCount()
+	for i := 0; i < n; i++ {
+		bLo, bHi, lLo, lHi, typ := mem.MMapEntry(i)
+
+		terminal.Print("base=0x")
+		printHex64(bHi, bLo)
+		terminal.Print(" len=0x")
+		printHex64(lHi, lLo)
+		terminal.Print(" type=")
+		printUint(uint64(typ))
 		terminal.PutRune('\n')
 	}
 }
@@ -1050,6 +1094,23 @@ func agentShowHelp(_ agent.Action, _ *agent.Context) agent.ActionResult {
 func agentShowHistory(_ agent.Action, _ *agent.Context) agent.ActionResult {
 	printHistory()
 	return agent.ActionResult{OK: true, Message: agent.MessageHistoryListed}
+}
+
+func agentShowVersion(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	printVersion()
+	return agent.ActionResult{OK: true, Message: agent.MessageVersionShown}
+}
+
+func agentShowTicks(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	if !printTicks() {
+		return agent.ActionResult{OK: false, Message: agent.MessageActionUnavailable}
+	}
+	return agent.ActionResult{OK: true, Message: agent.MessageTicksShown}
+}
+
+func agentShowMemoryMap(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	printMemoryMap()
+	return agent.ActionResult{OK: true, Message: agent.MessageMemoryMapShown}
 }
 
 func agentSetMode(action agent.Action, _ *agent.Context) agent.ActionResult {
