@@ -124,7 +124,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("agent show history", ["agent: history listed"]),
             ("agent show version", ["DavOS 0.2.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
-            ("agent show memory_map", ["base=0x", "agent: memory map shown"]),
+            ("agent show memorymap", ["base=0x", "agent: memory map shown"]),
             ("agent read notes", ["hi", "agent: file read"]),
             ("agent stat notes", ["page=0x", "size=2", "agent: file stat"]),
             ("agent delete notes", ["agent: confirmation required"]),

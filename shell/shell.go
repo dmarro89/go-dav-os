@@ -789,7 +789,7 @@ func execute() {
 		if matchLiteral(a1s, a1e, "show") {
 			a2s, a2e, ok := nextArg(a1e, end)
 			if !ok {
-				terminal.Print("Usage: agent show <files|history|version|ticks|memory_map>\n")
+				terminal.Print("Usage: agent show <files|history|version|ticks|memorymap>\n")
 				return
 			}
 			if matchLiteral(a2s, a2e, "files") {
@@ -804,11 +804,11 @@ func execute() {
 			} else if matchLiteral(a2s, a2e, "ticks") {
 				runAgentNoTarget(agent.ActionShowTicks, agent.IntentShowTicks, agent.RiskSafe)
 				return
-			} else if matchLiteral(a2s, a2e, "memory_map") {
+			} else if matchLiteral(a2s, a2e, "memorymap") || matchLiteral(a2s, a2e, "memory_map") {
 				runAgentNoTarget(agent.ActionShowMemoryMap, agent.IntentShowMemoryMap, agent.RiskSafe)
 				return
 			}
-			terminal.Print("Usage: agent show <files|history|version|ticks|memory_map>\n")
+			terminal.Print("Usage: agent show <files|history|version|ticks|memorymap>\n")
 			return
 		} else if matchLiteral(a1s, a1e, "read") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -951,7 +951,7 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent show history  - Show command history stored by the agent\n")
 		terminal.Print("  agent show version  - Show OS version through the agent\n")
 		terminal.Print("  agent show ticks    - Show PIT ticks through the agent\n")
-		terminal.Print("  agent show memory_map - Show memory map through the agent\n")
+		terminal.Print("  agent show memorymap - Show memory map through the agent\n")
 		terminal.Print("  agent read <name>   - Read a file through the agent\n")
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> confirm - Delete a file through the agent\n")
