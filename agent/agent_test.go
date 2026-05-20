@@ -308,6 +308,8 @@ func TestDeterministicPlannerRecognizesHelpAndDefaultsSafely(t *testing.T) {
 		{input: "what can you do?", intent: IntentShowHelp, action: ActionShowHelp},
 		{input: "help with files", intent: IntentShowHelp, action: ActionShowHelp},
 		{input: "LS", intent: IntentListFiles, action: ActionListFiles},
+		{input: "show files", intent: IntentListFiles, action: ActionListFiles},
+		{input: "list files", intent: IntentListFiles, action: ActionListFiles},
 	}
 
 	for _, tt := range tests {
@@ -333,7 +335,9 @@ func TestDeterministicPlannerBuildsTargetedFilePlans(t *testing.T) {
 	}{
 		{input: "read notes", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "notes"},
 		{input: "cat notes", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "notes"},
+		{input: "show notes", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "notes"},
 		{input: "delete notes", intent: IntentDeleteFile, action: ActionDeleteFile, risk: RiskRisky, target: "notes"},
+		{input: "remove notes", intent: IntentDeleteFile, action: ActionDeleteFile, risk: RiskRisky, target: "notes"},
 		{input: "stat notes", intent: IntentStatFile, action: ActionStatFile, risk: RiskSafe, target: "notes"},
 		{input: "mode deterministic", intent: IntentSetMode, action: ActionSetMode, risk: RiskSafe, target: "deterministic"},
 	}
@@ -360,13 +364,17 @@ func TestDeterministicPlannerBuildsTargetedFilePlans(t *testing.T) {
 	}
 }
 
-func TestDeterministicPlannerRecognizesHistoryAndMode(t *testing.T) {
+func TestDeterministicPlannerRecognizesSystemActions(t *testing.T) {
 	tests := []struct {
 		input  string
 		intent IntentKind
 		action ActionKind
 	}{
 		{input: "show history", intent: IntentShowHistory, action: ActionShowHistory},
+		{input: "show version", intent: IntentShowVersion, action: ActionShowVersion},
+		{input: "show ticks", intent: IntentShowTicks, action: ActionShowTicks},
+		{input: "show memory map", intent: IntentShowMemoryMap, action: ActionShowMemoryMap},
+		{input: "show memorymap", intent: IntentShowMemoryMap, action: ActionShowMemoryMap},
 		{input: "mode", intent: IntentSetMode, action: ActionSetMode},
 	}
 
@@ -381,6 +389,23 @@ func TestDeterministicPlannerRecognizesHistoryAndMode(t *testing.T) {
 				t.Fatalf("unexpected plan: intent=%v action=%v", result.Plan.Intent, action.Kind)
 			}
 		})
+	}
+}
+
+func TestDeterministicPlannerReturnsUnknownForUnsupportedRequests(t *testing.T) {
+	result := DeterministicPlanner{}.Plan("make coffee", nil)
+	if !result.OK {
+		t.Fatalf("expected deterministic planner to return a typed unknown plan")
+	}
+	if result.Plan.Intent != IntentUnknown {
+		t.Fatalf("expected unknown intent, got %v", result.Plan.Intent)
+	}
+	action := result.Plan.Actions[0]
+	if action.Kind != ActionUnknown {
+		t.Fatalf("expected unknown action, got %v", action.Kind)
+	}
+	if action.Risk != RiskSafe {
+		t.Fatalf("expected safe risk for unknown action, got %v", action.Risk)
 	}
 }
 
