@@ -6,12 +6,14 @@ type ActionHandler func(action Action, context *Context) ActionResult
 // Shell or filesystem integration can wire only the handlers it wants to expose;
 // unsupported action kinds fail closed instead of falling through to a shell
 type AllowedActionExecutor struct {
-	ListFiles  ActionHandler
-	ReadFile   ActionHandler
-	WriteFile  ActionHandler
-	DeleteFile ActionHandler
-	StatFile   ActionHandler
-	ShowHelp   ActionHandler
+	ListFiles   ActionHandler
+	ReadFile    ActionHandler
+	WriteFile   ActionHandler
+	DeleteFile  ActionHandler
+	StatFile    ActionHandler
+	ShowHelp    ActionHandler
+	ShowHistory ActionHandler
+	SetMode     ActionHandler
 }
 
 func (e AllowedActionExecutor) Execute(action Action, context *Context) ActionResult {
@@ -28,14 +30,18 @@ func (e AllowedActionExecutor) Execute(action Action, context *Context) ActionRe
 		return callHandler(e.StatFile, action, context)
 	case ActionShowHelp:
 		return callHandler(e.ShowHelp, action, context)
+	case ActionShowHistory:
+		return callHandler(e.ShowHistory, action, context)
+	case ActionSetMode:
+		return callHandler(e.SetMode, action, context)
 	default:
-		return ActionResult{OK: false, Message: "agent: unsupported action"}
+		return ActionResult{OK: false, Message: MessageUnsupportedAction}
 	}
 }
 
 func callHandler(handler ActionHandler, action Action, context *Context) ActionResult {
 	if handler == nil {
-		return ActionResult{OK: false, Message: "agent: action unavailable"}
+		return ActionResult{OK: false, Message: MessageActionUnavailable}
 	}
 	return handler(action, context)
 }

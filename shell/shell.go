@@ -3,6 +3,7 @@ package shell
 import (
 	"unsafe"
 
+	"github.com/dmarro89/go-dav-os/agent"
 	"github.com/dmarro89/go-dav-os/drivers/ata"
 	"github.com/dmarro89/go-dav-os/fs"
 	"github.com/dmarro89/go-dav-os/fs/fat16"
@@ -41,15 +42,19 @@ var (
 	historyHead int
 	// historyCount tracks the total number of items currently stored (max 32)
 	historyCount int
+
+	runtimeAgent agent.Runtime
 )
 
 // maxHistory defines the maximum size of the history ring buffer
 const maxHistory = 32
 
 var commandBuf = [...]string{
-	commandHelp, "clear", "echo", "ticks", "uptime", "mem", "mmap",
-	"pfa", "alloc", "free", "ls", "write", "cat", "rm", "stat",
-	"version", commandHistory, "run", "layout",
+	commandHelp, commandHistory, "clear", "echo", "ticks", "uptime",
+	"mem", "mmap", "mmapmax", "pfa", "alloc", "free",
+	"ls", "write", "cat", "rm", "stat",
+	"disk", "fatinit", "fatformat", "fatinfo", "fatls", "fatcreate", "fatread",
+	"layout", "version", "run", "agent",
 }
 
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
@@ -59,6 +64,53 @@ func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
 }
 func SetLayoutSwitcher(fn func(string) bool) { switchLayoutFn = fn }
 func SetInitialLayout(name string)           { currentLayout = name }
+func SetAgentRuntime(runtime *agent.Runtime) {
+	if runtime == nil {
+		runtimeAgent.Executor.ListFiles = nil
+		runtimeAgent.Executor.ReadFile = nil
+		runtimeAgent.Executor.WriteFile = nil
+		runtimeAgent.Executor.DeleteFile = nil
+		runtimeAgent.Executor.StatFile = nil
+		runtimeAgent.Executor.ShowHelp = nil
+		runtimeAgent.Executor.ShowHistory = nil
+		runtimeAgent.Executor.SetMode = nil
+		runtimeAgent.ExecutorConfigured = false
+		return
+	}
+	runtimeAgent.Executor.ListFiles = runtime.Executor.ListFiles
+	runtimeAgent.Executor.ReadFile = runtime.Executor.ReadFile
+	runtimeAgent.Executor.WriteFile = runtime.Executor.WriteFile
+	runtimeAgent.Executor.DeleteFile = runtime.Executor.DeleteFile
+	runtimeAgent.Executor.StatFile = runtime.Executor.StatFile
+	runtimeAgent.Executor.ShowHelp = runtime.Executor.ShowHelp
+	runtimeAgent.Executor.ShowHistory = runtime.Executor.ShowHistory
+	runtimeAgent.Executor.SetMode = runtime.Executor.SetMode
+	runtimeAgent.ExecutorConfigured = runtime.ExecutorConfigured
+}
+
+func ConfigureAgentRuntime() {
+	runtimeAgent.Executor.ListFiles = agentListFiles
+	runtimeAgent.Executor.ReadFile = agentReadFile
+	runtimeAgent.Executor.WriteFile = nil
+	runtimeAgent.Executor.DeleteFile = agentDeleteFile
+	runtimeAgent.Executor.StatFile = agentStatFile
+	runtimeAgent.Executor.ShowHelp = agentShowHelp
+	runtimeAgent.Executor.ShowHistory = agentShowHistory
+	runtimeAgent.Executor.SetMode = agentSetMode
+	runtimeAgent.ExecutorConfigured = true
+}
+
+func NewAgentExecutor() agent.AllowedActionExecutor {
+	var executor agent.AllowedActionExecutor
+	executor.ListFiles = agentListFiles
+	executor.ReadFile = agentReadFile
+	executor.DeleteFile = agentDeleteFile
+	executor.StatFile = agentStatFile
+	executor.ShowHelp = agentShowHelp
+	executor.ShowHistory = agentShowHistory
+	executor.SetMode = agentSetMode
+	return executor
+}
 
 func Init() {
 	lineLen = 0
@@ -151,30 +203,12 @@ func execute() {
 	cmdStart, cmdEnd := firstToken(start, end)
 
 	if matchLiteral(cmdStart, cmdEnd, commandHistory) {
-		// Print history
-		// We iterate from 0 to historyCount-1.
-		// To print chronologically (oldest first), we calculate the starting index
-		// in the ring buffer: (head - count + size) % size.
-		startIdx := (historyHead - historyCount + maxHistory) % maxHistory
-		for i := 0; i < historyCount; i++ {
-			idx := (startIdx + i) % maxHistory
-
-			// Print index (1-based for user friendliness)
-			printUint(uint64(i + 1))
-			terminal.Print(" ")
-
-			// Print command content
-			l := historyLen[idx]
-			for k := 0; k < l; k++ {
-				terminal.PutRune(rune(historyBuf[idx][k]))
-			}
-			terminal.PutRune('\n')
-		}
+		printHistory()
 		return
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, commandHelp) {
-		terminal.Print("Commands: help, clear, echo, ticks, uptime, mem, mmap, pfa, alloc, free, ls, write, cat, rm, stat, version, history, run, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout\n")
+		terminal.Print("Commands: help, history, clear, echo, ticks, uptime, mem, mmap, mmapmax, pfa, alloc, free, ls, write, cat, rm, stat, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout, version, run, agent\n")
 		return
 	}
 
@@ -752,6 +786,74 @@ func execute() {
 		return
 	}
 
+	if matchLiteral(cmdStart, cmdEnd, "agent") {
+		a1s, a1e, ok := nextArg(cmdEnd, end)
+		if !ok {
+			terminal.Print("Usage: agent <show|read|stat|delete|mode|help> [arg]\n")
+			return
+		}
+
+		if matchLiteral(a1s, a1e, "show") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if !ok {
+				terminal.Print("Usage: agent show <files|history>\n")
+				return
+			}
+			if matchLiteral(a2s, a2e, "files") {
+				runAgentNoTarget(agent.ActionListFiles, agent.IntentListFiles, agent.RiskSafe)
+				return
+			} else if matchLiteral(a2s, a2e, "history") {
+				runAgentNoTarget(agent.ActionShowHistory, agent.IntentShowHistory, agent.RiskSafe)
+				return
+			}
+			terminal.Print("Usage: agent show <files|history>\n")
+			return
+		} else if matchLiteral(a1s, a1e, "read") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if !ok {
+				terminal.Print("Usage: agent read <name>\n")
+				return
+			}
+			runAgentAction(agent.ActionReadFile, agent.IntentReadFile, agent.RiskSafe, a2s, a2e)
+			return
+		} else if matchLiteral(a1s, a1e, "delete") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if !ok {
+				terminal.Print("Usage: agent delete <name> [confirm]\n")
+				return
+			}
+			a3s, a3e, confirmed := nextArg(a2e, end)
+			if confirmed && matchLiteral(a3s, a3e, "confirm") {
+				runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskSafe, a2s, a2e)
+				return
+			}
+			runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskRisky, a2s, a2e)
+			return
+		} else if matchLiteral(a1s, a1e, "stat") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if !ok {
+				terminal.Print("Usage: agent stat <name>\n")
+				return
+			}
+			runAgentAction(agent.ActionStatFile, agent.IntentStatFile, agent.RiskSafe, a2s, a2e)
+			return
+		} else if matchLiteral(a1s, a1e, "mode") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if ok {
+				runAgentAction(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, a2s, a2e)
+				return
+			}
+			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe)
+			return
+		} else if matchLiteral(a1s, a1e, "help") {
+			runAgentNoTarget(agent.ActionShowHelp, agent.IntentShowHelp, agent.RiskSafe)
+			return
+		}
+
+		terminal.Print("Try with agent help to see available commands\n")
+		return
+	}
+
 	var suggestionBuf [len(commandBuf)]string
 	suggestionCount := 0
 
@@ -778,6 +880,201 @@ func execute() {
 	terminal.Print("Unknown command: ")
 	printRange(cmdStart, cmdEnd)
 	terminal.PutRune('\n')
+}
+
+func runAgentNoTarget(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel) {
+	message := runtimeAgent.RunActionMessage(kind, intent, risk, nil, 0, nil)
+	printAgentMessage(message)
+	terminal.PutRune('\n')
+}
+
+func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel, targetStart, targetEnd int) {
+	targetLen, ok := copyNameFromRange(targetStart, targetEnd)
+	if !ok {
+		terminal.Print("agent: invalid target\n")
+		return
+	}
+	message := runtimeAgent.RunActionMessage(kind, intent, risk, &tmpName, targetLen, nil)
+	printAgentMessage(message)
+	terminal.PutRune('\n')
+}
+
+func printAgentMessage(message agent.MessageKind) {
+	switch message {
+	case agent.MessagePlannerFailed:
+		terminal.Print("agent: planner failed")
+	case agent.MessageValidationFailed:
+		terminal.Print("validation_failed")
+	case agent.MessagePlanHasNoActions:
+		terminal.Print("agent: plan has no actions")
+	case agent.MessagePlanHasTooManyActions:
+		terminal.Print("agent: plan has too many actions")
+	case agent.MessagePlanContainsUnsupportedAction:
+		terminal.Print("agent: plan contains unsupported action")
+	case agent.MessageActionRiskInvalid:
+		terminal.Print("agent: action risk is invalid")
+	case agent.MessageActionTargetInvalid:
+		terminal.Print("agent: action target is invalid")
+	case agent.MessageActionDataInvalid:
+		terminal.Print("agent: action data is invalid")
+	case agent.MessageConfirmationRequired:
+		terminal.Print("agent: confirmation required")
+	case agent.MessageExecutorNotConfigured:
+		terminal.Print("agent: executor not configured")
+	case agent.MessageUnsupportedAction:
+		terminal.Print("agent: unsupported action")
+	case agent.MessageActionUnavailable:
+		terminal.Print("agent: action unavailable")
+	case agent.MessageNoResult:
+		terminal.Print("agent: no result")
+	case agent.MessageCompletedPlan:
+		terminal.Print("agent: completed plan")
+	case agent.MessageOK:
+		terminal.Print("ok")
+	case agent.MessageFilesListed:
+		terminal.Print("agent: files listed")
+	case agent.MessageNoFiles:
+		terminal.Print("agent: no files")
+	case agent.MessageFileRead:
+		terminal.Print("agent: file read")
+	case agent.MessageFileStat:
+		terminal.Print("agent: file stat")
+	case agent.MessageMissingFile:
+		terminal.Print("agent: missing file")
+	case agent.MessageFileNotFound:
+		terminal.Print("agent: file not found")
+	case agent.MessageAgentHelp:
+		terminal.Print("Agent commands:\n")
+		terminal.Print("  agent show files    - Show files managed by the agent\n")
+		terminal.Print("  agent show history  - Show command history stored by the agent\n")
+		terminal.Print("  agent read <name>   - Read a file through the agent\n")
+		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
+		terminal.Print("  agent delete <name> confirm - Delete a file through the agent\n")
+		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
+		terminal.Print("  agent help          - Show agent commands")
+	case agent.MessageHistoryListed:
+		terminal.Print("agent: history listed")
+	case agent.MessageDeterministicMode:
+		terminal.Print("agent: deterministic mode")
+	case agent.MessageLLMModeNotConfigured:
+		terminal.Print("agent: llm mode not configured")
+	case agent.MessageUnsupportedMode:
+		terminal.Print("agent: unsupported mode")
+	default:
+		return
+	}
+}
+
+func printHistory() {
+	startIdx := (historyHead - historyCount + maxHistory) % maxHistory
+	for i := 0; i < historyCount; i++ {
+		idx := (startIdx + i) % maxHistory
+		printUint(uint64(i + 1))
+		terminal.Print(" ")
+
+		l := historyLen[idx]
+		for k := 0; k < l; k++ {
+			terminal.PutRune(rune(historyBuf[idx][k]))
+		}
+		terminal.PutRune('\n')
+	}
+}
+
+func agentListFiles(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	count := 0
+	for i := 0; i < fs.MaxFiles(); i++ {
+		used, name, nameLen, size, page := fs.Entry(i)
+		if !used {
+			continue
+		}
+		printName(name, nameLen)
+		terminal.Print("  size=")
+		printUint(size)
+		terminal.Print("  page=0x")
+		printHexU64(page)
+		terminal.PutRune('\n')
+		count++
+	}
+	if count == 0 {
+		return agent.ActionResult{OK: true, Message: agent.MessageNoFiles}
+	}
+	return agent.ActionResult{OK: true, Message: agent.MessageFilesListed}
+}
+
+func agentReadFile(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.TargetLen <= 0 {
+		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
+	}
+	page, size, ok := fs.Lookup(&action.Target, action.TargetLen)
+	if !ok {
+		return agent.ActionResult{OK: false, Message: agent.MessageFileNotFound}
+	}
+	for i := uint64(0); i < size; i++ {
+		b := *(*byte)(unsafe.Pointer(uintptr(page) + uintptr(i)))
+		terminal.PutRune(rune(b))
+	}
+	terminal.PutRune('\n')
+	return agent.ActionResult{OK: true, Message: agent.MessageFileRead}
+}
+
+func agentDeleteFile(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.TargetLen <= 0 {
+		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
+	}
+	if !fs.Remove(&action.Target, action.TargetLen) {
+		return agent.ActionResult{OK: false, Message: agent.MessageFileNotFound}
+	}
+	return agent.ActionResult{OK: true, Message: agent.MessageOK}
+}
+
+func agentStatFile(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.TargetLen <= 0 {
+		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
+	}
+	page, size, ok := fs.Lookup(&action.Target, action.TargetLen)
+	if !ok {
+		return agent.ActionResult{OK: false, Message: agent.MessageFileNotFound}
+	}
+	terminal.Print("page=0x")
+	printHexU64(page)
+	terminal.Print(" size=")
+	printUint(size)
+	terminal.PutRune('\n')
+	return agent.ActionResult{OK: true, Message: agent.MessageFileStat}
+}
+
+func agentShowHelp(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	return agent.ActionResult{OK: true, Message: agent.MessageAgentHelp}
+}
+
+func agentShowHistory(_ agent.Action, _ *agent.Context) agent.ActionResult {
+	printHistory()
+	return agent.ActionResult{OK: true, Message: agent.MessageHistoryListed}
+}
+
+func agentSetMode(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.TargetLen == 0 {
+		return agent.ActionResult{OK: true, Message: agent.MessageDeterministicMode}
+	}
+	if actionTargetMatches(action, "deterministic") {
+		return agent.ActionResult{OK: true, Message: agent.MessageDeterministicMode}
+	}
+	if actionTargetMatches(action, "llm") {
+		return agent.ActionResult{OK: false, Message: agent.MessageLLMModeNotConfigured}
+	}
+	return agent.ActionResult{OK: false, Message: agent.MessageUnsupportedMode}
+}
+
+func actionTargetMatches(action agent.Action, literal string) bool {
+	if action.TargetLen != len(literal) {
+		return false
+	}
+	for i := 0; i < action.TargetLen; i++ {
+		if action.Target[i] != literal[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func isSpace(b byte) bool {

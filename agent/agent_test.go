@@ -4,18 +4,17 @@ import "testing"
 
 func TestRuntimeExecutesTypedSafePlan(t *testing.T) {
 	executed := false
-	runtime := Runtime{
-		Planner: DeterministicPlanner{},
-		Executor: AllowedActionExecutor{
+	runtime := NewDeterministicAgent(
+		AllowedActionExecutor{
 			ListFiles: func(action Action, context *Context) ActionResult {
 				executed = true
 				if action.Kind != ActionListFiles {
 					t.Fatalf("unexpected action kind: %v", action.Kind)
 				}
-				return ActionResult{OK: true, Message: "files listed"}
+				return ActionResult{OK: true, Message: MessageFilesListed}
 			},
 		},
-	}
+	)
 
 	var context Context
 	response := runtime.Run("show files", &context)
@@ -35,15 +34,14 @@ func TestRuntimeExecutesTypedSafePlan(t *testing.T) {
 
 func TestRuntimeRequiresConfirmationForRiskyPlan(t *testing.T) {
 	executed := false
-	runtime := Runtime{
-		Planner: staticPlanner{plan: singleActionPlan(PlannerModeLLM, IntentDeleteFile, ActionDeleteFile, RiskRisky)},
-		Executor: AllowedActionExecutor{
+	runtime := NewDeterministicAgent(
+		AllowedActionExecutor{
 			DeleteFile: func(action Action, context *Context) ActionResult {
 				executed = true
-				return ActionResult{OK: true, Message: "deleted"}
+				return ActionResult{OK: true, Message: MessageOK}
 			},
 		},
-	}
+	)
 
 	response := runtime.Run("delete notes", nil)
 	if response.Safety.Status != SafetyConfirmationRequired {
@@ -93,60 +91,26 @@ func TestLLMPlannerFailsWithoutBridge(t *testing.T) {
 	if result.OK {
 		t.Fatalf("expected missing bridge to fail")
 	}
-	if result.Reason != errLLMBridgeNotConfigured {
+	if result.Reason != MessageLLMBridgeNotConfigured {
 		t.Fatalf("unexpected failure reason: %q", result.Reason)
-	}
-}
-
-func TestRuntimeReturnsPlannerError(t *testing.T) {
-	response := Runtime{Planner: failingPlanner{reason: errLLMBridgeNotConfigured}}.Run("show files", nil)
-	if response.Result.OK {
-		t.Fatalf("expected planner failure response")
-	}
-	if response.Result.Message != errLLMBridgeNotConfigured {
-		t.Fatalf("unexpected planner failure message: %q", response.Result.Message)
-	}
-	if response.Safety.Status != SafetyRejected {
-		t.Fatalf("expected rejected safety status, got %v", response.Safety.Status)
-	}
-}
-
-func TestRuntimeReturnsDefaultPlannerError(t *testing.T) {
-	response := Runtime{Planner: failingPlanner{}}.Run("show files", nil)
-	if response.Result.Message != "agent: planner failed" {
-		t.Fatalf("unexpected planner failure message: %q", response.Result.Message)
-	}
-	if response.TraceCount != 1 || response.Trace[0].Stage != "Planner" {
-		t.Fatalf("expected planner trace, got count=%d", response.TraceCount)
-	}
-}
-
-func TestRuntimeRejectsMissingPlanner(t *testing.T) {
-	response := Runtime{}.Run("show files", nil)
-	if response.Result.OK {
-		t.Fatalf("expected missing planner to fail")
-	}
-	if response.Safety.Reason != "planner_missing" {
-		t.Fatalf("unexpected safety reason: %q", response.Safety.Reason)
 	}
 }
 
 func TestRuntimeStopsOnValidationFailure(t *testing.T) {
 	executed := false
-	response := Runtime{
-		Planner: staticPlanner{plan: Plan{}},
-		Executor: AllowedActionExecutor{
+	response := NewDeterministicAgent(
+		AllowedActionExecutor{
 			ShowHelp: func(action Action, context *Context) ActionResult {
 				executed = true
-				return ActionResult{OK: true, Message: "help"}
+				return ActionResult{OK: true, Message: MessageHelp}
 			},
 		},
-	}.Run("invalid", nil)
+	).runPlan(Plan{}, nil)
 
 	if response.Result.OK {
 		t.Fatalf("expected validation failure")
 	}
-	if response.Safety.Reason != "validation_failed" {
+	if response.Safety.Reason != MessageValidationFailed {
 		t.Fatalf("unexpected safety reason: %q", response.Safety.Reason)
 	}
 	if executed {
@@ -155,29 +119,26 @@ func TestRuntimeStopsOnValidationFailure(t *testing.T) {
 }
 
 func TestRuntimeReportsMissingExecutor(t *testing.T) {
-	response := Runtime{
-		Planner: staticPlanner{plan: singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe)},
-	}.Run("help", nil)
+	response := Runtime{}.RunAction(ActionShowHelp, IntentShowHelp, RiskSafe, nil, 0, nil)
 
-	if response.Result.Message != "agent: executor not configured" {
+	if response.Result.Message != MessageExecutorNotConfigured {
 		t.Fatalf("unexpected missing executor message: %q", response.Result.Message)
 	}
 }
 
 func TestRuntimeStopsOnExecutorFailure(t *testing.T) {
-	response := Runtime{
-		Planner: staticPlanner{plan: singleActionPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe)},
-		Executor: AllowedActionExecutor{
+	response := NewDeterministicAgent(
+		AllowedActionExecutor{
 			ReadFile: func(action Action, context *Context) ActionResult {
-				return ActionResult{OK: false, Message: "read failed"}
+				return ActionResult{OK: false, Message: MessageReadFailed}
 			},
 		},
-	}.Run("read notes", nil)
+	).Run("read notes", nil)
 
 	if response.Result.OK {
 		t.Fatalf("expected executor failure")
 	}
-	if response.Result.Message != "read failed" {
+	if response.Result.Message != MessageReadFailed {
 		t.Fatalf("unexpected executor failure: %q", response.Result.Message)
 	}
 }
@@ -197,17 +158,19 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 			if action.Kind != expected {
 				t.Fatalf("expected action %v, got %v", expected, action.Kind)
 			}
-			return ActionResult{OK: true, Message: action.Kind.String()}
+			return ActionResult{OK: true, Message: MessageOK}
 		}
 	}
 
 	executor := AllowedActionExecutor{
-		ListFiles:  handler(ActionListFiles),
-		ReadFile:   handler(ActionReadFile),
-		WriteFile:  handler(ActionWriteFile),
-		DeleteFile: handler(ActionDeleteFile),
-		StatFile:   handler(ActionStatFile),
-		ShowHelp:   handler(ActionShowHelp),
+		ListFiles:   handler(ActionListFiles),
+		ReadFile:    handler(ActionReadFile),
+		WriteFile:   handler(ActionWriteFile),
+		DeleteFile:  handler(ActionDeleteFile),
+		StatFile:    handler(ActionStatFile),
+		ShowHelp:    handler(ActionShowHelp),
+		ShowHistory: handler(ActionShowHistory),
+		SetMode:     handler(ActionSetMode),
 	}
 
 	actions := [...]ActionKind{
@@ -217,6 +180,8 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 		ActionDeleteFile,
 		ActionStatFile,
 		ActionShowHelp,
+		ActionShowHistory,
+		ActionSetMode,
 	}
 	for _, kind := range actions {
 		result := executor.Execute(Action{Kind: kind}, nil)
@@ -229,12 +194,33 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 	}
 }
 
+func TestNewDeterministicAgentUsesDeterministicPlanner(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		ShowHelp: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageHelp}
+		},
+	})
+
+	response := runtime.Run("help", nil)
+	if !response.Result.OK || response.Result.Message != MessageHelp {
+		t.Fatalf("unexpected deterministic agent response: %+v", response.Result)
+	}
+	if !executed {
+		t.Fatalf("expected configured executor to run")
+	}
+	if response.TraceCount == 0 || response.Trace[0].Detail != TraceDetailDeterministic {
+		t.Fatalf("expected deterministic planner trace, got %+v", response.Trace[0])
+	}
+}
+
 func TestAllowedActionExecutorRejectsUnknownAction(t *testing.T) {
 	result := AllowedActionExecutor{}.Execute(Action{Kind: ActionKind(99)}, nil)
 	if result.OK {
 		t.Fatalf("expected unknown action to fail")
 	}
-	if result.Message != "agent: unsupported action" {
+	if result.Message != MessageUnsupportedAction {
 		t.Fatalf("unexpected result: %q", result.Message)
 	}
 }
@@ -270,13 +256,13 @@ func TestDefaultFormatter(t *testing.T) {
 		t.Fatalf("expected no-result format to fail")
 	}
 
-	results[0] = ActionResult{OK: true, Message: "one"}
-	if result := formatter.Format(Plan{}, results, 1, SafetyDecision{}); result.Message != "one" {
+	results[0] = ActionResult{OK: true, Message: MessageOne}
+	if result := formatter.Format(Plan{}, results, 1, SafetyDecision{}); result.Message != MessageOne {
 		t.Fatalf("expected single result message, got %q", result.Message)
 	}
 
-	results[1] = ActionResult{OK: true, Message: "two"}
-	if result := formatter.Format(Plan{}, results, 2, SafetyDecision{}); !result.OK || result.Message != "agent: completed plan" {
+	results[1] = ActionResult{OK: true, Message: MessageTwo}
+	if result := formatter.Format(Plan{}, results, 2, SafetyDecision{}); !result.OK || result.Message != MessageCompletedPlan {
 		t.Fatalf("unexpected multi result: %+v", result)
 	}
 }
@@ -306,19 +292,90 @@ func TestDeterministicPlannerRecognizesHelpAndDefaultsSafely(t *testing.T) {
 	}
 }
 
+func TestDeterministicPlannerBuildsTargetedFilePlans(t *testing.T) {
+	tests := []struct {
+		input  string
+		intent IntentKind
+		action ActionKind
+		risk   RiskLevel
+		target string
+	}{
+		{input: "read notes", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "notes"},
+		{input: "cat notes", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "notes"},
+		{input: "delete notes", intent: IntentDeleteFile, action: ActionDeleteFile, risk: RiskRisky, target: "notes"},
+		{input: "stat notes", intent: IntentStatFile, action: ActionStatFile, risk: RiskSafe, target: "notes"},
+		{input: "mode deterministic", intent: IntentSetMode, action: ActionSetMode, risk: RiskSafe, target: "deterministic"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := DeterministicPlanner{}.Plan(tt.input, nil)
+			if !result.OK {
+				t.Fatalf("expected deterministic plan to succeed")
+			}
+			action := result.Plan.Actions[0]
+			if result.Plan.Intent != tt.intent || action.Kind != tt.action || action.Risk != tt.risk {
+				t.Fatalf("unexpected plan: intent=%v action=%v risk=%v", result.Plan.Intent, action.Kind, action.Risk)
+			}
+			if action.TargetLen != len(tt.target) {
+				t.Fatalf("target length = %d, expected %d", action.TargetLen, len(tt.target))
+			}
+			for i := 0; i < action.TargetLen; i++ {
+				if action.Target[i] != tt.target[i] {
+					t.Fatalf("target byte %d = %q, expected %q", i, action.Target[i], tt.target[i])
+				}
+			}
+		})
+	}
+}
+
+func TestDeterministicPlannerRecognizesHistoryAndMode(t *testing.T) {
+	tests := []struct {
+		input  string
+		intent IntentKind
+		action ActionKind
+	}{
+		{input: "show history", intent: IntentShowHistory, action: ActionShowHistory},
+		{input: "mode", intent: IntentSetMode, action: ActionSetMode},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := DeterministicPlanner{}.Plan(tt.input, nil)
+			if !result.OK {
+				t.Fatalf("expected deterministic plan to succeed")
+			}
+			action := result.Plan.Actions[0]
+			if result.Plan.Intent != tt.intent || action.Kind != tt.action {
+				t.Fatalf("unexpected plan: intent=%v action=%v", result.Plan.Intent, action.Kind)
+			}
+		})
+	}
+}
+
+func TestDeterministicPlannerLeavesTargetEmptyWhenMissing(t *testing.T) {
+	result := DeterministicPlanner{}.Plan("read", nil)
+	if !result.OK {
+		t.Fatalf("expected deterministic plan to succeed")
+	}
+	if result.Plan.Actions[0].TargetLen != 0 {
+		t.Fatalf("expected empty target, got len=%d", result.Plan.Actions[0].TargetLen)
+	}
+}
+
 func TestLLMPlannerPropagatesBridgeFailure(t *testing.T) {
-	result := LLMPlanner{Bridge: failingBridge{reason: "bridge timeout"}}.Plan("show files", nil)
+	result := LLMPlanner{Bridge: failingBridge{reason: MessageBridgeTimeout}}.Plan("show files", nil)
 	if result.OK {
 		t.Fatalf("expected bridge failure")
 	}
-	if result.Reason != "bridge timeout" {
+	if result.Reason != MessageBridgeTimeout {
 		t.Fatalf("unexpected bridge failure: %q", result.Reason)
 	}
 }
 
 func TestLLMPlannerDefaultsEmptyBridgeFailureReason(t *testing.T) {
 	result := LLMPlanner{Bridge: failingBridge{}}.Plan("show files", nil)
-	if result.Reason != "agent: llm bridge failed" {
+	if result.Reason != MessageLLMBridgeFailed {
 		t.Fatalf("unexpected bridge failure: %q", result.Reason)
 	}
 }
@@ -326,7 +383,7 @@ func TestLLMPlannerDefaultsEmptyBridgeFailureReason(t *testing.T) {
 func TestResponseAddTraceStopsAtCapacity(t *testing.T) {
 	var response Response
 	for i := 0; i < MaxTraceEntries+2; i++ {
-		response.AddTrace("stage", "detail")
+		response.AddTrace(TracePlanner, TraceDetailOK)
 	}
 	if response.TraceCount != MaxTraceEntries {
 		t.Fatalf("expected trace count %d, got %d", MaxTraceEntries, response.TraceCount)
@@ -336,7 +393,7 @@ func TestResponseAddTraceStopsAtCapacity(t *testing.T) {
 func TestContextRememberRollsRecentItems(t *testing.T) {
 	var context Context
 	for i := 0; i < MaxRecentItems+1; i++ {
-		context.Remember("input", "result", IntentShowHelp)
+		context.Remember(IntentShowHelp)
 	}
 	if context.RecentCount != MaxRecentItems {
 		t.Fatalf("expected recent count %d, got %d", MaxRecentItems, context.RecentCount)
@@ -350,10 +407,10 @@ func TestEnumStrings(t *testing.T) {
 	if PlannerModeDeterministic.String() != "deterministic" || PlannerModeLLM.String() != "llm" || PlannerMode(99).String() != stringUnknown {
 		t.Fatalf("unexpected planner mode strings")
 	}
-	if IntentReadFile.String() != stringReadFile || IntentWriteFile.String() != stringWriteFile || IntentDeleteFile.String() != stringDeleteFile || IntentKind(99).String() != stringUnknown {
+	if IntentReadFile.String() != stringReadFile || IntentWriteFile.String() != stringWriteFile || IntentDeleteFile.String() != stringDeleteFile || IntentShowHistory.String() != "show_history" || IntentSetMode.String() != "set_mode" || IntentKind(99).String() != stringUnknown {
 		t.Fatalf("unexpected intent strings")
 	}
-	if ActionNone.String() != stringNone || ActionDeleteFile.String() != stringDeleteFile || ActionKind(99).String() != stringNone {
+	if ActionNone.String() != stringNone || ActionDeleteFile.String() != stringDeleteFile || ActionShowHistory.String() != "show_history" || ActionSetMode.String() != "set_mode" || ActionKind(99).String() != stringNone {
 		t.Fatalf("unexpected action strings")
 	}
 	if RiskSafe.String() != "safe" || RiskRisky.String() != "risky" {
@@ -362,22 +419,6 @@ func TestEnumStrings(t *testing.T) {
 	if SafetyAllowed.String() != "allowed" || SafetyConfirmationRequired.String() != "confirmation_required" || SafetyRejected.String() != "rejected" {
 		t.Fatalf("unexpected safety strings")
 	}
-}
-
-type staticPlanner struct {
-	plan Plan
-}
-
-func (p staticPlanner) Plan(input string, context *Context) PlanningResult {
-	return successfulPlan(p.plan)
-}
-
-type failingPlanner struct {
-	reason string
-}
-
-func (p failingPlanner) Plan(input string, context *Context) PlanningResult {
-	return PlanningResult{OK: false, Reason: p.reason}
 }
 
 type fakeBridge struct {
@@ -389,7 +430,7 @@ func (b fakeBridge) Plan(input string, context *Context) PlanningResult {
 }
 
 type failingBridge struct {
-	reason string
+	reason MessageKind
 }
 
 func (b failingBridge) Plan(input string, context *Context) PlanningResult {
