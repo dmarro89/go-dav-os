@@ -42,6 +42,7 @@ func Main(multibootInfoAddr uint64) {
 	scheduler.Init()
 
 	fs.Init()
+	shell.ConfigureAgentRuntime()
 
 	InitKeyboard()
 

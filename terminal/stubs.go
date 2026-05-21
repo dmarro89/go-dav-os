@@ -5,6 +5,7 @@ package terminal
 var vgaBuffer *[25][80]uint16
 var cursorRow int
 var cursorCol int
+var output string
 
 func outb(port uint16, value byte) {}
 
@@ -14,6 +15,7 @@ func Init() {
 	vgaBuffer = new([25][80]uint16)
 	cursorRow = 0
 	cursorCol = 0
+	output = ""
 }
 
 func Clear() {
@@ -28,12 +30,28 @@ func Clear() {
 	cursorCol = 0
 }
 
-func PutRune(ch rune) {}
+func PutRune(ch rune) {
+	output += string(ch)
+}
 
-func Print(s string) {}
+func Print(s string) {
+	output += s
+}
 
 func PrintAt(col, row int, s string) {}
 
-func Backspace() {}
+func Backspace() {
+	if len(output) > 0 {
+		output = output[:len(output)-1]
+	}
+}
 
 func PrintInt(v int) {}
+
+func ResetOutputForTesting() {
+	output = ""
+}
+
+func OutputForTesting() string {
+	return output
+}
