@@ -16,7 +16,7 @@ const (
 	maxLine              = 128
 	osName               = "DavOS"
 	maxDistanceThreshold = 3
-	osVersion            = "0.2.0"
+	osVersion            = "0.0.5"
 	commandHelp          = "help"
 	commandHistory       = "history"
 )
