@@ -474,7 +474,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "show version",
 			input: "agent show version",
-			want:  "DavOS 0.2.0 (64bit)\nagent: version shown\n",
+			want:  "DavOS 0.0.5 (64bit)\nagent: version shown\n",
 		},
 		{
 			name:  "show ticks",
