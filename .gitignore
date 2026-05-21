@@ -36,3 +36,6 @@ build/
 
 # Project files
 qemu.log
+*.log
+*.img
+*.pyc
