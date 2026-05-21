@@ -180,27 +180,15 @@ func updateCursor() {
 	outb(vgaCursorDataPort, byte((pos>>8)&0xFF))
 }
 
-// PrintInt prints an integer value to the terminal
+// PrintInt prints an integer value to the terminal.
+//
+// The decimal-formatting work lives in FormatInt so it can be unit-tested
+// without standing up VGA memory; PrintInt is now a thin adapter that
+// emits each byte through PutRune.
 func PrintInt(v int) {
-	if v < 0 {
-		PutRune('-')
-		v = -v
-	}
-	if v == 0 {
-		PutRune('0')
-		return
-	}
-	var buf [20]byte
-	i := 0
-	val := uint64(v) // handle int conversion safely
-	for val > 0 {
-		buf[i] = byte('0' + (val % 10))
-		val /= 10
-		i++
-	}
-	for i > 0 {
-		i--
-		PutRune(rune(buf[i]))
+	buf, start := FormatInt(v)
+	for _, b := range buf[start:] {
+		PutRune(rune(b))
 	}
 }
 
