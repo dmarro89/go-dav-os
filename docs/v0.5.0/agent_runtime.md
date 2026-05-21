@@ -44,6 +44,11 @@ The LLM planner does not silently fall back to deterministic mode. If the bridge
 is not configured or returns an error, planning fails and the runtime returns
 that error before validation, safety evaluation, or execution.
 
+The host bridge JSON contract is documented in
+[`llm_bridge_protocol.md`](./llm_bridge_protocol.md). That protocol carries
+structured requests, lightweight context, an explicit action allow list, and
+typed plan responses. It does not permit raw shell command execution.
+
 ## Initial Integration Direction
 
 The first shell-facing integration should wire a narrow `AllowedActionExecutor`
