@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+func formatIntString(v int) string {
+	buf, start := FormatInt(v)
+	return string(buf[start:])
+}
+
 // FormatInt drives PrintInt's decimal output. The cases below cover the
 // branches PrintInt used to handle inline (zero, positive, negative) plus
 // the two int-range edges that exercised the prior `v = -v` overflow.
@@ -26,7 +31,7 @@ func TestFormatInt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := string(FormatInt(tt.in))
+			got := formatIntString(tt.in)
 			if got != tt.want {
 				t.Fatalf("FormatInt(%d) = %q, want %q", tt.in, got, tt.want)
 			}
@@ -39,7 +44,7 @@ func TestFormatInt(t *testing.T) {
 // This is implicitly required by `PutRune(rune(buf[i]))` in PrintInt.
 func TestFormatIntReturnsAsciiDigitsOnly(t *testing.T) {
 	for _, v := range []int{0, 1, -1, 42, -42, 1_000_000, -1_000_000, math.MaxInt64, math.MinInt64} {
-		got := FormatInt(v)
+		got := formatIntString(v)
 		for i, b := range got {
 			if i == 0 && b == '-' && v < 0 {
 				continue

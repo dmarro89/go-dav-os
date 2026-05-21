@@ -186,7 +186,8 @@ func updateCursor() {
 // without standing up VGA memory; PrintInt is now a thin adapter that
 // emits each byte through PutRune.
 func PrintInt(v int) {
-	for _, b := range FormatInt(v) {
+	buf, start := FormatInt(v)
+	for _, b := range buf[start:] {
 		PutRune(rune(b))
 	}
 }

@@ -1,14 +1,13 @@
 package terminal
 
-// FormatInt formats v as a base-10 string of bytes, with a leading '-' for
-// negative values.
-//
-// PrintInt and the testing stub both delegate the formatting work to this
-// function so the integer-to-decimal conversion can be tested without
-// touching VGA memory or the I/O ports backing PutRune.
-func FormatInt(v int) []byte {
+// FormatInt formats v as base-10 ASCII bytes, with a leading '-' for negatives.
+// It returns the populated buffer and the offset at which valid bytes begin.
+func FormatInt(v int) (buf [20]byte, start int) {
+	start = len(buf)
 	if v == 0 {
-		return []byte{'0'}
+		start--
+		buf[start] = '0'
+		return buf, start
 	}
 
 	negative := v < 0
@@ -22,22 +21,15 @@ func FormatInt(v int) []byte {
 		u = uint64(v)
 	}
 
-	// 20 bytes covers every uint64 decimal representation; +1 byte for the
-	// optional '-' sign.
-	var rev [20]byte
-	n := 0
 	for u > 0 {
-		rev[n] = byte('0' + (u % 10))
+		start--
+		buf[start] = byte('0' + (u % 10))
 		u /= 10
-		n++
 	}
 
-	out := make([]byte, 0, n+1)
 	if negative {
-		out = append(out, '-')
+		start--
+		buf[start] = '-'
 	}
-	for i := n - 1; i >= 0; i-- {
-		out = append(out, rev[i])
-	}
-	return out
+	return buf, start
 }
