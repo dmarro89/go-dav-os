@@ -46,7 +46,7 @@ Fields:
 - `context.lastAction`: optional string using the same names as `action`.
 - `context.lastSummary`: optional short human-readable summary of the last result.
 - `context.requestCount`: optional monotonic count of Agent requests in this session.
-- `allowedActions`: required list of action names the bridge may return.
+- `allowedActions`: required list of executable action names the bridge may return.
 
 The request does not contain shell command text, shell history replay commands,
 or an unconstrained tool list.
@@ -66,7 +66,8 @@ or an unconstrained tool list.
 Fields:
 
 - `intent`: required intent name.
-- `action`: required action name. It must appear in `allowedActions`.
+- `action`: required action name. It must appear in `allowedActions`, except for
+  the non-executable fallback action `unknown`.
 - `args`: optional list of strings. v0.5.0 uses at most one argument as a target
   name for file and mode actions.
 - `risk`: required risk level, either `safe` or `risky`.
@@ -108,7 +109,8 @@ show_memory_map
 ```
 
 The kernel may provide a smaller `allowedActions` list for a specific request.
-The bridge must choose from that list or return `unknown`.
+The bridge must choose from that list, or return `intent: "unknown"` and
+`action: "unknown"` when no allowed action matches the request.
 
 Risk levels:
 
@@ -126,7 +128,7 @@ The host integration must reject a bridge response safely when any of these are
 true:
 
 - required fields are missing or have the wrong JSON type
-- `action` is not in `allowedActions`
+- `action` is not in `allowedActions` and is not `unknown`
 - `action` is not a known Agent action
 - `intent` is not a known Agent intent
 - `risk` is not `safe` or `risky`
