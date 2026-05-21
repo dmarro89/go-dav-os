@@ -14,6 +14,8 @@
         <link rel="prev" href="agentic_os.html">
       
       
+        <link rel="next" href="llm_bridge_protocol.html">
+      
       
         
       
@@ -604,6 +606,33 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="llm_bridge_protocol.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 LLM Bridge Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -727,6 +756,10 @@ closed when a handler is not wired. Risky actions such as deletion are marked as
 <p>The LLM planner does not silently fall back to deterministic mode. If the bridge
 is not configured or returns an error, planning fails and the runtime returns
 that error before validation, safety evaluation, or execution.</p>
+<p>The host bridge JSON contract is documented in
+<a href="llm_bridge_protocol.html"><code>llm_bridge_protocol.md</code></a>. That protocol carries
+structured requests, lightweight context, an explicit action allow list, and
+typed plan responses. It does not permit raw shell command execution.</p>
 <h2 id="initial-integration-direction">Initial Integration Direction</h2>
 <p>The first shell-facing integration should wire a narrow <code>AllowedActionExecutor</code>
 to existing filesystem helpers. The deterministic planner can prove the flow in
