@@ -68,7 +68,6 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 	if runtime == nil {
 		runtimeAgent.Executor.ListFiles = nil
 		runtimeAgent.Executor.ReadFile = nil
-		runtimeAgent.Executor.WriteFile = nil
 		runtimeAgent.Executor.DeleteFile = nil
 		runtimeAgent.Executor.StatFile = nil
 		runtimeAgent.Executor.ShowHelp = nil
@@ -82,7 +81,6 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 	}
 	runtimeAgent.Executor.ListFiles = runtime.Executor.ListFiles
 	runtimeAgent.Executor.ReadFile = runtime.Executor.ReadFile
-	runtimeAgent.Executor.WriteFile = runtime.Executor.WriteFile
 	runtimeAgent.Executor.DeleteFile = runtime.Executor.DeleteFile
 	runtimeAgent.Executor.StatFile = runtime.Executor.StatFile
 	runtimeAgent.Executor.ShowHelp = runtime.Executor.ShowHelp
@@ -97,7 +95,6 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 func ConfigureAgentRuntime() {
 	runtimeAgent.Executor.ListFiles = agentListFiles
 	runtimeAgent.Executor.ReadFile = agentReadFile
-	runtimeAgent.Executor.WriteFile = nil
 	runtimeAgent.Executor.DeleteFile = agentDeleteFile
 	runtimeAgent.Executor.StatFile = agentStatFile
 	runtimeAgent.Executor.ShowHelp = agentShowHelp

@@ -9,7 +9,6 @@ func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
 	var runtime Runtime
 	runtime.Executor.ListFiles = executor.ListFiles
 	runtime.Executor.ReadFile = executor.ReadFile
-	runtime.Executor.WriteFile = executor.WriteFile
 	runtime.Executor.DeleteFile = executor.DeleteFile
 	runtime.Executor.StatFile = executor.StatFile
 	runtime.Executor.ShowHelp = executor.ShowHelp
@@ -140,7 +139,7 @@ func validatePlan(plan Plan) ValidationResult {
 		if !action.Kind.Valid() {
 			return ValidationResult{OK: false, Reason: MessagePlanContainsUnsupportedAction}
 		}
-		if !validRiskLevel(action.Risk) {
+		if action.Risk != action.Kind.ExpectedRisk() {
 			return ValidationResult{OK: false, Reason: MessageActionRiskInvalid}
 		}
 		if action.TargetLen < 0 || action.TargetLen > MaxNameLen {

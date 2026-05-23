@@ -8,7 +8,6 @@ type ActionHandler func(action Action, context *Context) ActionResult
 type AllowedActionExecutor struct {
 	ListFiles     ActionHandler
 	ReadFile      ActionHandler
-	WriteFile     ActionHandler
 	DeleteFile    ActionHandler
 	StatFile      ActionHandler
 	ShowHelp      ActionHandler
@@ -25,8 +24,7 @@ func (e AllowedActionExecutor) Execute(action Action, context *Context) ActionRe
 		return callHandler(e.ListFiles, action, context)
 	case ActionReadFile:
 		return callHandler(e.ReadFile, action, context)
-	case ActionWriteFile:
-		return callHandler(e.WriteFile, action, context)
+
 	case ActionDeleteFile:
 		return callHandler(e.DeleteFile, action, context)
 	case ActionStatFile:
