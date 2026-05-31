@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/dmarro89/go-dav-os/agent"
@@ -668,6 +669,111 @@ func TestEdgeCases(t *testing.T) {
 		// Should parse successfully but may overflow - just verify it doesn't crash
 		if !ok {
 			t.Errorf("parseDec should handle large numbers")
+		}
+	})
+}
+
+func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
+	fs.Init()
+	fs.SetupMockPFA()
+	SetTickProvider(func() uint64 { return 123 })
+	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+		SetTickProvider(nil)
+	})
+	historyBuf = [32][maxLine]byte{}
+	historyLen = [32]int{}
+	historyHead = 0
+	historyCount = 0
+
+	// 1. Write the file test.txt using fs.Write
+	fileName := "test.txt"
+	name := [16]byte{}
+	copy(name[:], fileName)
+	fileContent := "hello from the agent executor test!"
+	data := []byte(fileContent)
+	if !fs.Write(&name, len(fileName), &data[0], uint32(len(data))) {
+		t.Fatalf("failed to write test file")
+	}
+
+	// 2. Test reading the file
+	t.Run("read test.txt success", func(t *testing.T) {
+		terminal.Init()
+		terminal.ResetOutputForTesting()
+		setLineBuf("agent read test.txt")
+
+		execute()
+
+		want := fileContent + "\nagent: file read\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("execute(%q) output = %q, expected %q", "agent read test.txt", got, want)
+		}
+	})
+
+	// 3. Test stat file
+	t.Run("stat test.txt success", func(t *testing.T) {
+		terminal.Init()
+		terminal.ResetOutputForTesting()
+		setLineBuf("agent stat test.txt")
+
+		execute()
+
+		// The stat output lists: page=0x<something> size=<len>
+		// Let's verify it contains size=35
+		got := terminal.OutputForTesting()
+		wantSuffix := "size=35\nagent: file stat\n"
+		if !strings.HasSuffix(got, wantSuffix) || !strings.HasPrefix(got, "page=0x") {
+			t.Fatalf("execute(%q) output = %q, expected size=35 and agent: file stat", "agent stat test.txt", got)
+		}
+	})
+
+	// 4. Test delete without confirm (should prompt confirmation)
+	t.Run("delete test.txt requires confirmation", func(t *testing.T) {
+		terminal.Init()
+		terminal.ResetOutputForTesting()
+		setLineBuf("agent delete test.txt")
+
+		execute()
+
+		want := "agent: confirmation required\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("execute(%q) output = %q, expected %q", "agent delete test.txt", got, want)
+		}
+	})
+
+	// 5. Test delete with confirm
+	t.Run("delete test.txt with confirm success", func(t *testing.T) {
+		terminal.Init()
+		terminal.ResetOutputForTesting()
+		setLineBuf("agent delete test.txt confirm")
+
+		execute()
+
+		want := "ok\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("execute(%q) output = %q, expected %q", "agent delete test.txt confirm", got, want)
+		}
+
+		// Verify file is actually deleted in fs
+		_, _, ok := fs.Lookup(&name, len(fileName))
+		if ok {
+			t.Fatalf("expected file test.txt to be deleted from fs")
+		}
+	})
+
+	// 6. Test reading deleted file
+	t.Run("read deleted test.txt fails", func(t *testing.T) {
+		terminal.Init()
+		terminal.ResetOutputForTesting()
+		setLineBuf("agent read test.txt")
+
+		execute()
+
+		want := "agent: file not found\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("execute(%q) output = %q, expected %q", "agent read test.txt after delete", got, want)
 		}
 	})
 }
