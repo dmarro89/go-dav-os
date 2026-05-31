@@ -55,6 +55,7 @@ func (k ActionKind) Valid() bool {
 	switch k {
 	case ActionListFiles,
 		ActionReadFile,
+		ActionWriteFile,
 		ActionStatFile,
 		ActionShowHelp,
 		ActionShowHistory,

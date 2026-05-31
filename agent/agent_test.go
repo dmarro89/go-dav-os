@@ -180,6 +180,7 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 	executor := AllowedActionExecutor{
 		ListFiles:     handler(ActionListFiles),
 		ReadFile:      handler(ActionReadFile),
+		WriteFile:     handler(ActionWriteFile),
 		DeleteFile:    handler(ActionDeleteFile),
 		StatFile:      handler(ActionStatFile),
 		ShowHelp:      handler(ActionShowHelp),
@@ -193,6 +194,7 @@ func TestAllowedActionExecutorDispatchesAllActions(t *testing.T) {
 	actions := [...]ActionKind{
 		ActionListFiles,
 		ActionReadFile,
+		ActionWriteFile,
 		ActionDeleteFile,
 		ActionStatFile,
 		ActionShowHelp,
@@ -263,8 +265,8 @@ func TestDefaultValidatorRejectsMalformedPlans(t *testing.T) {
 		{name: "too many actions", plan: Plan{ActionCount: MaxActions + 1}},
 		{name: "target too long", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: MaxNameLen + 1})},
 		{name: "negative target", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: -1})},
-		{name: "data too long", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, DataLen: MaxDataLen + 1})},
-		{name: "negative data", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, DataLen: -1})},
+		{name: "data too long", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe, DataLen: MaxDataLen + 1})},
+		{name: "negative data", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe, DataLen: -1})},
 	}
 
 	for _, tt := range tests {
@@ -517,14 +519,10 @@ func TestValidatorRejectsRiskyActionMarkedAsSafe(t *testing.T) {
 	}
 }
 
-func TestValidatorRejectsWriteFileAction(t *testing.T) {
-	// ActionWriteFile is not in the allowlist (out of scope)
+func TestValidatorAcceptsWriteFileAction(t *testing.T) {
 	plan := singleActionPlan(PlannerModeLLM, IntentWriteFile, ActionWriteFile, RiskSafe)
 	result := DefaultValidator{}.Validate(plan)
-	if result.OK {
-		t.Fatalf("expected ActionWriteFile to be rejected as unsupported")
-	}
-	if result.Reason != MessagePlanContainsUnsupportedAction {
-		t.Fatalf("expected unsupported action reason, got %v", result.Reason)
+	if !result.OK {
+		t.Fatalf("expected ActionWriteFile to be accepted, got %v", result.Reason)
 	}
 }

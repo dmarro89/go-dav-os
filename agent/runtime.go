@@ -9,6 +9,7 @@ func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
 	var runtime Runtime
 	runtime.Executor.ListFiles = executor.ListFiles
 	runtime.Executor.ReadFile = executor.ReadFile
+	runtime.Executor.WriteFile = executor.WriteFile
 	runtime.Executor.DeleteFile = executor.DeleteFile
 	runtime.Executor.StatFile = executor.StatFile
 	runtime.Executor.ShowHelp = executor.ShowHelp
