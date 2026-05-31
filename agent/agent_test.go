@@ -265,8 +265,8 @@ func TestDefaultValidatorRejectsMalformedPlans(t *testing.T) {
 		{name: "too many actions", plan: Plan{ActionCount: MaxActions + 1}},
 		{name: "target too long", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: MaxNameLen + 1})},
 		{name: "negative target", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: -1})},
-		{name: "data too long", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe, DataLen: MaxDataLen + 1})},
-		{name: "negative data", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe, DataLen: -1})},
+		{name: "data too long", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskRisky, DataLen: MaxDataLen + 1})},
+		{name: "negative data", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskRisky, DataLen: -1})},
 	}
 
 	for _, tt := range tests {
@@ -520,7 +520,7 @@ func TestValidatorRejectsRiskyActionMarkedAsSafe(t *testing.T) {
 }
 
 func TestValidatorAcceptsWriteFileAction(t *testing.T) {
-	plan := singleActionPlan(PlannerModeLLM, IntentWriteFile, ActionWriteFile, RiskSafe)
+	plan := singleActionPlan(PlannerModeLLM, IntentWriteFile, ActionWriteFile, RiskRisky)
 	result := DefaultValidator{}.Validate(plan)
 	if !result.OK {
 		t.Fatalf("expected ActionWriteFile to be accepted, got %v", result.Reason)
