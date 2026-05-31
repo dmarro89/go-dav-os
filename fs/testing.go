@@ -15,5 +15,5 @@ func SetupMockPFA() {
 		mockPages = append(mockPages, page)
 		return uint64(uintptr(unsafe.Pointer(&page[0])))
 	}
-	freePage = func(page uint64) bool { return true }
+	freePage = func(_ uint64) bool { return true }
 }
