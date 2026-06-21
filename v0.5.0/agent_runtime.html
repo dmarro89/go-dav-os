@@ -735,7 +735,7 @@ never flows directly into shell execution.</p>
 </code></pre>
 <p>The package exposes typed <code>Plan</code> and <code>Action</code> values. There is no raw shell
 command field in an action. Shell integration must map known action kinds such
-as <code>list_files</code>, <code>read_file</code>, or <code>delete_file</code> onto explicit internal APIs.</p>
+as <code>list_files</code>, <code>read_file</code>, <code>write_file</code>, or <code>delete_file</code> onto explicit internal APIs.</p>
 <h2 id="components">Components</h2>
 <ul>
 <li><code>Planner</code>: converts user input and lightweight context into a typed plan.</li>
