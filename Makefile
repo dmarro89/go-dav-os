@@ -46,7 +46,7 @@ KEYBOARD_LAYOUT_SRCS := $(filter-out %_test.go, $(wildcard keyboard/layout/*.go)
 SHELL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard shell/*.go))
 AGENT_SRCS := $(filter-out %_test.go %stubs.go %_host.go %_llm.go, $(wildcard agent/*.go))
 MEM_SRCS       := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard mem/*.go))
-FS_SRCS   := $(filter-out %_test.go %stubs.go %_host.go, $(wildcard fs/*.go))
+FS_SRCS   := $(filter-out %_test.go %stubs.go %_host.go %testing.go, $(wildcard fs/*.go))
 ATA_SRCS  := drivers/ata/ata.go drivers/ata/ata_gccgo.go
 FAT16_SRCS := fs/fat16/fat16.go
 SCHEDULER_SRCS := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard kernel/scheduler/*.go))
@@ -306,6 +306,10 @@ docker-shell: docker-image
 # -----------------------
 # Unit tests and vet
 # -----------------------
+test:
+	mkdir -p $(BUILD_DIR)/.gocache
+	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing $(TEST_PKGS)
+
 vet:
 	mkdir -p $(BUILD_DIR)/.gocache
 	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go vet -tags testing -unsafeptr=false ./...

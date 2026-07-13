@@ -19,7 +19,7 @@ Planner
 
 The package exposes typed `Plan` and `Action` values. There is no raw shell
 command field in an action. Shell integration must map known action kinds such
-as `list_files`, `read_file`, or `delete_file` onto explicit internal APIs.
+as `list_files`, `read_file`, `write_file`, or `delete_file` onto explicit internal APIs.
 
 ## Components
 

@@ -265,8 +265,8 @@ func TestDefaultValidatorRejectsMalformedPlans(t *testing.T) {
 		{name: "too many actions", plan: Plan{ActionCount: MaxActions + 1}},
 		{name: "target too long", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: MaxNameLen + 1})},
 		{name: "negative target", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: -1})},
-		{name: "data too long", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: 1, DataLen: MaxDataLen + 1})},
-		{name: "negative data", plan: planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe, TargetLen: 1, DataLen: -1})},
+		{name: "data too long", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskRisky, DataLen: MaxDataLen + 1})},
+		{name: "negative data", plan: planWithAction(Action{Kind: ActionWriteFile, Risk: RiskRisky, DataLen: -1})},
 	}
 
 	for _, tt := range tests {
@@ -606,15 +606,22 @@ func planWithAction(action Action) Plan {
 	return plan
 }
 
-func planWithTargetAction(kind ActionKind, risk RiskLevel, target string) Plan {
-	plan := planWithAction(Action{Kind: kind, Risk: risk})
-	targetLen := len(target)
-	if targetLen > MaxNameLen {
-		targetLen = MaxNameLen
+func TestValidatorRejectsRiskyActionMarkedAsSafe(t *testing.T) {
+	// ActionDeleteFile is risky but the plan marks it as RiskSafe
+	plan := singleActionPlan(PlannerModeLLM, IntentDeleteFile, ActionDeleteFile, RiskSafe)
+	result := DefaultValidator{}.Validate(plan)
+	if result.OK {
+		t.Fatalf("expected plan with risky action marked as safe to be rejected")
 	}
-	plan.Actions[0].TargetLen = targetLen
-	for i := 0; i < targetLen; i++ {
-		plan.Actions[0].Target[i] = target[i]
+	if result.Reason != MessageActionRiskInvalid {
+		t.Fatalf("expected risk invalid reason, got %v", result.Reason)
 	}
-	return plan
+}
+
+func TestValidatorAcceptsWriteFileAction(t *testing.T) {
+	plan := singleActionPlan(PlannerModeLLM, IntentWriteFile, ActionWriteFile, RiskRisky)
+	result := DefaultValidator{}.Validate(plan)
+	if !result.OK {
+		t.Fatalf("expected ActionWriteFile to be accepted, got %v", result.Reason)
+	}
 }
