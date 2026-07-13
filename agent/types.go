@@ -53,11 +53,28 @@ const ActionNone = ActionUnknown
 
 func (k ActionKind) Valid() bool {
 	switch k {
-	case ActionListFiles, ActionReadFile, ActionWriteFile, ActionDeleteFile, ActionStatFile, ActionShowHelp, ActionShowHistory, ActionShowVersion, ActionShowTicks, ActionShowMemoryMap, ActionSetMode:
+	case ActionListFiles,
+		ActionReadFile,
+		ActionWriteFile,
+		ActionStatFile,
+		ActionShowHelp,
+		ActionShowHistory,
+		ActionShowVersion,
+		ActionShowTicks,
+		ActionShowMemoryMap,
+		ActionSetMode,
+		ActionDeleteFile:
 		return true
 	default:
 		return false
 	}
+}
+
+func (k ActionKind) ExpectedRisk() RiskLevel {
+	if k == ActionDeleteFile {
+		return RiskRisky
+	}
+	return RiskSafe
 }
 
 type RiskLevel uint8

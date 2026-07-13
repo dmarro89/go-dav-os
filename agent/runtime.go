@@ -140,7 +140,7 @@ func validatePlan(plan Plan) ValidationResult {
 		if !action.Kind.Valid() {
 			return ValidationResult{OK: false, Reason: MessagePlanContainsUnsupportedAction}
 		}
-		if !validRiskLevel(action.Risk) {
+		if action.Risk != action.Kind.ExpectedRisk() {
 			return ValidationResult{OK: false, Reason: MessageActionRiskInvalid}
 		}
 		if action.TargetLen < 0 || action.TargetLen > MaxNameLen {

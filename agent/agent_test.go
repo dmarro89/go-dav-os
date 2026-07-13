@@ -506,3 +506,23 @@ func planWithAction(action Action) Plan {
 	plan.Actions[0] = action
 	return plan
 }
+
+func TestValidatorRejectsRiskyActionMarkedAsSafe(t *testing.T) {
+	// ActionDeleteFile is risky but the plan marks it as RiskSafe
+	plan := singleActionPlan(PlannerModeLLM, IntentDeleteFile, ActionDeleteFile, RiskSafe)
+	result := DefaultValidator{}.Validate(plan)
+	if result.OK {
+		t.Fatalf("expected plan with risky action marked as safe to be rejected")
+	}
+	if result.Reason != MessageActionRiskInvalid {
+		t.Fatalf("expected risk invalid reason, got %v", result.Reason)
+	}
+}
+
+func TestValidatorAcceptsWriteFileAction(t *testing.T) {
+	plan := singleActionPlan(PlannerModeLLM, IntentWriteFile, ActionWriteFile, RiskSafe)
+	result := DefaultValidator{}.Validate(plan)
+	if !result.OK {
+		t.Fatalf("expected ActionWriteFile to be accepted, got %v", result.Reason)
+	}
+}

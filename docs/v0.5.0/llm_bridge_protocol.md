@@ -28,6 +28,7 @@ list.
   "allowedActions": [
     "list_files",
     "read_file",
+    "write_file",
     "stat_file",
     "delete_file",
     "show_history",
@@ -100,6 +101,7 @@ Supported bridge actions for v0.5.0:
 ```txt
 list_files
 read_file
+write_file
 stat_file
 delete_file
 show_history

@@ -97,7 +97,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 func ConfigureAgentRuntime() {
 	runtimeAgent.Executor.ListFiles = agentListFiles
 	runtimeAgent.Executor.ReadFile = agentReadFile
-	runtimeAgent.Executor.WriteFile = nil
+	runtimeAgent.Executor.WriteFile = agentWriteFile
 	runtimeAgent.Executor.DeleteFile = agentDeleteFile
 	runtimeAgent.Executor.StatFile = agentStatFile
 	runtimeAgent.Executor.ShowHelp = agentShowHelp
@@ -113,6 +113,7 @@ func NewAgentExecutor() agent.AllowedActionExecutor {
 	var executor agent.AllowedActionExecutor
 	executor.ListFiles = agentListFiles
 	executor.ReadFile = agentReadFile
+	executor.WriteFile = agentWriteFile
 	executor.DeleteFile = agentDeleteFile
 	executor.StatFile = agentStatFile
 	executor.ShowHelp = agentShowHelp
@@ -1059,6 +1060,20 @@ func agentReadFile(action agent.Action, _ *agent.Context) agent.ActionResult {
 	}
 	terminal.PutRune('\n')
 	return agent.ActionResult{OK: true, Message: agent.MessageFileRead}
+}
+
+func agentWriteFile(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.TargetLen <= 0 {
+		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
+	}
+	var dataPtr *byte
+	if action.DataLen > 0 {
+		dataPtr = &action.Data[0]
+	}
+	if !fs.Write(&action.Target, action.TargetLen, dataPtr, uint32(action.DataLen)) {
+		return agent.ActionResult{OK: false, Message: agent.MessageActionUnavailable}
+	}
+	return agent.ActionResult{OK: true, Message: agent.MessageOK}
 }
 
 func agentDeleteFile(action agent.Action, _ *agent.Context) agent.ActionResult {
