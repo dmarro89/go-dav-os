@@ -71,7 +71,7 @@ func (k ActionKind) Valid() bool {
 }
 
 func (k ActionKind) ExpectedRisk() RiskLevel {
-	if k == ActionDeleteFile {
+	if k == ActionDeleteFile || k == ActionWriteFile {
 		return RiskRisky
 	}
 	return RiskSafe
