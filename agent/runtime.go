@@ -137,10 +137,10 @@ func validatePlan(plan Plan) ValidationResult {
 	}
 	for i := 0; i < plan.ActionCount; i++ {
 		action := plan.Actions[i]
-		if !action.Kind.Valid() || !allowedPlanAction(action.Kind) {
+		if !action.Kind.Valid() || plan.Planner == PlannerModeLLM && !allowedPlanAction(action.Kind) {
 			return ValidationResult{OK: false, Reason: MessagePlanContainsUnsupportedAction}
 		}
-		if action.Risk != action.Kind.ExpectedRisk() {
+		if !validRiskLevel(action.Risk) {
 			return ValidationResult{OK: false, Reason: MessageActionRiskInvalid}
 		}
 		if action.TargetLen < 0 || action.TargetLen > MaxNameLen {
@@ -155,7 +155,7 @@ func validatePlan(plan Plan) ValidationResult {
 		if actionRequiresTarget(action.Kind) && action.TargetLen == 0 {
 			return ValidationResult{OK: false, Reason: MessageActionTargetInvalid}
 		}
-		if actionRisk(action.Kind) != action.Risk {
+		if plan.Planner == PlannerModeLLM && actionRisk(action.Kind) != action.Risk {
 			return ValidationResult{OK: false, Reason: MessageActionRiskInvalid}
 		}
 	}

@@ -141,6 +141,37 @@ func TestRuntimeReportsMissingExecutor(t *testing.T) {
 	}
 }
 
+func TestRunActionExecutesTypedWriteAction(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		WriteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+
+	response := runtime.RunAction(ActionWriteFile, IntentWriteFile, RiskSafe, nil, 0, nil)
+	if !response.Result.OK || !executed {
+		t.Fatalf("expected typed write action to execute, got %+v", response.Result)
+	}
+}
+
+func TestRunActionExecutesConfirmedDeleteAction(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		DeleteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+	target := [MaxNameLen]byte{'n', 'o', 't', 'e', 's'}
+
+	response := runtime.RunAction(ActionDeleteFile, IntentDeleteFile, RiskSafe, &target, 5, nil)
+	if !response.Result.OK || !executed {
+		t.Fatalf("expected confirmed delete action to execute, got %+v", response.Result)
+	}
+}
+
 func TestRuntimeStopsOnExecutorFailure(t *testing.T) {
 	response := NewDeterministicAgent(
 		AllowedActionExecutor{
@@ -287,32 +318,32 @@ func TestDefaultValidatorRejectsUnsafePlanShapes(t *testing.T) {
 	}{
 		{
 			name:   "action outside allowlist",
-			plan:   planWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe}),
+			plan:   llmPlanWithAction(Action{Kind: ActionWriteFile, Risk: RiskSafe}),
 			reason: MessagePlanContainsUnsupportedAction,
 		},
 		{
 			name:   "missing read target",
-			plan:   planWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe}),
+			plan:   llmPlanWithAction(Action{Kind: ActionReadFile, Risk: RiskSafe}),
 			reason: MessageActionTargetInvalid,
 		},
 		{
 			name:   "missing delete target",
-			plan:   planWithAction(Action{Kind: ActionDeleteFile, Risk: RiskRisky}),
+			plan:   llmPlanWithAction(Action{Kind: ActionDeleteFile, Risk: RiskRisky}),
 			reason: MessageActionTargetInvalid,
 		},
 		{
 			name:   "delete marked safe",
-			plan:   planWithTargetAction(ActionDeleteFile, RiskSafe, "notes"),
+			plan:   llmPlanWithTargetAction(ActionDeleteFile, RiskSafe, "notes"),
 			reason: MessageActionRiskInvalid,
 		},
 		{
 			name:   "read marked risky",
-			plan:   planWithTargetAction(ActionReadFile, RiskRisky, "notes"),
+			plan:   llmPlanWithTargetAction(ActionReadFile, RiskRisky, "notes"),
 			reason: MessageActionRiskInvalid,
 		},
 		{
 			name: "raw action data",
-			plan: planWithAction(Action{
+			plan: llmPlanWithAction(Action{
 				Kind:      ActionReadFile,
 				Risk:      RiskSafe,
 				TargetLen: 1,
@@ -616,5 +647,17 @@ func planWithTargetAction(kind ActionKind, risk RiskLevel, target string) Plan {
 	for i := 0; i < targetLen; i++ {
 		plan.Actions[0].Target[i] = target[i]
 	}
+	return plan
+}
+
+func llmPlanWithAction(action Action) Plan {
+	plan := planWithAction(action)
+	plan.Planner = PlannerModeLLM
+	return plan
+}
+
+func llmPlanWithTargetAction(kind ActionKind, risk RiskLevel, target string) Plan {
+	plan := planWithTargetAction(kind, risk, target)
+	plan.Planner = PlannerModeLLM
 	return plan
 }
