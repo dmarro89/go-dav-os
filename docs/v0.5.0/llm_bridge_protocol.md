@@ -147,3 +147,8 @@ must not be executed and must not be translated into shell input.
 The bridge is a planner only. It cannot execute, request arbitrary execution, or
 expand the action surface. The runtime validates the returned typed plan, runs
 the safety gate, and dispatches only through `AllowedActionExecutor`.
+
+## Fake Bridge
+
+For local testing without an LLM provider, use the deterministic fake bridge
+documented in [`fake_llm_bridge.md`](./fake_llm_bridge.md).

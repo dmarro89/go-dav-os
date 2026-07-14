@@ -17,3 +17,4 @@ nav:
   - v0.5.0 Agentic OS: v0.5.0/agentic_os.md
   - v0.5.0 Agent Runtime: v0.5.0/agent_runtime.md
   - v0.5.0 LLM Bridge Protocol: v0.5.0/llm_bridge_protocol.md
+  - v0.5.0 Fake LLM Bridge: v0.5.0/fake_llm_bridge.md
