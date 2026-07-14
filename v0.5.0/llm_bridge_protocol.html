@@ -14,6 +14,8 @@
         <link rel="prev" href="agent_runtime.html">
       
       
+        <link rel="next" href="fake_llm_bridge.html">
+      
       
         
       
@@ -645,10 +647,48 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#fake-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fake Bridge
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="fake_llm_bridge.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Fake LLM Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -739,6 +779,17 @@
     <span class="md-ellipsis">
       
         Security Invariant
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fake-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fake Bridge
       
     </span>
   </a>
@@ -883,6 +934,9 @@ must not be executed and must not be translated into shell input.</p>
 <p>The bridge is a planner only. It cannot execute, request arbitrary execution, or
 expand the action surface. The runtime validates the returned typed plan, runs
 the safety gate, and dispatches only through <code>AllowedActionExecutor</code>.</p>
+<h2 id="fake-bridge">Fake Bridge</h2>
+<p>For local testing without an LLM provider, use the deterministic fake bridge
+documented in <a href="fake_llm_bridge.html"><code>fake_llm_bridge.md</code></a>.</p>
 
 
 
