@@ -44,6 +44,7 @@ var (
 	historyCount int
 
 	runtimeAgent agent.Runtime
+	agentContext agent.Context
 )
 
 // maxHistory defines the maximum size of the history ring buffer
@@ -78,6 +79,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 		runtimeAgent.Executor.ShowMemoryMap = nil
 		runtimeAgent.Executor.SetMode = nil
 		runtimeAgent.ExecutorConfigured = false
+		agentContext = agent.Context{}
 		return
 	}
 	runtimeAgent.Executor.ListFiles = runtime.Executor.ListFiles
@@ -92,6 +94,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 	runtimeAgent.Executor.ShowMemoryMap = runtime.Executor.ShowMemoryMap
 	runtimeAgent.Executor.SetMode = runtime.Executor.SetMode
 	runtimeAgent.ExecutorConfigured = runtime.ExecutorConfigured
+	agentContext = agent.Context{}
 }
 
 func ConfigureAgentRuntime() {
@@ -127,6 +130,7 @@ func NewAgentExecutor() agent.AllowedActionExecutor {
 
 func Init() {
 	lineLen = 0
+	agentContext = agent.Context{}
 	terminal.Print("Welcome to " + osName + " " + osVersion + "\n")
 	terminal.Print(prompt)
 }
@@ -170,6 +174,12 @@ var targetLayout string
 func execute() {
 	start := trimLeft(0, lineLen)
 	end := trimRight(start, lineLen)
+	if agentContext.ConfirmationPending {
+		message := runtimeAgent.ConfirmActionMessage(start < end && matchLiteral(start, end, "yes"), &agentContext)
+		printAgentMessage(message)
+		terminal.PutRune('\n')
+		return
+	}
 	if start >= end {
 		return
 	}
@@ -822,12 +832,7 @@ func execute() {
 		} else if matchLiteral(a1s, a1e, "delete") {
 			a2s, a2e, ok := nextArg(a1e, end)
 			if !ok {
-				terminal.Print("Usage: agent delete <name> [confirm]\n")
-				return
-			}
-			a3s, a3e, confirmed := nextArg(a2e, end)
-			if confirmed && matchLiteral(a3s, a3e, "confirm") {
-				runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskSafe, a2s, a2e)
+				terminal.Print("Usage: agent delete <name>\n")
 				return
 			}
 			runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskRisky, a2s, a2e)
@@ -886,7 +891,7 @@ func execute() {
 }
 
 func runAgentNoTarget(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel) {
-	message := runtimeAgent.RunActionMessage(kind, intent, risk, nil, 0, nil)
+	message := runtimeAgent.RunActionMessage(kind, intent, risk, nil, 0, &agentContext)
 	printAgentMessage(message)
 	terminal.PutRune('\n')
 }
@@ -897,7 +902,12 @@ func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.R
 		terminal.Print("agent: invalid target\n")
 		return
 	}
-	message := runtimeAgent.RunActionMessage(kind, intent, risk, &tmpName, targetLen, nil)
+	message := runtimeAgent.RunActionMessage(kind, intent, risk, &tmpName, targetLen, &agentContext)
+	if message == agent.MessageConfirmationRequired && kind == agent.ActionDeleteFile {
+		terminal.Print("Agent understood: delete file \"")
+		printName(&tmpName, targetLen)
+		terminal.Print("\"\n")
+	}
 	printAgentMessage(message)
 	terminal.PutRune('\n')
 }
@@ -921,7 +931,9 @@ func printAgentMessage(message agent.MessageKind) {
 	case agent.MessageActionDataInvalid:
 		terminal.Print("agent: action data is invalid")
 	case agent.MessageConfirmationRequired:
-		terminal.Print("agent: confirmation required")
+		terminal.Print("This action may remove data.\nConfirm? type: yes")
+	case agent.MessageActionCancelled:
+		terminal.Print("agent: action cancelled")
 	case agent.MessageExecutorNotConfigured:
 		terminal.Print("agent: executor not configured")
 	case agent.MessageUnsupportedAction:
@@ -955,7 +967,7 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent show memorymap - Show memory map through the agent\n")
 		terminal.Print("  agent read <name>   - Read a file through the agent\n")
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
-		terminal.Print("  agent delete <name> confirm - Delete a file through the agent\n")
+		terminal.Print("  agent delete <name> - Delete a file after confirmation\n")
 		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
 		terminal.Print("  agent help          - Show agent commands")
 	case agent.MessageHistoryListed:

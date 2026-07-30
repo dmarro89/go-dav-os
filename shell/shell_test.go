@@ -500,12 +500,12 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing delete argument",
 			input: "agent delete",
-			want:  "Usage: agent delete <name> [confirm]\n",
+			want:  "Usage: agent delete <name>\n",
 		},
 		{
 			name:  "delete notes",
 			input: "agent delete notes",
-			want:  "agent: confirmation required\n",
+			want:  "Agent understood: delete file \"notes\"\nThis action may remove data.\nConfirm? type: yes\n",
 		},
 		{
 			name:  "missing stat argument",
@@ -525,7 +525,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
 		},
 	}
 
@@ -533,6 +533,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			terminal.ResetOutputForTesting()
+			agentContext = agent.Context{}
 			setLineBuf(tt.input)
 
 			execute()
@@ -609,7 +610,7 @@ func TestExecuteAgentShowFilesRunsConfiguredRuntime(t *testing.T) {
 	}
 }
 
-func TestExecuteAgentDeleteConfirmRunsConfiguredRuntime(t *testing.T) {
+func TestExecuteAgentDeleteConfirmationRunsConfiguredRuntime(t *testing.T) {
 	calls := 0
 	runtime := agent.NewDeterministicAgent(
 		agent.AllowedActionExecutor{
@@ -618,8 +619,8 @@ func TestExecuteAgentDeleteConfirmRunsConfiguredRuntime(t *testing.T) {
 				if action.Kind != agent.ActionDeleteFile {
 					t.Fatalf("unexpected action kind: %v", action.Kind)
 				}
-				if action.Risk != agent.RiskSafe {
-					t.Fatalf("expected confirmed delete to run as safe, got %v", action.Risk)
+				if action.Risk != agent.RiskRisky {
+					t.Fatalf("expected confirmed delete to remain risky, got %v", action.Risk)
 				}
 				return agent.ActionResult{OK: true, Message: agent.MessageOK}
 			},
@@ -632,15 +633,61 @@ func TestExecuteAgentDeleteConfirmRunsConfiguredRuntime(t *testing.T) {
 
 	terminal.Init()
 	terminal.ResetOutputForTesting()
-	setLineBuf("agent delete notes confirm")
+	setLineBuf("agent delete notes")
 
+	execute()
+
+	if calls != 0 {
+		t.Fatalf("delete action ran before confirmation")
+	}
+
+	terminal.ResetOutputForTesting()
+	setLineBuf("yes")
 	execute()
 
 	if calls != 1 {
 		t.Fatalf("expected delete action to run once, got %d", calls)
 	}
 	if got := terminal.OutputForTesting(); got != "ok\n" {
-		t.Fatalf("execute(%q) output = %q, expected %q", "agent delete notes confirm", got, "ok\n")
+		t.Fatalf("confirmation output = %q, expected %q", got, "ok\n")
+	}
+}
+
+func TestExecuteAgentDeleteCancellationKeepsShellUsable(t *testing.T) {
+	deleteCalls := 0
+	listCalls := 0
+	runtime := agent.NewDeterministicAgent(agent.AllowedActionExecutor{
+		DeleteFile: func(action agent.Action, context *agent.Context) agent.ActionResult {
+			deleteCalls++
+			return agent.ActionResult{OK: true, Message: agent.MessageOK}
+		},
+		ListFiles: func(action agent.Action, context *agent.Context) agent.ActionResult {
+			listCalls++
+			return agent.ActionResult{OK: true, Message: agent.MessageFilesListed}
+		},
+	})
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent delete notes")
+	execute()
+
+	terminal.ResetOutputForTesting()
+	setLineBuf("no")
+	execute()
+	if got := terminal.OutputForTesting(); got != "agent: action cancelled\n" || deleteCalls != 0 {
+		t.Fatalf("cancellation output = %q, delete calls = %d", got, deleteCalls)
+	}
+
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent show files")
+	execute()
+	if got := terminal.OutputForTesting(); got != "agent: files listed\n" || listCalls != 1 {
+		t.Fatalf("shell did not resume after cancellation: output=%q calls=%d", got, listCalls)
 	}
 }
 
@@ -729,7 +776,7 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 		}
 	})
 
-	// 4. Test delete without confirm (should prompt confirmation)
+	// 4. Test delete without confirmation (should prompt)
 	t.Run("delete test.txt requires confirmation", func(t *testing.T) {
 		terminal.Init()
 		terminal.ResetOutputForTesting()
@@ -737,23 +784,23 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 
 		execute()
 
-		want := "agent: confirmation required\n"
+		want := "Agent understood: delete file \"test.txt\"\nThis action may remove data.\nConfirm? type: yes\n"
 		if got := terminal.OutputForTesting(); got != want {
 			t.Fatalf("execute(%q) output = %q, expected %q", "agent delete test.txt", got, want)
 		}
 	})
 
-	// 5. Test delete with confirm
-	t.Run("delete test.txt with confirm success", func(t *testing.T) {
+	// 5. Confirm the pending delete
+	t.Run("delete test.txt with confirmation succeeds", func(t *testing.T) {
 		terminal.Init()
 		terminal.ResetOutputForTesting()
-		setLineBuf("agent delete test.txt confirm")
+		setLineBuf("yes")
 
 		execute()
 
 		want := "ok\n"
 		if got := terminal.OutputForTesting(); got != want {
-			t.Fatalf("execute(%q) output = %q, expected %q", "agent delete test.txt confirm", got, want)
+			t.Fatalf("execute(%q) output = %q, expected %q", "yes", got, want)
 		}
 
 		// Verify file is actually deleted in fs

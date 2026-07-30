@@ -133,6 +133,8 @@ func (m MessageKind) String() string {
 		return "agent: action data is invalid"
 	case MessageConfirmationRequired:
 		return "agent: confirmation required"
+	case MessageActionCancelled:
+		return "agent: action cancelled"
 	case MessageExecutorNotConfigured:
 		return "agent: executor not configured"
 	case MessageExecutorMissing:
@@ -160,7 +162,7 @@ func (m MessageKind) String() string {
 	case MessageFileNotFound:
 		return "agent: file not found"
 	case MessageAgentHelp:
-		return "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
+		return "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
 	case MessageHistoryListed:
 		return "agent: history listed"
 	case MessageVersionShown:

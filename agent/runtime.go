@@ -37,40 +37,44 @@ func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, t
 }
 
 func (r *Runtime) RunActionMessage(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) MessageKind {
-	if !kind.Valid() {
-		return MessagePlanContainsUnsupportedAction
-	}
-	if !validRiskLevel(risk) {
-		return MessageActionRiskInvalid
-	}
-	if targetLen < 0 || targetLen > MaxNameLen {
-		return MessageActionTargetInvalid
-	}
-	if risk == RiskRisky {
-		return MessageConfirmationRequired
-	}
-	if r == nil || !r.ExecutorConfigured {
+	if r == nil {
 		return MessageExecutorNotConfigured
 	}
+	return r.RunAction(kind, intent, risk, target, targetLen, context).Result.Message
+}
 
-	var action Action
-	action.Kind = kind
-	action.Risk = risk
-	if target != nil && targetLen > 0 {
-		action.TargetLen = targetLen
-		for i := 0; i < targetLen; i++ {
-			action.Target[i] = target[i]
-		}
+func (r *Runtime) ConfirmActionMessage(confirmed bool, context *Context) MessageKind {
+	if r == nil {
+		return MessageExecutorNotConfigured
+	}
+	return r.ConfirmAction(confirmed, context).Result.Message
+}
+
+func (r Runtime) ConfirmAction(confirmed bool, context *Context) Response {
+	var response Response
+	if context == nil || !context.ConfirmationPending {
+		setResponseResult(&response, false, MessageActionCancelled)
+		setSafety(&response, SafetyRejected, MessageActionCancelled)
+		return response
 	}
 
-	result := r.Executor.Execute(action, context)
-	if result.OK && context != nil {
-		context.Remember(intent)
+	plan := context.PendingPlan
+	context.PendingPlan = Plan{}
+	context.ConfirmationPending = false
+	if !confirmed {
+		setResponseResult(&response, false, MessageActionCancelled)
+		setSafety(&response, SafetyRejected, MessageActionCancelled)
+		response.AddTrace(TraceSafety, TraceDetailRejected)
+		return response
 	}
-	return result.Message
+	return r.runPlanWithConfirmation(plan, context, true)
 }
 
 func (r Runtime) runPlan(plan Plan, context *Context) Response {
+	return r.runPlanWithConfirmation(plan, context, false)
+}
+
+func (r Runtime) runPlanWithConfirmation(plan Plan, context *Context, confirmed bool) Response {
 	var response Response
 	response.AddTrace(TracePlanner, plannerTrace(plan.Planner))
 	response.AddTrace(TraceIntent, intentTrace(plan.Intent))
@@ -84,7 +88,7 @@ func (r Runtime) runPlan(plan Plan, context *Context) Response {
 	}
 	response.AddTrace(TraceValidation, TraceDetailOK)
 
-	safety := evaluateSafety(plan, context)
+	safety := evaluateSafetyWithConfirmation(plan, context, confirmed)
 	setSafety(&response, safety.Status, safety.Reason)
 	response.AddTrace(TraceSafety, safetyTrace(safety.Status))
 	if safety.Status != SafetyAllowed {
@@ -196,9 +200,20 @@ func validRiskLevel(risk RiskLevel) bool {
 	}
 }
 
-func evaluateSafety(plan Plan, _ *Context) SafetyDecision {
+func evaluateSafety(plan Plan, context *Context) SafetyDecision {
+	return evaluateSafetyWithConfirmation(plan, context, false)
+}
+
+func evaluateSafetyWithConfirmation(plan Plan, context *Context, confirmed bool) SafetyDecision {
 	for i := 0; i < plan.ActionCount; i++ {
 		if plan.Actions[i].Risk == RiskRisky {
+			if confirmed {
+				return SafetyDecision{Status: SafetyAllowed, Reason: MessageOK}
+			}
+			if context != nil {
+				context.PendingPlan = plan
+				context.ConfirmationPending = true
+			}
 			return SafetyDecision{Status: SafetyConfirmationRequired, Reason: MessageConfirmationRequired}
 		}
 	}
