@@ -40,6 +40,9 @@ func (r *Runtime) RunActionMessage(kind ActionKind, intent IntentKind, risk Risk
 	if r == nil {
 		return MessageExecutorNotConfigured
 	}
+	if targetLen < 0 || targetLen > MaxNameLen {
+		return MessageActionTargetInvalid
+	}
 	return r.RunAction(kind, intent, risk, target, targetLen, context).Result.Message
 }
 
