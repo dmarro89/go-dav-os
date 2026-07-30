@@ -185,6 +185,27 @@ func TestRuntimeExecutesConfirmedDeleteAction(t *testing.T) {
 	}
 }
 
+func TestRunActionMessageRejectsTooLongTarget(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		DeleteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+	target := [MaxNameLen]byte{}
+	var context Context
+
+	message := runtime.RunActionMessage(ActionDeleteFile, IntentDeleteFile, RiskRisky, &target, MaxNameLen+1, &context)
+
+	if message != MessageActionTargetInvalid {
+		t.Fatalf("expected invalid target message, got %v", message)
+	}
+	if executed || context.ConfirmationPending {
+		t.Fatalf("invalid action must not be queued or executed")
+	}
+}
+
 func TestRuntimeCancelsPendingAction(t *testing.T) {
 	executed := false
 	runtime := NewDeterministicAgent(AllowedActionExecutor{
