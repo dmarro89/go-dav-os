@@ -120,6 +120,17 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("version", ["DavOS 0.0.5 (64bit)"]),
             ("write notes hi", ["ok"]),
             ("agent show files", ["notes  size=2", "agent: files listed"]),
+            (
+                "agent context",
+                [
+                    "Agent context:",
+                    "last input: agent show files",
+                    "last intent: list_files",
+                    "last action: list_files",
+                    "request count: 1",
+                    "planner mode: deterministic",
+                ],
+            ),
             ("agent help", ["Agent commands:", "agent delete <name>"]),
             ("agent show history", ["agent: history listed"]),
             ("agent show version", ["DavOS 0.0.5 (64bit)", "agent: version shown"]),

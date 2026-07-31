@@ -6,6 +6,7 @@ const (
 	MaxNameLen      = 16
 	MaxDataLen      = 128
 	MaxRecentItems  = 4
+	MaxContextInput = 128
 )
 
 type PlannerMode uint8
@@ -237,10 +238,42 @@ func (r *Response) AddTrace(stage TraceKind, detail TraceDetail) {
 }
 
 type Context struct {
+	CurrentTask         ActionKind
+	LastInput           [MaxContextInput]byte
+	LastInputLen        int
 	LastIntent          IntentKind
+	LastAction          ActionKind
+	LastResultSummary   MessageKind
+	RequestCount        uint64
+	PlannerMode         PlannerMode
 	RecentCount         int
 	PendingPlan         Plan
 	ConfirmationPending bool
+}
+
+func (c *Context) BeginRequest(input *[MaxContextInput]byte, inputLen int, planner PlannerMode) {
+	if c == nil {
+		return
+	}
+	if inputLen < 0 {
+		inputLen = 0
+	}
+	if inputLen > MaxContextInput {
+		inputLen = MaxContextInput
+	}
+	if input == nil {
+		inputLen = 0
+	}
+	for i := 0; i < inputLen; i++ {
+		c.LastInput[i] = input[i]
+	}
+	c.LastInputLen = inputLen
+	c.RequestCount++
+	c.PlannerMode = planner
+	c.CurrentTask = ActionNone
+	if c.RecentCount < MaxRecentItems {
+		c.RecentCount++
+	}
 }
 
 func (c *Context) Remember(intent IntentKind) {

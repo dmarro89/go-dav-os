@@ -465,7 +465,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing command",
 			input: "agent",
-			want:  "Usage: agent <show|read|stat|delete|mode|help> [arg]\n",
+			want:  "Usage: agent <show|read|stat|delete|mode|context|help> [arg]\n",
 		},
 		{
 			name:  "missing show argument",
@@ -525,7 +525,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
 		},
 	}
 
@@ -575,6 +575,36 @@ func TestExecuteAgentShowFilesUsesDefaultRuntime(t *testing.T) {
 
 	if got := terminal.OutputForTesting(); got != "agent: no files\n" {
 		t.Fatalf("execute(%q) output = %q, expected %q", "agent show files", got, "agent: no files\n")
+	}
+}
+
+func TestExecuteAgentContextShowsSessionState(t *testing.T) {
+	fs.Init()
+	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent show files")
+	execute()
+
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent context")
+	execute()
+
+	want := "Agent context:\n" +
+		"  current task: none\n" +
+		"  last input: agent show files\n" +
+		"  last intent: list_files\n" +
+		"  last action: list_files\n" +
+		"  last result: agent: no files\n" +
+		"  request count: 1\n" +
+		"  planner mode: deterministic\n"
+	if got := terminal.OutputForTesting(); got != want {
+		t.Fatalf("agent context output = %q, expected %q", got, want)
 	}
 }
 
