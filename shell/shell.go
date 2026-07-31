@@ -1035,11 +1035,12 @@ func printAgentContext(context *agent.Context) {
 	terminal.Print("\n  last action: ")
 	printAgentContextKind(uint8(context.LastAction))
 	terminal.Print("\n  last result: ")
-	if context.LastResultSummary == agent.MessageNone {
+	switch context.LastResultSummary {
+	case agent.MessageNone:
 		terminal.Print("none")
-	} else if context.LastResultSummary == agent.MessageAgentHelp {
+	case agent.MessageAgentHelp:
 		terminal.Print("agent: help shown")
-	} else {
+	default:
 		printAgentMessage(context.LastResultSummary)
 	}
 	terminal.Print("\n  request count: ")
