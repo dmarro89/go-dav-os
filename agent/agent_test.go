@@ -43,7 +43,8 @@ func TestRuntimeRequiresConfirmationForRiskyPlan(t *testing.T) {
 		},
 	)
 
-	response := runtime.Run("delete notes", nil)
+	var context Context
+	response := runtime.Run("delete notes", &context)
 	if response.Safety.Status != SafetyConfirmationRequired {
 		t.Fatalf("expected confirmation_required, got %v", response.Safety.Status)
 	}
@@ -52,6 +53,9 @@ func TestRuntimeRequiresConfirmationForRiskyPlan(t *testing.T) {
 	}
 	if executed {
 		t.Fatalf("risky action executed without confirmation")
+	}
+	if !context.ConfirmationPending {
+		t.Fatalf("expected risky plan to remain pending")
 	}
 }
 
@@ -156,7 +160,32 @@ func TestRunActionExecutesTypedWriteAction(t *testing.T) {
 	}
 }
 
-func TestRunActionExecutesConfirmedDeleteAction(t *testing.T) {
+func TestRuntimeExecutesConfirmedDeleteAction(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		DeleteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			if action.Risk != RiskRisky {
+				t.Fatalf("confirmed action risk = %v, expected risky", action.Risk)
+			}
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+	target := [MaxNameLen]byte{'n', 'o', 't', 'e', 's'}
+	var context Context
+
+	response := runtime.RunAction(ActionDeleteFile, IntentDeleteFile, RiskRisky, &target, 5, &context)
+	if response.Safety.Status != SafetyConfirmationRequired || executed {
+		t.Fatalf("expected delete to wait for confirmation")
+	}
+
+	response = runtime.ConfirmAction(true, &context)
+	if !response.Result.OK || !executed {
+		t.Fatalf("expected confirmed delete action to execute, got %+v", response.Result)
+	}
+}
+
+func TestRunActionMessageRejectsTooLongTarget(t *testing.T) {
 	executed := false
 	runtime := NewDeterministicAgent(AllowedActionExecutor{
 		DeleteFile: func(action Action, context *Context) ActionResult {
@@ -164,11 +193,55 @@ func TestRunActionExecutesConfirmedDeleteAction(t *testing.T) {
 			return ActionResult{OK: true, Message: MessageOK}
 		},
 	})
-	target := [MaxNameLen]byte{'n', 'o', 't', 'e', 's'}
+	target := [MaxNameLen]byte{}
+	var context Context
 
-	response := runtime.RunAction(ActionDeleteFile, IntentDeleteFile, RiskSafe, &target, 5, nil)
-	if !response.Result.OK || !executed {
-		t.Fatalf("expected confirmed delete action to execute, got %+v", response.Result)
+	message := runtime.RunActionMessage(ActionDeleteFile, IntentDeleteFile, RiskRisky, &target, MaxNameLen+1, &context)
+
+	if message != MessageActionTargetInvalid {
+		t.Fatalf("expected invalid target message, got %v", message)
+	}
+	if executed || context.ConfirmationPending {
+		t.Fatalf("invalid action must not be queued or executed")
+	}
+}
+
+func TestRuntimeCancelsPendingAction(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		DeleteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+	var context Context
+
+	runtime.Run("delete notes", &context)
+	response := runtime.ConfirmAction(false, &context)
+
+	if response.Result.Message != MessageActionCancelled || executed || context.ConfirmationPending {
+		t.Fatalf("expected pending action to be cancelled")
+	}
+}
+
+func TestLLMPlanUsesSameConfirmationGate(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		DeleteFile: func(action Action, context *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageOK}
+		},
+	})
+	var context Context
+	plan := llmPlanWithTargetAction(ActionDeleteFile, RiskRisky, "notes")
+	plan.Intent = IntentDeleteFile
+
+	response := runtime.runPlan(plan, &context)
+	if response.Safety.Status != SafetyConfirmationRequired || executed {
+		t.Fatalf("expected LLM plan to wait for confirmation")
+	}
+	if response = runtime.ConfirmAction(true, &context); !response.Result.OK || !executed {
+		t.Fatalf("expected confirmed LLM plan to execute")
 	}
 }
 
@@ -608,7 +681,7 @@ func TestEnumStrings(t *testing.T) {
 }
 
 func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
-	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> confirm - Delete a file through the agent\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
+	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
 	if got := MessageAgentHelp.String(); got != want {
 		t.Fatalf("MessageAgentHelp.String() = %q, expected %q", got, want)
 	}

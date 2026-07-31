@@ -106,6 +106,7 @@ const (
 	MessageActionTargetInvalid
 	MessageActionDataInvalid
 	MessageConfirmationRequired
+	MessageActionCancelled
 	MessageExecutorNotConfigured
 	MessageExecutorMissing
 	MessageUnsupportedAction
@@ -236,8 +237,10 @@ func (r *Response) AddTrace(stage TraceKind, detail TraceDetail) {
 }
 
 type Context struct {
-	LastIntent  IntentKind
-	RecentCount int
+	LastIntent          IntentKind
+	RecentCount         int
+	PendingPlan         Plan
+	ConfirmationPending bool
 }
 
 func (c *Context) Remember(intent IntentKind) {
