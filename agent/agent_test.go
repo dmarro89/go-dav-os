@@ -178,10 +178,16 @@ func TestRuntimeExecutesConfirmedDeleteAction(t *testing.T) {
 	if response.Safety.Status != SafetyConfirmationRequired || executed {
 		t.Fatalf("expected delete to wait for confirmation")
 	}
+	if context.CurrentTask != ActionDeleteFile || context.LastResultSummary != MessageConfirmationRequired {
+		t.Fatalf("pending context was not recorded: %+v", context)
+	}
 
 	response = runtime.ConfirmAction(true, &context)
 	if !response.Result.OK || !executed {
 		t.Fatalf("expected confirmed delete action to execute, got %+v", response.Result)
+	}
+	if context.CurrentTask != ActionNone || context.LastResultSummary != MessageOK {
+		t.Fatalf("confirmed context was not completed: %+v", context)
 	}
 }
 
@@ -246,19 +252,23 @@ func TestLLMPlanUsesSameConfirmationGate(t *testing.T) {
 }
 
 func TestRuntimeStopsOnExecutorFailure(t *testing.T) {
+	var context Context
 	response := NewDeterministicAgent(
 		AllowedActionExecutor{
 			ReadFile: func(action Action, context *Context) ActionResult {
 				return ActionResult{OK: false, Message: MessageReadFailed}
 			},
 		},
-	).Run("read notes", nil)
+	).Run("read notes", &context)
 
 	if response.Result.OK {
 		t.Fatalf("expected executor failure")
 	}
 	if response.Result.Message != MessageReadFailed {
 		t.Fatalf("unexpected executor failure: %q", response.Result.Message)
+	}
+	if context.LastAction != ActionReadFile || context.LastResultSummary != MessageReadFailed || context.RequestCount != 1 {
+		t.Fatalf("executor failure was not recorded in context: %+v", context)
 	}
 }
 
@@ -662,6 +672,72 @@ func TestContextRememberRollsRecentItems(t *testing.T) {
 	}
 }
 
+func TestRuntimeUpdatesSessionContext(t *testing.T) {
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		ListFiles: func(action Action, context *Context) ActionResult {
+			if context.CurrentTask != ActionListFiles {
+				t.Fatalf("executor current task = %v, expected list files", context.CurrentTask)
+			}
+			return ActionResult{OK: true, Message: MessageFilesListed}
+		},
+	})
+	var input [MaxContextInput]byte
+	copy(input[:], "agent show files")
+	var context Context
+
+	response := runtime.RunActionRequest(
+		ActionListFiles,
+		IntentListFiles,
+		RiskSafe,
+		nil,
+		0,
+		&input,
+		len("agent show files"),
+		&context,
+	)
+
+	if !response.Result.OK {
+		t.Fatalf("expected successful response, got %+v", response)
+	}
+	if context.CurrentTask != ActionNone ||
+		context.LastIntent != IntentListFiles ||
+		context.LastAction != ActionListFiles ||
+		context.LastResultSummary != MessageFilesListed ||
+		context.RequestCount != 1 ||
+		context.PlannerMode != PlannerModeDeterministic ||
+		context.RecentCount != 1 {
+		t.Fatalf("unexpected context: %+v", context)
+	}
+	if got := string(context.LastInput[:context.LastInputLen]); got != "agent show files" {
+		t.Fatalf("last input = %q, expected %q", got, "agent show files")
+	}
+}
+
+func TestLLMPlannerForwardsSessionContext(t *testing.T) {
+	bridge := &contextBridge{
+		plan: singleActionPlan(PlannerModeLLM, IntentListFiles, ActionListFiles, RiskSafe),
+	}
+	context := Context{
+		LastIntent:        IntentReadFile,
+		LastAction:        ActionReadFile,
+		LastResultSummary: MessageFileRead,
+		RequestCount:      3,
+		PlannerMode:       PlannerModeDeterministic,
+	}
+
+	result := (LLMPlanner{Bridge: bridge}).Plan("show files", &context)
+
+	if !result.OK {
+		t.Fatalf("expected successful plan, got %+v", result)
+	}
+	if bridge.context != &context {
+		t.Fatalf("bridge did not receive the session context")
+	}
+	if bridge.context.RequestCount != 3 || bridge.context.LastAction != ActionReadFile {
+		t.Fatalf("bridge received unexpected context: %+v", bridge.context)
+	}
+}
+
 func TestEnumStrings(t *testing.T) {
 	if PlannerModeDeterministic.String() != "deterministic" || PlannerModeLLM.String() != "llm" || PlannerMode(99).String() != stringUnknown {
 		t.Fatalf("unexpected planner mode strings")
@@ -681,7 +757,7 @@ func TestEnumStrings(t *testing.T) {
 }
 
 func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
-	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
+	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
 	if got := MessageAgentHelp.String(); got != want {
 		t.Fatalf("MessageAgentHelp.String() = %q, expected %q", got, want)
 	}
@@ -692,6 +768,16 @@ type fakeBridge struct {
 }
 
 func (b fakeBridge) Plan(input string, context *Context) PlanningResult {
+	return successfulPlan(b.plan)
+}
+
+type contextBridge struct {
+	plan    Plan
+	context *Context
+}
+
+func (b *contextBridge) Plan(_ string, context *Context) PlanningResult {
+	b.context = context
 	return successfulPlan(b.plan)
 }
 

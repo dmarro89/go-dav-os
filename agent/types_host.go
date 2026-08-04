@@ -22,6 +22,18 @@ const (
 	stringRejected             = "rejected"
 )
 
+func (c *Context) BeginStringRequest(input string, planner PlannerMode) {
+	var request [MaxContextInput]byte
+	inputLen := len(input)
+	if inputLen > MaxContextInput {
+		inputLen = MaxContextInput
+	}
+	for i := 0; i < inputLen; i++ {
+		request[i] = input[i]
+	}
+	c.BeginRequest(&request, inputLen, planner)
+}
+
 func (m PlannerMode) String() string {
 	switch m {
 	case PlannerModeDeterministic:
@@ -162,7 +174,7 @@ func (m MessageKind) String() string {
 	case MessageFileNotFound:
 		return "agent: file not found"
 	case MessageAgentHelp:
-		return "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent help          - Show agent commands"
+		return "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
 	case MessageHistoryListed:
 		return "agent: history listed"
 	case MessageVersionShown:

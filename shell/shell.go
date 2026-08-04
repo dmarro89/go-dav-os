@@ -58,6 +58,21 @@ var commandBuf = [...]string{
 	"layout", "version", "run", "agent",
 }
 
+var agentContextKindNames = [...]string{
+	"none",
+	"list_files",
+	"read_file",
+	"write_file",
+	"delete_file",
+	"stat_file",
+	"show_help",
+	"show_history",
+	"show_version",
+	"show_ticks",
+	"show_memory_map",
+	"set_mode",
+}
+
 func SetTickProvider(fn func() uint64)        { getTicks = fn }
 func SetSyscallTickProvider(fn func() uint64) { getSyscallTicks = fn }
 func SetProgramRunner(fn func(name *[16]byte, nameLen int) (pid int, ok bool)) {
@@ -793,7 +808,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "agent") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: agent <show|read|stat|delete|mode|help> [arg]\n")
+			terminal.Print("Usage: agent <show|read|stat|delete|mode|context|help> [arg]\n")
 			return
 		}
 
@@ -804,19 +819,19 @@ func execute() {
 				return
 			}
 			if matchLiteral(a2s, a2e, "files") {
-				runAgentNoTarget(agent.ActionListFiles, agent.IntentListFiles, agent.RiskSafe)
+				runAgentNoTarget(agent.ActionListFiles, agent.IntentListFiles, agent.RiskSafe, start, end)
 				return
 			} else if matchLiteral(a2s, a2e, "history") {
-				runAgentNoTarget(agent.ActionShowHistory, agent.IntentShowHistory, agent.RiskSafe)
+				runAgentNoTarget(agent.ActionShowHistory, agent.IntentShowHistory, agent.RiskSafe, start, end)
 				return
 			} else if matchLiteral(a2s, a2e, "version") {
-				runAgentNoTarget(agent.ActionShowVersion, agent.IntentShowVersion, agent.RiskSafe)
+				runAgentNoTarget(agent.ActionShowVersion, agent.IntentShowVersion, agent.RiskSafe, start, end)
 				return
 			} else if matchLiteral(a2s, a2e, "ticks") {
-				runAgentNoTarget(agent.ActionShowTicks, agent.IntentShowTicks, agent.RiskSafe)
+				runAgentNoTarget(agent.ActionShowTicks, agent.IntentShowTicks, agent.RiskSafe, start, end)
 				return
 			} else if matchLiteral(a2s, a2e, "memorymap") || matchLiteral(a2s, a2e, "memory_map") {
-				runAgentNoTarget(agent.ActionShowMemoryMap, agent.IntentShowMemoryMap, agent.RiskSafe)
+				runAgentNoTarget(agent.ActionShowMemoryMap, agent.IntentShowMemoryMap, agent.RiskSafe, start, end)
 				return
 			}
 			terminal.Print("Usage: agent show <files|history|version|ticks|memorymap>\n")
@@ -827,7 +842,7 @@ func execute() {
 				terminal.Print("Usage: agent read <name>\n")
 				return
 			}
-			runAgentAction(agent.ActionReadFile, agent.IntentReadFile, agent.RiskSafe, a2s, a2e)
+			runAgentAction(agent.ActionReadFile, agent.IntentReadFile, agent.RiskSafe, a2s, a2e, start, end)
 			return
 		} else if matchLiteral(a1s, a1e, "delete") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -835,7 +850,7 @@ func execute() {
 				terminal.Print("Usage: agent delete <name>\n")
 				return
 			}
-			runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskRisky, a2s, a2e)
+			runAgentAction(agent.ActionDeleteFile, agent.IntentDeleteFile, agent.RiskRisky, a2s, a2e, start, end)
 			return
 		} else if matchLiteral(a1s, a1e, "stat") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -843,18 +858,21 @@ func execute() {
 				terminal.Print("Usage: agent stat <name>\n")
 				return
 			}
-			runAgentAction(agent.ActionStatFile, agent.IntentStatFile, agent.RiskSafe, a2s, a2e)
+			runAgentAction(agent.ActionStatFile, agent.IntentStatFile, agent.RiskSafe, a2s, a2e, start, end)
 			return
 		} else if matchLiteral(a1s, a1e, "mode") {
 			a2s, a2e, ok := nextArg(a1e, end)
 			if ok {
-				runAgentAction(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, a2s, a2e)
+				runAgentAction(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, a2s, a2e, start, end)
 				return
 			}
-			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe)
+			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, start, end)
+			return
+		} else if matchLiteral(a1s, a1e, "context") {
+			printAgentContext(&agentContext)
 			return
 		} else if matchLiteral(a1s, a1e, "help") {
-			runAgentNoTarget(agent.ActionShowHelp, agent.IntentShowHelp, agent.RiskSafe)
+			runAgentNoTarget(agent.ActionShowHelp, agent.IntentShowHelp, agent.RiskSafe, start, end)
 			return
 		}
 
@@ -890,19 +908,29 @@ func execute() {
 	terminal.PutRune('\n')
 }
 
-func runAgentNoTarget(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel) {
-	message := runtimeAgent.RunActionMessage(kind, intent, risk, nil, 0, &agentContext)
+func runAgentNoTarget(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel, inputStart, inputEnd int) {
+	var input [agent.MaxContextInput]byte
+	inputLen := inputEnd - inputStart
+	for i := 0; i < inputLen; i++ {
+		input[i] = lineBuf[inputStart+i]
+	}
+	message := runtimeAgent.RunActionRequestMessage(kind, intent, risk, nil, 0, &input, inputLen, &agentContext)
 	printAgentMessage(message)
 	terminal.PutRune('\n')
 }
 
-func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel, targetStart, targetEnd int) {
+func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.RiskLevel, targetStart, targetEnd, inputStart, inputEnd int) {
 	targetLen, ok := copyNameFromRange(targetStart, targetEnd)
 	if !ok {
 		terminal.Print("agent: invalid target\n")
 		return
 	}
-	message := runtimeAgent.RunActionMessage(kind, intent, risk, &tmpName, targetLen, &agentContext)
+	var input [agent.MaxContextInput]byte
+	inputLen := inputEnd - inputStart
+	for i := 0; i < inputLen; i++ {
+		input[i] = lineBuf[inputStart+i]
+	}
+	message := runtimeAgent.RunActionRequestMessage(kind, intent, risk, &tmpName, targetLen, &input, inputLen, &agentContext)
 	if message == agent.MessageConfirmationRequired && kind == agent.ActionDeleteFile {
 		terminal.Print("Agent understood: delete file \"")
 		printName(&tmpName, targetLen)
@@ -969,6 +997,7 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> - Delete a file after confirmation\n")
 		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
+		terminal.Print("  agent context       - Show current agent context\n")
 		terminal.Print("  agent help          - Show agent commands")
 	case agent.MessageHistoryListed:
 		terminal.Print("agent: history listed")
@@ -987,6 +1016,49 @@ func printAgentMessage(message agent.MessageKind) {
 	default:
 		return
 	}
+}
+
+func printAgentContext(context *agent.Context) {
+	terminal.Print("Agent context:\n")
+	terminal.Print("  current task: ")
+	printAgentContextKind(uint8(context.CurrentTask))
+	terminal.Print("\n  last input: ")
+	if context.LastInputLen == 0 {
+		terminal.Print("none")
+	} else {
+		for i := 0; i < context.LastInputLen; i++ {
+			terminal.PutRune(rune(context.LastInput[i]))
+		}
+	}
+	terminal.Print("\n  last intent: ")
+	printAgentContextKind(uint8(context.LastIntent))
+	terminal.Print("\n  last action: ")
+	printAgentContextKind(uint8(context.LastAction))
+	terminal.Print("\n  last result: ")
+	switch context.LastResultSummary {
+	case agent.MessageNone:
+		terminal.Print("none")
+	case agent.MessageAgentHelp:
+		terminal.Print("agent: help shown")
+	default:
+		printAgentMessage(context.LastResultSummary)
+	}
+	terminal.Print("\n  request count: ")
+	printUint(context.RequestCount)
+	terminal.Print("\n  planner mode: ")
+	if context.PlannerMode == agent.PlannerModeLLM {
+		terminal.Print("llm")
+	} else {
+		terminal.Print("deterministic")
+	}
+	terminal.PutRune('\n')
+}
+
+func printAgentContextKind(kind uint8) {
+	if int(kind) >= len(agentContextKindNames) {
+		kind = 0
+	}
+	terminal.Print(agentContextKindNames[kind])
 }
 
 func printHistory() {

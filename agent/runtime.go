@@ -23,6 +23,20 @@ func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
 }
 
 func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
+	if context != nil {
+		context.BeginRequest(nil, 0, PlannerModeDeterministic)
+	}
+	return r.runAction(kind, intent, risk, target, targetLen, context)
+}
+
+func (r Runtime) RunActionRequest(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, input *[MaxContextInput]byte, inputLen int, context *Context) Response {
+	if context != nil {
+		context.BeginRequest(input, inputLen, PlannerModeDeterministic)
+	}
+	return r.runAction(kind, intent, risk, target, targetLen, context)
+}
+
+func (r Runtime) runAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
 	plan := singleActionPlan(PlannerModeDeterministic, intent, kind, risk)
 	if target != nil && targetLen > 0 {
 		if targetLen > MaxNameLen {
@@ -44,6 +58,16 @@ func (r *Runtime) RunActionMessage(kind ActionKind, intent IntentKind, risk Risk
 		return MessageActionTargetInvalid
 	}
 	return r.RunAction(kind, intent, risk, target, targetLen, context).Result.Message
+}
+
+func (r *Runtime) RunActionRequestMessage(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, input *[MaxContextInput]byte, inputLen int, context *Context) MessageKind {
+	if r == nil {
+		return MessageExecutorNotConfigured
+	}
+	if targetLen < 0 || targetLen > MaxNameLen {
+		return MessageActionTargetInvalid
+	}
+	return r.RunActionRequest(kind, intent, risk, target, targetLen, input, inputLen, context).Result.Message
 }
 
 func (r *Runtime) ConfirmActionMessage(confirmed bool, context *Context) MessageKind {
@@ -68,7 +92,7 @@ func (r Runtime) ConfirmAction(confirmed bool, context *Context) Response {
 		setResponseResult(&response, false, MessageActionCancelled)
 		setSafety(&response, SafetyRejected, MessageActionCancelled)
 		response.AddTrace(TraceSafety, TraceDetailRejected)
-		return response
+		return finishPlanContext(response, context, plan)
 	}
 	return r.runPlanWithConfirmation(plan, context, true)
 }
@@ -87,31 +111,37 @@ func (r Runtime) runPlanWithConfirmation(plan Plan, context *Context, confirmed 
 		setResponseResult(&response, false, validation.Reason)
 		setSafety(&response, SafetyRejected, MessageValidationFailed)
 		response.AddTrace(TraceValidation, traceFromMessage(validation.Reason))
-		return response
+		return finishPlanContext(response, context, plan)
 	}
 	response.AddTrace(TraceValidation, TraceDetailOK)
+	if context != nil {
+		context.CurrentTask = plan.Actions[0].Kind
+	}
 
 	safety := evaluateSafetyWithConfirmation(plan, context, confirmed)
 	setSafety(&response, safety.Status, safety.Reason)
 	response.AddTrace(TraceSafety, safetyTrace(safety.Status))
 	if safety.Status != SafetyAllowed {
 		setResponseResult(&response, false, safety.Reason)
-		return response
+		return finishPlanContext(response, context, plan)
 	}
 
 	if !r.ExecutorConfigured {
 		setResponseResult(&response, false, MessageExecutorNotConfigured)
 		response.AddTrace(TraceExecutor, TraceDetailMissing)
-		return response
+		return finishPlanContext(response, context, plan)
 	}
 
 	var results [MaxActions]ActionResult
 	for i := 0; i < plan.ActionCount; i++ {
+		if context != nil {
+			context.CurrentTask = plan.Actions[i].Kind
+		}
 		results[i] = r.Executor.Execute(plan.Actions[i], context)
 		if !results[i].OK {
 			response.AddTrace(TraceExecutor, TraceDetailFailed)
 			setResponseResult(&response, results[i].OK, results[i].Message)
-			return response
+			return finishPlanContext(response, context, plan)
 		}
 	}
 	response.AddTrace(TraceExecutor, TraceDetailSuccess)
@@ -119,8 +149,26 @@ func (r Runtime) runPlanWithConfirmation(plan Plan, context *Context, confirmed 
 	result := formatResult(plan, results, plan.ActionCount, safety)
 	setResponseResult(&response, result.OK, result.Message)
 	response.AddTrace(TraceFormatter, TraceDetailStructured)
-	if context != nil {
-		context.Remember(plan.Intent)
+	return finishPlanContext(response, context, plan)
+}
+
+func finishPlanContext(response Response, context *Context, plan Plan) Response {
+	if context == nil {
+		return response
+	}
+	context.LastIntent = plan.Intent
+	context.LastAction = ActionNone
+	if plan.ActionCount > 0 {
+		actionIndex := plan.ActionCount - 1
+		if actionIndex >= MaxActions {
+			actionIndex = MaxActions - 1
+		}
+		context.LastAction = plan.Actions[actionIndex].Kind
+	}
+	context.LastResultSummary = response.Result.Message
+	context.PlannerMode = plan.Planner
+	if response.Safety.Status != SafetyConfirmationRequired {
+		context.CurrentTask = ActionNone
 	}
 	return response
 }
