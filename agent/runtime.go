@@ -5,7 +5,6 @@ type Runtime struct {
 	ExecutorConfigured bool
 	plannerMode        PlannerMode
 	llmConfigured      bool
-	llmPlan            func(string, *Context) PlanningResult
 }
 
 func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
@@ -63,12 +62,10 @@ func (r *Runtime) CopyPlannerConfiguration(source *Runtime) {
 	if source == nil {
 		r.plannerMode = PlannerModeDeterministic
 		r.llmConfigured = false
-		r.llmPlan = nil
 		return
 	}
 	r.plannerMode = source.plannerMode
 	r.llmConfigured = source.llmConfigured
-	r.llmPlan = source.llmPlan
 }
 
 func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
