@@ -4,7 +4,8 @@ type Runtime struct {
 	Executor           AllowedActionExecutor
 	ExecutorConfigured bool
 	plannerMode        PlannerMode
-	llmPlanner         Planner
+	llmConfigured      bool
+	llmPlan            func(string, *Context) PlanningResult
 }
 
 func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
@@ -45,7 +46,7 @@ func (r *Runtime) SetPlannerMode(mode PlannerMode) ActionResult {
 		r.plannerMode = PlannerModeDeterministic
 		return ActionResult{OK: true, Message: MessagePlannerSwitchedDeterministic}
 	case PlannerModeLLM:
-		if r.llmPlanner == nil || !r.llmPlanner.Available() {
+		if !r.llmConfigured {
 			return ActionResult{OK: false, Message: MessageLLMModeNotConfigured}
 		}
 		r.plannerMode = PlannerModeLLM
@@ -55,31 +56,19 @@ func (r *Runtime) SetPlannerMode(mode PlannerMode) ActionResult {
 	}
 }
 
-func (r *Runtime) ConfigureLLMPlanner(planner Planner) {
-	if r == nil {
-		return
-	}
-	if planner == nil || !planner.Available() {
-		r.llmPlanner = nil
-		if r.plannerMode == PlannerModeLLM {
-			r.plannerMode = PlannerModeDeterministic
-		}
-		return
-	}
-	r.llmPlanner = planner
-}
-
 func (r *Runtime) CopyPlannerConfiguration(source *Runtime) {
 	if r == nil {
 		return
 	}
 	if source == nil {
 		r.plannerMode = PlannerModeDeterministic
-		r.llmPlanner = nil
+		r.llmConfigured = false
+		r.llmPlan = nil
 		return
 	}
 	r.plannerMode = source.plannerMode
-	r.llmPlanner = source.llmPlanner
+	r.llmConfigured = source.llmConfigured
+	r.llmPlan = source.llmPlan
 }
 
 func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
