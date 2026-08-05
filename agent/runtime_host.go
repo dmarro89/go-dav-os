@@ -2,20 +2,22 @@
 
 package agent
 
+var configuredLLMPlanner Planner
+
 func (r *Runtime) ConfigureLLMPlanner(planner Planner) {
 	if r == nil {
 		return
 	}
 	if planner == nil || !planner.Available() {
+		configuredLLMPlanner = nil
 		r.llmConfigured = false
-		r.llmPlan = nil
 		if r.plannerMode == PlannerModeLLM {
 			r.plannerMode = PlannerModeDeterministic
 		}
 		return
 	}
+	configuredLLMPlanner = planner
 	r.llmConfigured = true
-	r.llmPlan = planner.Plan
 }
 
 func (r Runtime) Run(input string, context *Context) Response {
@@ -24,10 +26,10 @@ func (r Runtime) Run(input string, context *Context) Response {
 		context.BeginStringRequest(input, mode)
 	}
 	var planning PlanningResult
-	if mode == PlannerModeLLM && r.llmPlan == nil {
+	if mode == PlannerModeLLM && configuredLLMPlanner == nil {
 		planning = PlanningResult{OK: false, Reason: MessageLLMBridgeNotConfigured}
 	} else if mode == PlannerModeLLM {
-		planning = r.llmPlan(input, context)
+		planning = configuredLLMPlanner.Plan(input, context)
 	} else {
 		planning = deterministicPlan(input, context)
 	}
