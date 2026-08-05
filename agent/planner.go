@@ -1,10 +1,5 @@
 package agent
 
-type Planner interface {
-	Plan(input string, context *Context) PlanningResult
-	Available() bool
-}
-
 func singleActionPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel) Plan {
 	var plan Plan
 	plan.Planner = mode
