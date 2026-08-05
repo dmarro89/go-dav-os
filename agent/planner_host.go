@@ -2,6 +2,11 @@
 
 package agent
 
+type Planner interface {
+	Plan(input string, context *Context) PlanningResult
+	Available() bool
+}
+
 type DeterministicPlanner struct{}
 
 var _ Planner = DeterministicPlanner{}
