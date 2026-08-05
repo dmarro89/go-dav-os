@@ -3,6 +3,8 @@ package agent
 type Runtime struct {
 	Executor           AllowedActionExecutor
 	ExecutorConfigured bool
+	plannerMode        PlannerMode
+	llmPlanner         Planner
 }
 
 func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
@@ -19,25 +21,83 @@ func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
 	runtime.Executor.ShowMemoryMap = executor.ShowMemoryMap
 	runtime.Executor.SetMode = executor.SetMode
 	runtime.ExecutorConfigured = true
+	runtime.plannerMode = PlannerModeDeterministic
 	return runtime
+}
+
+func (r Runtime) PlannerMode() PlannerMode {
+	return r.plannerMode
+}
+
+func (r Runtime) CurrentPlanner() ActionResult {
+	if r.plannerMode == PlannerModeLLM {
+		return ActionResult{OK: true, Message: MessageLLMMode}
+	}
+	return ActionResult{OK: true, Message: MessageDeterministicMode}
+}
+
+func (r *Runtime) SetPlannerMode(mode PlannerMode) ActionResult {
+	if r == nil {
+		return ActionResult{OK: false, Message: MessagePlannerMissing}
+	}
+	switch mode {
+	case PlannerModeDeterministic:
+		r.plannerMode = PlannerModeDeterministic
+		return ActionResult{OK: true, Message: MessagePlannerSwitchedDeterministic}
+	case PlannerModeLLM:
+		if r.llmPlanner == nil || !r.llmPlanner.Available() {
+			return ActionResult{OK: false, Message: MessageLLMModeNotConfigured}
+		}
+		r.plannerMode = PlannerModeLLM
+		return ActionResult{OK: true, Message: MessagePlannerSwitchedLLM}
+	default:
+		return ActionResult{OK: false, Message: MessageUnsupportedMode}
+	}
+}
+
+func (r *Runtime) ConfigureLLMPlanner(planner Planner) {
+	if r == nil {
+		return
+	}
+	if planner == nil || !planner.Available() {
+		r.llmPlanner = nil
+		if r.plannerMode == PlannerModeLLM {
+			r.plannerMode = PlannerModeDeterministic
+		}
+		return
+	}
+	r.llmPlanner = planner
+}
+
+func (r *Runtime) CopyPlannerConfiguration(source *Runtime) {
+	if r == nil {
+		return
+	}
+	if source == nil {
+		r.plannerMode = PlannerModeDeterministic
+		r.llmPlanner = nil
+		return
+	}
+	r.plannerMode = source.plannerMode
+	r.llmPlanner = source.llmPlanner
 }
 
 func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
 	if context != nil {
-		context.BeginRequest(nil, 0, PlannerModeDeterministic)
+		context.BeginRequest(nil, 0, r.plannerMode)
 	}
 	return r.runAction(kind, intent, risk, target, targetLen, context)
 }
 
 func (r Runtime) RunActionRequest(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, input *[MaxContextInput]byte, inputLen int, context *Context) Response {
 	if context != nil {
-		context.BeginRequest(input, inputLen, PlannerModeDeterministic)
+		context.BeginRequest(input, inputLen, r.plannerMode)
 	}
 	return r.runAction(kind, intent, risk, target, targetLen, context)
 }
 
 func (r Runtime) runAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {
-	plan := singleActionPlan(PlannerModeDeterministic, intent, kind, risk)
+	plan := singleActionPlan(r.plannerMode, intent, kind, risk)
 	if target != nil && targetLen > 0 {
 		if targetLen > MaxNameLen {
 			targetLen = MaxNameLen
@@ -166,7 +226,9 @@ func finishPlanContext(response Response, context *Context, plan Plan) Response 
 		context.LastAction = plan.Actions[actionIndex].Kind
 	}
 	context.LastResultSummary = response.Result.Message
-	context.PlannerMode = plan.Planner
+	if context.LastAction != ActionSetMode {
+		context.PlannerMode = plan.Planner
+	}
 	if response.Safety.Status != SafetyConfirmationRequired {
 		context.CurrentTask = ActionNone
 	}

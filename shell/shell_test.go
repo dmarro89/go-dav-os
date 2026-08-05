@@ -520,7 +520,22 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "mode",
 			input: "agent mode",
-			want:  "agent: deterministic mode\n",
+			want:  "Current planner: deterministic\n",
+		},
+		{
+			name:  "switch deterministic mode",
+			input: "agent mode deterministic",
+			want:  "Planner switched to: deterministic\n",
+		},
+		{
+			name:  "reject unavailable llm mode",
+			input: "agent mode llm",
+			want:  "agent: llm bridge unavailable\n",
+		},
+		{
+			name:  "failed switch keeps deterministic mode",
+			input: "agent mode",
+			want:  "Current planner: deterministic\n",
 		},
 		{
 			name:  "help",
@@ -543,6 +558,43 @@ func TestExecuteAgentCommand(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
+	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
+	runtime.ConfigureLLMPlanner(agent.LLMPlanner{Bridge: shellBridge{}})
+	SetAgentRuntime(&runtime)
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+	})
+	terminal.Init()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "agent mode llm", want: "Planner switched to: llm\n"},
+		{input: "agent mode", want: "Current planner: llm\n"},
+		{input: "agent mode other", want: "agent: unsupported mode\n"},
+		{input: "agent mode", want: "Current planner: llm\n"},
+		{input: "agent mode deterministic", want: "Planner switched to: deterministic\n"},
+		{input: "agent mode", want: "Current planner: deterministic\n"},
+	}
+
+	for _, tt := range tests {
+		terminal.ResetOutputForTesting()
+		setLineBuf(tt.input)
+		execute()
+		if got := terminal.OutputForTesting(); got != tt.want {
+			t.Fatalf("execute(%q) output = %q, expected %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+type shellBridge struct{}
+
+func (shellBridge) Plan(agent.BridgeRequest) agent.BridgeResult {
+	return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
 }
 
 func TestExecuteHelpListsImplementedCommands(t *testing.T) {

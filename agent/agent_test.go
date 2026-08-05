@@ -353,6 +353,51 @@ func TestNewDeterministicAgentUsesDeterministicPlanner(t *testing.T) {
 	}
 }
 
+func TestRuntimePlannerModeSelection(t *testing.T) {
+	listCalls := 0
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		ListFiles: func(action Action, context *Context) ActionResult {
+			listCalls++
+			return ActionResult{OK: true, Message: MessageFilesListed}
+		},
+	})
+
+	if current := runtime.CurrentPlanner(); !current.OK || current.Message != MessageDeterministicMode {
+		t.Fatalf("unexpected initial planner: %+v", current)
+	}
+	if result := runtime.SetPlannerMode(PlannerModeLLM); result.OK || result.Message != MessageLLMModeNotConfigured {
+		t.Fatalf("unexpected unavailable LLM result: %+v", result)
+	}
+	if runtime.PlannerMode() != PlannerModeDeterministic {
+		t.Fatalf("failed switch changed planner mode to %v", runtime.PlannerMode())
+	}
+	if response := runtime.Run("show files", nil); !response.Result.OK || listCalls != 1 {
+		t.Fatalf("deterministic planner did not remain usable: %+v", response.Result)
+	}
+
+	runtime.ConfigureLLMPlanner(LLMPlanner{
+		Bridge: fakeBridge{response: bridgeResponse(IntentListFiles, ActionListFiles, RiskSafe, "")},
+	})
+	if result := runtime.SetPlannerMode(PlannerModeLLM); !result.OK || result.Message != MessagePlannerSwitchedLLM {
+		t.Fatalf("unexpected LLM switch result: %+v", result)
+	}
+	var context Context
+	response := runtime.Run("show files", &context)
+	if !response.Result.OK || listCalls != 2 || context.PlannerMode != PlannerModeLLM {
+		t.Fatalf("LLM planner did not execute: response=%+v context=%+v", response.Result, context)
+	}
+	if response.TraceCount == 0 || response.Trace[0].Detail != TraceDetailLLM {
+		t.Fatalf("expected LLM planner trace, got %+v", response.Trace[0])
+	}
+
+	if result := runtime.SetPlannerMode(PlannerModeDeterministic); !result.OK || result.Message != MessagePlannerSwitchedDeterministic {
+		t.Fatalf("unexpected deterministic switch result: %+v", result)
+	}
+	if current := runtime.CurrentPlanner(); current.Message != MessageDeterministicMode {
+		t.Fatalf("unexpected final planner: %+v", current)
+	}
+}
+
 func TestAllowedActionExecutorRejectsUnknownAction(t *testing.T) {
 	result := AllowedActionExecutor{}.Execute(Action{Kind: ActionUnknown}, nil)
 	if result.OK {

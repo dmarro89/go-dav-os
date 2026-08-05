@@ -127,6 +127,9 @@ const (
 	MessageTicksShown
 	MessageMemoryMapShown
 	MessageDeterministicMode
+	MessageLLMMode
+	MessagePlannerSwitchedDeterministic
+	MessagePlannerSwitchedLLM
 	MessageLLMModeNotConfigured
 	MessageUnsupportedMode
 	MessageReadFailed
