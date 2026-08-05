@@ -91,7 +91,7 @@ func TestValidatorRejectsUnsupportedRiskLevels(t *testing.T) {
 }
 
 func TestLLMPlannerDelegatesToBridge(t *testing.T) {
-	bridge := fakeBridge{plan: singleActionPlan(PlannerModeDeterministic, IntentStatFile, ActionStatFile, RiskSafe)}
+	bridge := fakeBridge{response: bridgeResponse(IntentStatFile, ActionStatFile, RiskSafe, "notes")}
 	result := LLMPlanner{Bridge: bridge}.Plan("status of notes", nil)
 	if !result.OK {
 		t.Fatalf("expected LLM planner to succeed, got %q", result.Reason)
@@ -102,6 +102,9 @@ func TestLLMPlannerDelegatesToBridge(t *testing.T) {
 	}
 	if plan.Intent != IntentStatFile {
 		t.Fatalf("expected bridge intent, got %v", plan.Intent)
+	}
+	if got := string(plan.Actions[0].Target[:plan.Actions[0].TargetLen]); got != "notes" {
+		t.Fatalf("expected converted target, got %q", got)
 	}
 }
 
@@ -649,6 +652,51 @@ func TestLLMPlannerDefaultsEmptyBridgeFailureReason(t *testing.T) {
 	}
 }
 
+func TestLLMPlannerRejectsInvalidBridgeResponses(t *testing.T) {
+	longTarget := bridgeResponse(IntentReadFile, ActionReadFile, RiskSafe, "notes")
+	longTarget.TargetLen = MaxNameLen + 1
+	tests := []struct {
+		name     string
+		response BridgeResponse
+		reason   MessageKind
+	}{
+		{
+			name:     "action outside allowlist",
+			response: bridgeResponse(IntentWriteFile, ActionWriteFile, RiskRisky, "notes"),
+			reason:   MessagePlanContainsUnsupportedAction,
+		},
+		{
+			name:     "missing target",
+			response: bridgeResponse(IntentReadFile, ActionReadFile, RiskSafe, ""),
+			reason:   MessageActionTargetInvalid,
+		},
+		{
+			name:     "incorrect risk",
+			response: bridgeResponse(IntentDeleteFile, ActionDeleteFile, RiskSafe, "notes"),
+			reason:   MessageActionRiskInvalid,
+		},
+		{
+			name:     "mismatched intent",
+			response: bridgeResponse(IntentDeleteFile, ActionReadFile, RiskSafe, "notes"),
+			reason:   MessagePlannerFailed,
+		},
+		{
+			name:     "target beyond limit",
+			response: longTarget,
+			reason:   MessageActionTargetInvalid,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := LLMPlanner{Bridge: fakeBridge{response: tt.response}}.Plan("request", nil)
+			if result.OK || result.Reason != tt.reason {
+				t.Fatalf("unexpected planning result: %+v", result)
+			}
+		})
+	}
+}
+
 func TestResponseAddTraceStopsAtCapacity(t *testing.T) {
 	var response Response
 	for i := 0; i < MaxTraceEntries+2; i++ {
@@ -715,7 +763,7 @@ func TestRuntimeUpdatesSessionContext(t *testing.T) {
 
 func TestLLMPlannerForwardsSessionContext(t *testing.T) {
 	bridge := &contextBridge{
-		plan: singleActionPlan(PlannerModeLLM, IntentListFiles, ActionListFiles, RiskSafe),
+		response: bridgeResponse(IntentListFiles, ActionListFiles, RiskSafe, ""),
 	}
 	context := Context{
 		LastIntent:        IntentReadFile,
@@ -730,11 +778,22 @@ func TestLLMPlannerForwardsSessionContext(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected successful plan, got %+v", result)
 	}
-	if bridge.context != &context {
+	if bridge.request.Context != &context {
 		t.Fatalf("bridge did not receive the session context")
 	}
-	if bridge.context.RequestCount != 3 || bridge.context.LastAction != ActionReadFile {
-		t.Fatalf("bridge received unexpected context: %+v", bridge.context)
+	if bridge.request.Input != "show files" {
+		t.Fatalf("bridge input = %q, expected %q", bridge.request.Input, "show files")
+	}
+	if bridge.request.Context.RequestCount != 3 || bridge.request.Context.LastAction != ActionReadFile {
+		t.Fatalf("bridge received unexpected context: %+v", bridge.request.Context)
+	}
+	if bridge.request.AllowedActionCount != MaxBridgeAllowedActions {
+		t.Fatalf("bridge allowed action count = %d", bridge.request.AllowedActionCount)
+	}
+	for i := 0; i < bridge.request.AllowedActionCount; i++ {
+		if bridge.request.AllowedActions[i] == ActionWriteFile || bridge.request.AllowedActions[i] == ActionSetMode {
+			t.Fatalf("bridge received unsupported action %v", bridge.request.AllowedActions[i])
+		}
 	}
 }
 
@@ -764,29 +823,44 @@ func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
 }
 
 type fakeBridge struct {
-	plan Plan
+	response BridgeResponse
 }
 
-func (b fakeBridge) Plan(input string, context *Context) PlanningResult {
-	return successfulPlan(b.plan)
+func (b fakeBridge) Plan(request BridgeRequest) BridgeResult {
+	return BridgeResult{OK: true, Response: b.response}
 }
 
 type contextBridge struct {
-	plan    Plan
-	context *Context
+	response BridgeResponse
+	request  BridgeRequest
 }
 
-func (b *contextBridge) Plan(_ string, context *Context) PlanningResult {
-	b.context = context
-	return successfulPlan(b.plan)
+func (b *contextBridge) Plan(request BridgeRequest) BridgeResult {
+	b.request = request
+	return BridgeResult{OK: true, Response: b.response}
 }
 
 type failingBridge struct {
 	reason MessageKind
 }
 
-func (b failingBridge) Plan(input string, context *Context) PlanningResult {
-	return PlanningResult{OK: false, Reason: b.reason}
+func (b failingBridge) Plan(request BridgeRequest) BridgeResult {
+	return BridgeResult{OK: false, Reason: b.reason}
+}
+
+func bridgeResponse(intent IntentKind, action ActionKind, risk RiskLevel, target string) BridgeResponse {
+	var response BridgeResponse
+	response.Intent = intent
+	response.Action = action
+	response.Risk = risk
+	response.TargetLen = len(target)
+	if response.TargetLen > MaxNameLen {
+		response.TargetLen = MaxNameLen
+	}
+	for i := 0; i < response.TargetLen; i++ {
+		response.Target[i] = target[i]
+	}
+	return response
 }
 
 func planWithAction(action Action) Plan {
