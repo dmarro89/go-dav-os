@@ -9,7 +9,7 @@ Starting with `v0.5.0`, go-dav-os includes its first **Minimum Working Agent**: 
 
 The current Agent foundation includes:
 
-- a deterministic planner that runs entirely inside the OS;
+- a deterministic planner foundation for host-side tests, while the QEMU shell maps supported `agent` subcommands directly to typed actions;
 - typed plans, a fixed action allowlist and validation before execution;
 - an explicit safety gate for risky actions such as file deletion;
 - structured execution traces and session-local context;
@@ -20,6 +20,7 @@ The trust boundary is deliberate: an LLM may propose one allowed typed action, b
 ### Try the Agent in QEMU
 
 ```text
+write notes hi
 agent show files
 agent read notes
 agent delete notes
