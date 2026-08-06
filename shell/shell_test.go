@@ -6,6 +6,7 @@ import (
 
 	"github.com/dmarro89/go-dav-os/agent"
 	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -465,7 +466,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing command",
 			input: "agent",
-			want:  "Usage: agent <show|read|stat|delete|mode|context|help> [arg]\n",
+			want:  "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n",
 		},
 		{
 			name:  "missing show argument",
@@ -538,15 +539,26 @@ func TestExecuteAgentCommand(t *testing.T) {
 			want:  "Current planner: deterministic\n",
 		},
 		{
+			name:  "transport unavailable",
+			input: "agent transport ping",
+			want:  "agent: transport unavailable\n",
+		},
+		{
+			name:  "transport rejects extra arguments",
+			input: "agent transport ping extra",
+			want:  "Usage: agent transport ping\n",
+		},
+		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
 		},
 	}
 
 	terminal.Init()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			serial.ResetForTesting()
 			terminal.ResetOutputForTesting()
 			agentContext = agent.Context{}
 			setLineBuf(tt.input)
@@ -557,6 +569,45 @@ func TestExecuteAgentCommand(t *testing.T) {
 				t.Fatalf("execute(%q) output = %q, expected %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestExecuteAgentTransportRoundTripAndRecovery(t *testing.T) {
+	var payload [serial.MaxPayload]byte
+	payload[0] = 'p'
+	payload[1] = 'o'
+	payload[2] = 'n'
+	payload[3] = 'g'
+	var response [serial.MaxFrameSize]byte
+	responseLen, result := serial.Encode(serial.FrameResponse, &payload, 4, &response)
+	if result != serial.ResultOK {
+		t.Fatalf("Encode() result = %d", result)
+	}
+
+	serial.ConfigureResponseForTesting(&response, responseLen)
+	t.Cleanup(serial.ResetForTesting)
+	terminal.Init()
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent transport ping")
+	execute()
+	if got := terminal.OutputForTesting(); got != "Agent transport: connected\n" {
+		t.Fatalf("successful transport output = %q", got)
+	}
+
+	response[responseLen-1] ^= 0xFF
+	serial.ConfigureResponseForTesting(&response, responseLen)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent transport ping")
+	execute()
+	if got := terminal.OutputForTesting(); got != "agent: transport malformed response\n" {
+		t.Fatalf("malformed transport output = %q", got)
+	}
+
+	terminal.ResetOutputForTesting()
+	setLineBuf("version")
+	execute()
+	if got := terminal.OutputForTesting(); got != "DavOS 0.5.0 (64bit)\n" {
+		t.Fatalf("shell output after transport failure = %q", got)
 	}
 }
 
