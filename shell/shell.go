@@ -94,6 +94,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 		runtimeAgent.Executor.ShowMemoryMap = nil
 		runtimeAgent.Executor.SetMode = nil
 		runtimeAgent.ExecutorConfigured = false
+		runtimeAgent.CopyPlannerConfiguration(nil)
 		agentContext = agent.Context{}
 		return
 	}
@@ -109,10 +110,12 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 	runtimeAgent.Executor.ShowMemoryMap = runtime.Executor.ShowMemoryMap
 	runtimeAgent.Executor.SetMode = runtime.Executor.SetMode
 	runtimeAgent.ExecutorConfigured = runtime.ExecutorConfigured
+	runtimeAgent.CopyPlannerConfiguration(runtime)
 	agentContext = agent.Context{}
 }
 
 func ConfigureAgentRuntime() {
+	runtimeAgent.CopyPlannerConfiguration(nil)
 	runtimeAgent.Executor.ListFiles = agentListFiles
 	runtimeAgent.Executor.ReadFile = agentReadFile
 	runtimeAgent.Executor.WriteFile = agentWriteFile
@@ -1008,9 +1011,15 @@ func printAgentMessage(message agent.MessageKind) {
 	case agent.MessageMemoryMapShown:
 		terminal.Print("agent: memory map shown")
 	case agent.MessageDeterministicMode:
-		terminal.Print("agent: deterministic mode")
+		terminal.Print("Current planner: deterministic")
+	case agent.MessageLLMMode:
+		terminal.Print("Current planner: llm")
+	case agent.MessagePlannerSwitchedDeterministic:
+		terminal.Print("Planner switched to: deterministic")
+	case agent.MessagePlannerSwitchedLLM:
+		terminal.Print("Planner switched to: llm")
 	case agent.MessageLLMModeNotConfigured:
-		terminal.Print("agent: llm mode not configured")
+		terminal.Print("agent: llm bridge unavailable")
 	case agent.MessageUnsupportedMode:
 		terminal.Print("agent: unsupported mode")
 	default:
@@ -1212,17 +1221,22 @@ func agentShowMemoryMap(_ agent.Action, _ *agent.Context) agent.ActionResult {
 	return agent.ActionResult{OK: true, Message: agent.MessageMemoryMapShown}
 }
 
-func agentSetMode(action agent.Action, _ *agent.Context) agent.ActionResult {
+func agentSetMode(action agent.Action, context *agent.Context) agent.ActionResult {
 	if action.TargetLen == 0 {
-		return agent.ActionResult{OK: true, Message: agent.MessageDeterministicMode}
+		return runtimeAgent.CurrentPlanner()
 	}
+	var result agent.ActionResult
 	if actionTargetMatches(action, "deterministic") {
-		return agent.ActionResult{OK: true, Message: agent.MessageDeterministicMode}
+		result = runtimeAgent.SetPlannerMode(agent.PlannerModeDeterministic)
+	} else if actionTargetMatches(action, "llm") {
+		result = runtimeAgent.SetPlannerMode(agent.PlannerModeLLM)
+	} else {
+		return agent.ActionResult{OK: false, Message: agent.MessageUnsupportedMode}
 	}
-	if actionTargetMatches(action, "llm") {
-		return agent.ActionResult{OK: false, Message: agent.MessageLLMModeNotConfigured}
+	if result.OK && context != nil {
+		context.PlannerMode = runtimeAgent.PlannerMode()
 	}
-	return agent.ActionResult{OK: false, Message: agent.MessageUnsupportedMode}
+	return result
 }
 
 func actionTargetMatches(action agent.Action, literal string) bool {

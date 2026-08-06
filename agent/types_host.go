@@ -184,9 +184,15 @@ func (m MessageKind) String() string {
 	case MessageMemoryMapShown:
 		return "agent: memory map shown"
 	case MessageDeterministicMode:
-		return "agent: deterministic mode"
+		return "Current planner: deterministic"
+	case MessageLLMMode:
+		return "Current planner: llm"
+	case MessagePlannerSwitchedDeterministic:
+		return "Planner switched to: deterministic"
+	case MessagePlannerSwitchedLLM:
+		return "Planner switched to: llm"
 	case MessageLLMModeNotConfigured:
-		return "agent: llm mode not configured"
+		return "agent: llm bridge unavailable"
 	case MessageUnsupportedMode:
 		return "agent: unsupported mode"
 	case MessageReadFailed:

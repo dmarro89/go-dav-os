@@ -37,6 +37,10 @@ var _ Planner = LLMPlanner{}
 
 const errLLMBridgeNotConfigured = "agent: llm bridge not configured"
 
+func (p LLMPlanner) Available() bool {
+	return p.Bridge != nil
+}
+
 func (p LLMPlanner) Plan(input string, context *Context) PlanningResult {
 	if p.Bridge == nil {
 		return PlanningResult{OK: false, Reason: MessageLLMBridgeNotConfigured}
