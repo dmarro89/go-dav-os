@@ -3,7 +3,37 @@
 Hobby project to dig deeper into how an OS works by writing the bare essentials of a kernel in Go. Only the kernel lives here (gccgo, x86_64 long mode); BIOS and bootloader are handled by battle-tested tools (GRUB with a Multiboot2 header). No reinvention of those pieces.
 Join [Discord](https://discord.gg/mBHhPZ65eW) for real time discussions on the project ! 
 
+## Agentic OS
+
+Starting with `v0.5.0`, go-dav-os includes its first **Minimum Working Agent**: a small, inspectable runtime that turns user intent into typed actions instead of arbitrary shell commands.
+
+The current Agent foundation includes:
+
+- a deterministic planner foundation for host-side tests, while the QEMU shell maps supported `agent` subcommands directly to typed actions;
+- typed plans, a fixed action allowlist and validation before execution;
+- an explicit safety gate for risky actions such as file deletion;
+- structured execution traces and session-local context;
+- an LLM planner boundary, bridge protocol and fake host bridge for testing without API keys.
+
+The trust boundary is deliberate: an LLM may propose one allowed typed action, but the OS remains responsible for validation, confirmation and execution. `v0.5.0` establishes this secure foundation. The real QEMU guest-to-host transport and an OpenAI-compatible provider are planned for `v0.6.0`; provider credentials will remain outside the guest and kernel.
+
+### Try the Agent in QEMU
+
+```text
+write notes hi
+agent show files
+agent read notes
+agent delete notes
+yes
+agent context
+agent mode
+```
+
+Read the [Agent runtime architecture](docs/v0.5.0/agent_runtime.md), [LLM bridge protocol](docs/v0.5.0/llm_bridge_protocol.md) and [fake bridge guide](docs/v0.5.0/fake_llm_bridge.md).
+
 ## What’s inside
+
+- Agent runtime: `agent/` implements typed planning, validation, safety, constrained execution, context and LLM bridge contracts
 
 - Boot: `boot/boot.s` exposes the Multiboot2 header and `_start`, sets up a 16 KB stack, enables long mode, and jumps into `kernel.Main`
   - The Multiboot2 info pointer is passed to `kernel.Main(...)` in `RDI`
@@ -103,6 +133,7 @@ If you run into issues while building or running the project, check these common
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
 - `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (in-memory filesystem)
 - `run <program>` (task runner)
+- `agent <show|read|stat|delete|mode|context|help> [arg]` (typed Agent runtime)
 
 ### Persistent Storage (FAT16)
 

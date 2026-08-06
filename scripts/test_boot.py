@@ -117,7 +117,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
 
         test_cases = [
             ("help", ["Commands:", "agent"]),
-            ("version", ["DavOS 0.0.5 (64bit)"]),
+            ("version", ["DavOS 0.5.0 (64bit)"]),
             ("write notes hi", ["ok"]),
             ("agent show files", ["notes  size=2", "agent: files listed"]),
             (
@@ -133,7 +133,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ),
             ("agent help", ["Agent commands:", "agent delete <name>"]),
             ("agent show history", ["agent: history listed"]),
-            ("agent show version", ["DavOS 0.0.5 (64bit)", "agent: version shown"]),
+            ("agent show version", ["DavOS 0.5.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
             ("agent show memorymap", ["base=0x", "agent: memory map shown"]),
             ("agent read notes", ["hi", "agent: file read"]),
