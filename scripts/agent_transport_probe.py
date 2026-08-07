@@ -70,10 +70,13 @@ def encode_response(payload):
 def connect(path, deadline):
     while True:
         stream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        stream.settimeout(remaining_timeout(deadline))
         try:
+            stream.settimeout(remaining_timeout(deadline))
             stream.connect(path)
             return stream
+        except ProtocolError:
+            stream.close()
+            raise
         except socket.timeout as error:
             stream.close()
             raise ProtocolError("probe timed out") from error
