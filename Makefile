@@ -4,7 +4,7 @@ AS       := $(CROSS)-as
 GCC      := $(CROSS)-gcc
 GCCGO    := $(CROSS)-gccgo
 OBJCOPY  := $(CROSS)-objcopy
-GCCGOFLAGS := -m64 -mno-sse -mno-sse2 -mno-mmx
+GCCGOFLAGS := -m64 -mno-red-zone -mno-sse -mno-sse2 -mno-mmx
 GRUB_CFG      := iso/grub/grub.cfg
 
 GRUBMKRESCUE  := grub-mkrescue
