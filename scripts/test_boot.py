@@ -22,7 +22,7 @@ def create_disk_image(disk_img):
         f.write(b"\0" * (20 * 1024 * 1024))
 
 
-def start_qemu(iso_path, disk_img, log_file):
+def start_qemu(iso_path, disk_img, log_file, serial_socket=None):
     cmd = [
         "qemu-system-x86_64",
         "-cdrom",
@@ -31,15 +31,25 @@ def start_qemu(iso_path, disk_img, log_file):
         f"file={disk_img},format=raw",
         "-debugcon",
         f"file:{log_file}",
-        "-serial",
-        "none",
-        "-monitor",
-        "stdio",
-        "-display",
-        "none",
-        "-no-reboot",
-        "-no-shutdown",
     ]
+    if serial_socket:
+        if os.path.exists(serial_socket):
+            os.remove(serial_socket)
+        cmd.extend(
+            ["-serial", f"unix:{serial_socket},server=on,wait=off"],
+        )
+    else:
+        cmd.extend(["-serial", "none"])
+    cmd.extend(
+        [
+            "-monitor",
+            "stdio",
+            "-display",
+            "none",
+            "-no-reboot",
+            "-no-shutdown",
+        ],
+    )
     return subprocess.Popen(
         cmd,
         stdin=subprocess.PIPE,
@@ -107,13 +117,58 @@ def send_shell_command(process, cmd_text):
     time.sleep(0.1)
 
 
+def run_agent_transport_probe(process, log_file, serial_socket):
+    probe = subprocess.Popen(
+        [
+            sys.executable,
+            "scripts/agent_transport_probe.py",
+            "--socket",
+            serial_socket,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        send_shell_command(process, "agent transport ping")
+        if not check_log_for("Agent transport: connected", log_file, timeout=6):
+            fail_with_log("Agent transport probe did not complete.", process, log_file)
+        try:
+            probe.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            fail_with_log("Host transport probe did not exit.", process, log_file)
+        if probe.returncode != 0:
+            print("--- Agent transport probe stderr ---")
+            print(probe.stderr.read())
+            print("------------------------------------")
+            fail_with_log("Host transport probe failed.", process, log_file)
+
+        send_shell_command(process, "agent transport ping")
+        if not check_log_for("agent: transport timeout", log_file, timeout=6):
+            fail_with_log("Transport timeout was not reported.", process, log_file)
+
+        send_shell_command(process, "version")
+        if not check_log_for("DavOS 0.5.0 (64bit)", log_file, timeout=6):
+            fail_with_log("Shell did not recover from transport timeout.", process, log_file)
+    finally:
+        if probe.poll() is None:
+            probe.terminate()
+            probe.wait(timeout=2)
+        if probe.stdout is not None:
+            probe.stdout.close()
+        if probe.stderr is not None:
+            probe.stderr.close()
+
+
 def run_functional_suite(iso_path, disk_img, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
 
-    process = start_qemu(iso_path, disk_img, log_file)
+    serial_socket = "qemu-agent.sock"
+    process = start_qemu(iso_path, disk_img, log_file, serial_socket)
     try:
         wait_for_boot(process, log_file)
+        run_agent_transport_probe(process, log_file, serial_socket)
 
         test_cases = [
             ("help", ["Commands:", "agent"]),
@@ -169,6 +224,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
             print(f"Test Passed: '{cmd_text}' command executed successfully.")
     finally:
         stop_qemu(process)
+        if os.path.exists(serial_socket):
+            os.remove(serial_socket)
 
 
 def run_fault_probe(iso_path, disk_img, cmd_text, log_file, fault_marker="PF"):

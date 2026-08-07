@@ -861,7 +861,7 @@ func TestEnumStrings(t *testing.T) {
 }
 
 func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
-	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
+	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
 	if got := MessageAgentHelp.String(); got != want {
 		t.Fatalf("MessageAgentHelp.String() = %q, expected %q", got, want)
 	}

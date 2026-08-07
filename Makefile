@@ -4,11 +4,12 @@ AS       := $(CROSS)-as
 GCC      := $(CROSS)-gcc
 GCCGO    := $(CROSS)-gccgo
 OBJCOPY  := $(CROSS)-objcopy
-GCCGOFLAGS := -m64 -mno-sse -mno-sse2 -mno-mmx
+GCCGOFLAGS := -m64 -mno-red-zone -mno-sse -mno-sse2 -mno-mmx
 GRUB_CFG      := iso/grub/grub.cfg
 
 GRUBMKRESCUE  := grub-mkrescue
 QEMU          := qemu-system-x86_64
+AGENT_SERIAL_SOCKET ?= /tmp/davos-agent.sock
 
 DOCKER_PLATFORM := linux/amd64
 DOCKER_IMAGE    := go-dav-os-toolchain
@@ -29,6 +30,7 @@ KEYBOARD_IMPORT  := $(MODPATH)/keyboard
 KEYBOARD_LAYOUT_IMPORT := $(MODPATH)/keyboard/layout
 SHELL_IMPORT     := $(MODPATH)/shell
 AGENT_IMPORT     := $(MODPATH)/agent
+SERIAL_IMPORT    := $(MODPATH)/serial
 MEM_IMPORT     := $(MODPATH)/mem
 FS_IMPORT := $(MODPATH)/fs
 ATA_IMPORT := $(MODPATH)/drivers/ata
@@ -45,6 +47,7 @@ KEYBOARD_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard keyboard/*.go))
 KEYBOARD_LAYOUT_SRCS := $(filter-out %_test.go, $(wildcard keyboard/layout/*.go))
 SHELL_SRCS := $(filter-out %_test.go %stubs.go, $(wildcard shell/*.go))
 AGENT_SRCS := $(filter-out %_test.go %stubs.go %_host.go %_llm.go, $(wildcard agent/*.go))
+SERIAL_SRCS := serial/frame.go serial/transport.go serial/io_gccgo.go
 MEM_SRCS       := $(filter-out %_test.go %_stub.go %stubs.go, $(wildcard mem/*.go))
 FS_SRCS   := $(filter-out %_test.go %stubs.go %_host.go %testing.go, $(wildcard fs/*.go))
 ATA_SRCS  := drivers/ata/ata.go drivers/ata/ata_gccgo.go
@@ -69,6 +72,8 @@ SHELL_OBJ   := $(BUILD_DIR)/shell.o
 SHELL_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/shell.gox
 AGENT_OBJ   := $(BUILD_DIR)/agent.o
 AGENT_GOX   := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/agent.gox
+SERIAL_OBJ  := $(BUILD_DIR)/serial.o
+SERIAL_GOX  := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/serial.gox
 MEM_OBJ   := $(BUILD_DIR)/mem.o
 MEM_GOX        := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/mem.gox
 FS_OBJ    := $(BUILD_DIR)/fs.o
@@ -87,7 +92,7 @@ GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
 TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
 SYSCALL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/syscall.gox
 
-.PHONY: all kernel iso run clean docker-build docker-shell docker-run test
+.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test
 
 all: $(ISO_IMAGE)
 
@@ -97,6 +102,11 @@ iso: $(ISO_IMAGE)
 
 run: $(ISO_IMAGE) disk.img
 	$(QEMU) -cdrom $(ISO_IMAGE) -drive file=disk.img,format=raw
+
+run-agent-transport: $(ISO_IMAGE) disk.img
+	rm -f "$(AGENT_SERIAL_SOCKET)"
+	$(QEMU) -cdrom $(ISO_IMAGE) -drive file=disk.img,format=raw \
+		-serial unix:$(AGENT_SERIAL_SOCKET),server=on,wait=off
 
 disk.img:
 	dd if=/dev/zero of=disk.img bs=1M count=20
@@ -192,7 +202,16 @@ $(AGENT_GOX): $(AGENT_OBJ) | $(BUILD_DIR)
 	mkdir -p $(dir $(AGENT_GOX))
 	$(OBJCOPY) -j .go_export $(AGENT_OBJ) $(AGENT_GOX)
 
-$(SHELL_OBJ): $(SHELL_SRCS) $(AGENT_GOX) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) $(ATA_GOX) $(FAT16_GOX) | $(BUILD_DIR)
+$(SERIAL_OBJ): $(SERIAL_SRCS) | $(BUILD_DIR)
+	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
+		-fgo-pkgpath=$(SERIAL_IMPORT) \
+		-c $(SERIAL_SRCS) -o $(SERIAL_OBJ)
+
+$(SERIAL_GOX): $(SERIAL_OBJ) | $(BUILD_DIR)
+	mkdir -p $(dir $(SERIAL_GOX))
+	$(OBJCOPY) -j .go_export $(SERIAL_OBJ) $(SERIAL_GOX)
+
+$(SHELL_OBJ): $(SHELL_SRCS) $(AGENT_GOX) $(SERIAL_GOX) $(TERMINAL_GOX) $(MEM_GOX) $(FS_GOX) $(ATA_GOX) $(FAT16_GOX) | $(BUILD_DIR)
 	$(GCCGO) $(GCCGOFLAGS) -static -Werror -nostdlib -nostartfiles -nodefaultlibs \
 		-I $(BUILD_DIR) \
 		-fgo-pkgpath=$(SHELL_IMPORT) \
@@ -265,10 +284,10 @@ $(KERNEL_OBJ): $(KERNEL_SRCS) $(AGENT_GOX) $(TERMINAL_GOX) $(KEYBOARD_GOX) $(KEY
 # -----------------------
 # Link: boot.o + kernel.o -> kernel.elf
 # -----------------------
-$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(AGENT_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
+$(KERNEL_ELF): $(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(AGENT_OBJ) $(SERIAL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) $(LINKER_SCRIPT)
 	$(GCC) -T $(LINKER_SCRIPT) -o $(KERNEL_ELF) \
 		-ffreestanding -O2 -nostdlib \
-		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(AGENT_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
+		$(BOOT_OBJ) $(USER_HELLO_OBJ) $(TERMINAL_OBJ) $(KEYBOARD_LAYOUT_OBJ) $(KEYBOARD_OBJ) $(SHELL_OBJ) $(AGENT_OBJ) $(SERIAL_OBJ) $(MEM_OBJ) $(FS_OBJ) $(ATA_OBJ) $(FAT16_OBJ) $(SCHEDULER_OBJ) $(GDT_OBJ) $(TSS_OBJ) $(SYSCALL_OBJ) $(SCH_SWITCH_OBJ) $(KERNEL_OBJ) -lgcc
 
 # -----------------------
 # ISO with GRUB

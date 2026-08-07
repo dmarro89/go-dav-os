@@ -18,3 +18,4 @@ nav:
   - v0.5.0 Agent Runtime: v0.5.0/agent_runtime.md
   - v0.5.0 LLM Bridge Protocol: v0.5.0/llm_bridge_protocol.md
   - v0.5.0 Fake LLM Bridge: v0.5.0/fake_llm_bridge.md
+  - v0.6.0 QEMU Agent Transport: v0.6.0/agent_transport.md

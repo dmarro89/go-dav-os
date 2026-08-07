@@ -8,6 +8,7 @@ import (
 	"github.com/dmarro89/go-dav-os/fs"
 	"github.com/dmarro89/go-dav-os/fs/fat16"
 	"github.com/dmarro89/go-dav-os/mem"
+	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
 
@@ -22,16 +23,18 @@ const (
 )
 
 var (
-	lineBuf         [maxLine]byte
-	lineLen         int
-	getTicks        func() uint64
-	getSyscallTicks func() uint64
-	runProgram      func(name *[16]byte, nameLen int) (pid int, ok bool)
-	switchLayoutFn  func(string) bool
-	currentLayout   = "it"
-	tmpName         [16]byte
-	tmpData         [4096]byte
-	diskBuf         [512]byte
+	lineBuf           [maxLine]byte
+	lineLen           int
+	getTicks          func() uint64
+	getSyscallTicks   func() uint64
+	runProgram        func(name *[16]byte, nameLen int) (pid int, ok bool)
+	switchLayoutFn    func(string) bool
+	currentLayout     = "it"
+	tmpName           [16]byte
+	tmpData           [4096]byte
+	diskBuf           [512]byte
+	transportRequest  [serial.MaxPayload]byte
+	transportResponse [serial.MaxPayload]byte
 
 	// History ring buffer
 	// historyBuf stores the content of the commands
@@ -811,7 +814,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "agent") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: agent <show|read|stat|delete|mode|context|help> [arg]\n")
+			terminal.Print("Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n")
 			return
 		}
 
@@ -870,6 +873,19 @@ func execute() {
 				return
 			}
 			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, start, end)
+			return
+		} else if matchLiteral(a1s, a1e, "transport") {
+			a2s, a2e, ok := nextArg(a1e, end)
+			if !ok {
+				terminal.Print("Usage: agent transport ping\n")
+				return
+			}
+			_, _, extra := nextArg(a2e, end)
+			if extra || !matchLiteral(a2s, a2e, "ping") {
+				terminal.Print("Usage: agent transport ping\n")
+				return
+			}
+			runAgentTransportProbe()
 			return
 		} else if matchLiteral(a1s, a1e, "context") {
 			printAgentContext(&agentContext)
@@ -943,6 +959,39 @@ func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.R
 	terminal.PutRune('\n')
 }
 
+func runAgentTransportProbe() {
+	transportRequest[0] = 'p'
+	transportRequest[1] = 'i'
+	transportRequest[2] = 'n'
+	transportRequest[3] = 'g'
+	responseLen, result := serial.Exchange(&transportRequest, 4, &transportResponse)
+	if result != serial.ResultOK {
+		printAgentTransportError(result)
+		terminal.PutRune('\n')
+		return
+	}
+	if responseLen != 4 || transportResponse[0] != 'p' || transportResponse[1] != 'o' || transportResponse[2] != 'n' || transportResponse[3] != 'g' {
+		terminal.Print("agent: transport invalid response\n")
+		return
+	}
+	terminal.Print("Agent transport: connected\n")
+}
+
+func printAgentTransportError(result serial.Result) {
+	switch result {
+	case serial.ResultPortUnavailable:
+		terminal.Print("agent: transport unavailable")
+	case serial.ResultWriteTimeout, serial.ResultReadTimeout:
+		terminal.Print("agent: transport timeout")
+	case serial.ResultPartialFrame:
+		terminal.Print("agent: transport partial response")
+	case serial.ResultOversizedFrame:
+		terminal.Print("agent: transport response too large")
+	default:
+		terminal.Print("agent: transport malformed response")
+	}
+}
+
 func printAgentMessage(message agent.MessageKind) {
 	switch message {
 	case agent.MessagePlannerFailed:
@@ -1000,6 +1049,7 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> - Delete a file after confirmation\n")
 		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
+		terminal.Print("  agent transport ping - Probe the guest-host transport\n")
 		terminal.Print("  agent context       - Show current agent context\n")
 		terminal.Print("  agent help          - Show agent commands")
 	case agent.MessageHistoryListed:
