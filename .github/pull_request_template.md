@@ -24,6 +24,7 @@ Closes #
 - [ ] `go vet -tags testing -unsafeptr=false ./...` is clean
 - [ ] `make test` passes
 - [ ] `python3 scripts/test_boot.py` passes
+- [ ] Every commit includes a `Signed-off-by` trailer
 - [ ] PR is a single concern (no drive-by cleanups)
 
 <!-- If AI was used substantially in this PR, leave one line below: "AI was used for assistance." -->
