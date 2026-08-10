@@ -25,15 +25,32 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          signoff_pattern='^Signed-off-by: [^<>[:space:]]([^<>]*[^<>[:space:]])? <[^<>[:space:]@]+@[^<>[:space:]@]+>$'
+          if ! grep --extended-regexp --quiet "$signoff_pattern" <<< 'Signed-off-by: Human Name <human@example.com>'; then
+            echo "::error::The sign-off pattern rejected a valid trailer."
+            exit 1
+          fi
+          if grep --extended-regexp --quiet "$signoff_pattern" <<< 'Signed-off-by: Human Name <a@@b>'; then
+            echo "::error::The sign-off pattern accepted an invalid trailer."
+            exit 1
+          fi
+
+          if ! commits="$(git rev-list "$BASE_SHA..$HEAD_SHA")"; then
+            echo "::error::Unable to enumerate the pull-request commit range."
+            exit 1
+          fi
+
           missing=0
-          while IFS= read -r commit; do
-            if ! git show -s --format=%B "$commit" \
-              | git interpret-trailers --parse \
-              | grep --extended-regexp --quiet '^Signed-off-by: [^<>]+ <[^<>[:space:]]+@[^<>[:space:]]+>$'; then
-              echo "::error::Commit $commit is missing a valid Signed-off-by trailer."
-              missing=1
-            fi
-          done < <(git rev-list "$BASE_SHA..$HEAD_SHA")
+          if [ -n "$commits" ]; then
+            while IFS= read -r commit; do
+              if ! git show -s --format=%B "$commit" \
+                | git interpret-trailers --parse \
+                | grep --extended-regexp --quiet "$signoff_pattern"; then
+                echo "::error::Commit $commit is missing a valid Signed-off-by trailer."
+                missing=1
+              fi
+            done <<< "$commits"
+          fi
 
           if [ "$missing" -ne 0 ]; then
             echo "Sign each commit with 'git commit -s' and push the updated history."
