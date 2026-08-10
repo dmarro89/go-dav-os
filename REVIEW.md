@@ -10,6 +10,7 @@ If a PR can't tick the relevant items, it is either re-worked or closed.
 - [ ] `go vet -tags testing -unsafeptr=false ./...` reports no issues
 - [ ] `make test` passes locally
 - [ ] `python3 scripts/test_boot.py` passes (QEMU integration suite)
+- [ ] Every commit has a valid `Signed-off-by` trailer
 - [ ] CI on the PR is green
 
 ## Scope and shape
