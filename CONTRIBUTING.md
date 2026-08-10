@@ -46,8 +46,9 @@ The workflow is the classic one:
 1. Fork the repo
 2. Create a branch (`feat/...`, `fix/...`, `docs/...` — nothing strict here)
 3. Do the change
-4. Make sure it still builds and runs (same commands as in the README)
-5. Open the PR
+4. Sign every commit with `git commit -s`
+5. Make sure it still builds and runs (same commands as in the README)
+6. Open the PR
 
 In the PR description, please write 2–3 lines:
 - what you changed
@@ -55,6 +56,18 @@ In the PR description, please write 2–3 lines:
 - how I can test it (what command to run / what output to expect)
 
 That’s enough.
+
+## Commit sign-off
+
+Every commit in a PR must include a well-formed `Signed-off-by` trailer identifying the human who accepts responsibility for the contribution under the [Developer Certificate of Origin](https://developercertificate.org/). Add it automatically with:
+
+```bash
+git commit -s -m "Describe the change"
+```
+
+For the most recent commit, add a missing sign-off with `git commit --amend -s`. For older commits, use an interactive rebase and amend each affected commit. Rewriting commits requires pushing the updated branch with `--force-with-lease`.
+
+The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every commit in a PR and rejects the PR when any sign-off is missing or malformed.
 
 ## A couple of guidelines (to keep things simple)
 - Prefer **small PRs** (one thing at a time)
