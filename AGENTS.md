@@ -20,7 +20,8 @@ go-dav-os is a 64-bit freestanding hobby kernel written in Go (`gccgo`, x86_64 l
 4. **Don't touch `boot/boot.s`, the Multiboot2 header layout, or paging/IDT setup unless the issue is explicitly about them.** Those are load-bearing.
 5. **No standard library imports in kernel code.** This is a freestanding build (`gccgo`, no stdlib). Stick to packages already imported in the file you're editing.
 6. **Comments explain *why*, not *what*.** Identifier names already say what; only comment when the reasoning would otherwise be lost.
-7. **Disclose AI authorship in the PR body** when the change was substantially agent-written. One line is enough: `AI was used for assistance.` Do not advertise the engine name or describe verification — keep it short.
+7. **Sign every commit.** Each commit must contain a well-formed `Signed-off-by` trailer identifying the responsible human contributor. Use `git commit -s`; never put an AI tool in this trailer.
+8. **Disclose AI authorship in the PR body** when the change was substantially agent-written. One line is enough: `AI was used for assistance.` Do not advertise the engine name or describe verification — keep it short.
 
 ## Recommended workflow
 
@@ -28,11 +29,13 @@ go-dav-os is a 64-bit freestanding hobby kernel written in Go (`gccgo`, x86_64 l
 2. Open the relevant file before changing it. Match the existing style of that file (indentation, comment density, error-handling shape).
 3. Keep diffs small. Aim for under 100 added lines on a first contribution.
 4. Run the full gate stack locally. If a gate fails, fix it locally — do not push and let CI fail.
-5. Follow the [PR template](.github/pull_request_template.md). Three lines (what / why / how to test) is the minimum, not a suggestion.
+5. Commit with a human sign-off using `git commit -s`.
+6. Follow the [PR template](.github/pull_request_template.md). Three lines (what / why / how to test) is the minimum, not a suggestion.
 
 ## Things that get auto-rejected
 
 - PRs that fail `gofmt` or `go vet`.
+- PRs containing a commit without a valid `Signed-off-by` trailer.
 - PRs that bundle unrelated cleanups with the actual fix.
 - PRs that import new third-party Go modules into kernel code.
 - PRs that add `TODO`/`FIXME` comments without an issue link.
