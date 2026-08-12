@@ -40,6 +40,7 @@ If a PR can't tick the relevant items, it is either re-worked or closed.
 - [ ] PR body has the three sections from [`pull_request_template.md`](.github/pull_request_template.md): **what**, **why**, **how to test**
 - [ ] "How to test" has a concrete command, not a description
 - [ ] If AI was used substantially, the PR body includes the disclosure line `AI was used for assistance.`
+- [ ] If AI materially affected a commit, it has the `AI-Assisted-by` trailer described in [`AI_POLICY.md`](AI_POLICY.md)
 - [ ] If the PR was opened from a coding agent, the agent followed [`AGENTS.md`](AGENTS.md)
 
 ## Final gate
