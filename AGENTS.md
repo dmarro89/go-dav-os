@@ -2,7 +2,7 @@
 
 This file gives coding agents (Claude Code, Codex, Copilot, Cursor, automated PR bots, etc.) the rules and context they need to ship good changes to **go-dav-os**.
 
-If you are a human, you do not need to read this — start with [`README.md`](README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md). The same expectations apply to agent-authored PRs.
+If you are a human, you do not need to read this — start with [`README.md`](README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md). The same expectations apply to agent-authored PRs. All AI-assisted contributions also follow [`AI_POLICY.md`](AI_POLICY.md).
 
 ## Project shape
 
@@ -20,7 +20,7 @@ go-dav-os is a 64-bit freestanding hobby kernel written in Go (`gccgo`, x86_64 l
 4. **Don't touch `boot/boot.s`, the Multiboot2 header layout, or paging/IDT setup unless the issue is explicitly about them.** Those are load-bearing.
 5. **No standard library imports in kernel code.** This is a freestanding build (`gccgo`, no stdlib). Stick to packages already imported in the file you're editing.
 6. **Comments explain *why*, not *what*.** Identifier names already say what; only comment when the reasoning would otherwise be lost.
-7. **Sign every commit.** Each commit must contain a well-formed `Signed-off-by` trailer identifying the responsible human contributor. Use `git commit -s`; never put an AI tool in this trailer.
+7. **Sign every commit.** Each commit must contain a well-formed `Signed-off-by` trailer identifying the responsible human contributor. Use `git commit -s`; never put an AI tool in this trailer. Add `AI-Assisted-by` when required by [`AI_POLICY.md`](AI_POLICY.md).
 8. **Disclose AI authorship in the PR body** when the change was substantially agent-written. One line is enough: `AI was used for assistance.` Do not advertise the engine name or describe verification — keep it short.
 
 ## Recommended workflow

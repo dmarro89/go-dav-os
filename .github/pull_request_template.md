@@ -25,6 +25,7 @@ Closes #
 - [ ] `make test` passes
 - [ ] `python3 scripts/test_boot.py` passes
 - [ ] Every commit includes a valid `Signed-off-by: Human Name <email>` trailer
+- [ ] Material AI assistance is disclosed with the `AI-Assisted-by` trailer described in [`AI_POLICY.md`](../../AI_POLICY.md)
 - [ ] PR is a single concern (no drive-by cleanups)
 
 <!-- If AI was used substantially in this PR, leave one line below: "AI was used for assistance." -->

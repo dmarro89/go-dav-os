@@ -6,7 +6,7 @@ This is a hobby project and it’s still in a very early stage. The main idea is
 
 If you’re not sure where to start, open a Discussion and we’ll align quickly.
 
-Reviewers run [`REVIEW.md`](REVIEW.md) on every PR; coding agents (Claude Code, Codex, Cursor, automated PR bots) should also read [`AGENTS.md`](AGENTS.md) before opening a PR.
+Reviewers run [`REVIEW.md`](REVIEW.md) on every PR; coding agents (Claude Code, Codex, Cursor, automated PR bots) should also read [`AGENTS.md`](AGENTS.md) before opening a PR. AI-assisted contributions follow [`AI_POLICY.md`](AI_POLICY.md).
 
 ## What you can contribute
 Anything that helps the project move forward, especially:
@@ -47,8 +47,9 @@ The workflow is the classic one:
 2. Create a branch (`feat/...`, `fix/...`, `docs/...` — nothing strict here)
 3. Do the change
 4. Sign every commit with `git commit -s`
-5. Make sure it still builds and runs (same commands as in the README)
-6. Open the PR
+5. If AI materially assisted the change, add the `AI-Assisted-by` trailer described in [`AI_POLICY.md`](AI_POLICY.md)
+6. Make sure it still builds and runs (same commands as in the README)
+7. Open the PR
 
 In the PR description, please write 2–3 lines:
 - what you changed
@@ -67,7 +68,7 @@ git commit -s -m "Describe the change"
 
 For the most recent commit, add a missing sign-off with `git commit --amend -s`. For older commits, use an interactive rebase and amend each affected commit. Rewriting commits requires pushing the updated branch with `--force-with-lease`.
 
-The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every commit in a PR and rejects the PR when any sign-off is missing or malformed.
+The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every commit in a PR and rejects the PR when any sign-off is missing or malformed. AI disclosure is separate from the human sign-off; see [`AI_POLICY.md`](AI_POLICY.md).
 
 ## A couple of guidelines (to keep things simple)
 - Prefer **small PRs** (one thing at a time)
