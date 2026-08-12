@@ -47,7 +47,7 @@ The workflow is the classic one:
 2. Create a branch (`feat/...`, `fix/...`, `docs/...` — nothing strict here)
 3. Do the change
 4. Sign every commit with `git commit -s`
-5. If AI materially assisted the change, add the `AI-Assisted-by` trailer described in [`AI_POLICY.md`](AI_POLICY.md)
+5. If AI materially affected a commit, add the `AI-Assisted-by` trailer to that commit as described in [`AI_POLICY.md`](AI_POLICY.md)
 6. Make sure it still builds and runs (same commands as in the README)
 7. Open the PR
 

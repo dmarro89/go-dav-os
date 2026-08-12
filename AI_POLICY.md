@@ -35,7 +35,8 @@ Add an `AI-Assisted-by` trailer when AI assistance materially affected the
 content of a commit. Assistance is material when generated or transformed
 content remains in the commit, or when AI analysis materially shaped the
 implementation, tests, documentation, or design. Routine completion, spelling
-help, search, formatting, or an unused suggestion does not require the trailer.
+help, search, formatting, or an unused suggestion does not require the trailer
+when it does not materially affect the committed content.
 
 Use a product or service name, not a person:
 
