@@ -14,6 +14,8 @@
         <link rel="prev" href="../v0.5.0/fake_llm_bridge.html">
       
       
+        <link rel="next" href="host_bridge.html">
+      
       
         
       
@@ -685,6 +687,33 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="host_bridge.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.6.0 Host Agent Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -795,6 +824,8 @@ host:</p>
 <p>The guest sends a framed <code>ping</code>; the host validates it and returns a framed
 <code>pong</code>. A successful round trip prints <code>Agent transport: connected</code>. The probe
 contains no provider or networking logic and exists only to verify the channel.</p>
+<p>For the host planning service built on this channel, see
+<a href="host_bridge.html"><code>host_bridge.md</code></a>.</p>
 <h2 id="wire-frame">Wire frame</h2>
 <p>Every integer uses network byte order (big-endian).</p>
 <table>

@@ -8,28 +8,26 @@
       
       
       
-        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/manual/03-kernel-core/release-checklist.html">
+        <link rel="canonical" href="https://dmarro89.github.io/go-dav-os/v0.6.0/host_bridge.html">
       
       
-        <link rel="prev" href="user-kernel-memory-isolation.html">
+        <link rel="prev" href="agent_transport.html">
       
-      
-        <link rel="next" href="../../v0.5.0/agentic_os.html">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Release Checklist - Go DAV OS</title>
+        <title>v0.6.0 Host Agent Bridge - Go DAV OS</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
       
       
 
@@ -48,7 +46,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -66,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#release-checklist-for-v040" class="md-skip">
+        <a href="#v060-host-agent-bridge" class="md-skip">
           Skip to content
         </a>
       
@@ -82,7 +80,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../index.html" title="Go DAV OS" class="md-header__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -102,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Release Checklist
+              v0.6.0 Host Agent Bridge
             
           </span>
         </div>
@@ -180,7 +178,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
+    <a href="../index.html" title="Go DAV OS" class="md-nav__button md-logo" aria-label="Go DAV OS" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -198,7 +196,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../index.html" class="md-nav__link">
+      <a href="../index.html" class="md-nav__link">
         
   
   
@@ -225,7 +223,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../00-introduction/index.html" class="md-nav__link">
+      <a href="../manual/00-introduction/index.html" class="md-nav__link">
         
   
   
@@ -252,7 +250,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../00-introduction/glossary.html" class="md-nav__link">
+      <a href="../manual/00-introduction/glossary.html" class="md-nav__link">
         
   
   
@@ -279,7 +277,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../01-overview/architecture.html" class="md-nav__link">
+      <a href="../manual/01-overview/architecture.html" class="md-nav__link">
         
   
   
@@ -306,7 +304,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../02-boot/boot-and-grub.html" class="md-nav__link">
+      <a href="../manual/02-boot/boot-and-grub.html" class="md-nav__link">
         
   
   
@@ -333,7 +331,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
+      <a href="../manual/02-boot/linker-and-initial-memory-layout.html" class="md-nav__link">
         
   
   
@@ -360,7 +358,7 @@
   
   
     <li class="md-nav__item">
-      <a href="privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
+      <a href="../manual/03-kernel-core/privilege-transition-gdt-tss-rsp0.html" class="md-nav__link">
         
   
   
@@ -387,7 +385,7 @@
   
   
     <li class="md-nav__item">
-      <a href="syscall-entry-and-abi.html" class="md-nav__link">
+      <a href="../manual/03-kernel-core/syscall-entry-and-abi.html" class="md-nav__link">
         
   
   
@@ -414,7 +412,7 @@
   
   
     <li class="md-nav__item">
-      <a href="user-kernel-memory-isolation.html" class="md-nav__link">
+      <a href="../manual/03-kernel-core/user-kernel-memory-isolation.html" class="md-nav__link">
         
   
   
@@ -422,6 +420,168 @@
     
   
     User/Kernel Memory Isolation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../manual/03-kernel-core/release-checklist.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.5.0/agentic_os.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Agentic OS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.5.0/agent_runtime.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.5.0/llm_bridge_protocol.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 LLM Bridge Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v0.5.0/fake_llm_bridge.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.5.0 Fake LLM Bridge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="agent_transport.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v0.6.0 QEMU Agent Transport
   
 
     
@@ -457,7 +617,7 @@
   <span class="md-ellipsis">
     
   
-    Release Checklist
+    v0.6.0 Host Agent Bridge
   
 
     
@@ -468,14 +628,14 @@
           <span class="md-nav__icon md-icon"></span>
         </label>
       
-      <a href="release-checklist.html" class="md-nav__link md-nav__link--active">
+      <a href="host_bridge.html" class="md-nav__link md-nav__link--active">
         
   
   
   <span class="md-ellipsis">
     
   
-    Release Checklist
+    v0.6.0 Host Agent Bridge
   
 
     
@@ -501,10 +661,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-build-the-os" class="md-nav__link">
+  <a href="#run-with-the-fake-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Build the OS
+        Run with the fake provider
       
     </span>
   </a>
@@ -512,10 +672,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-test-normal-user-execution" class="md-nav__link">
+  <a href="#openai-compatible-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Test Normal User Execution
+        OpenAI-compatible provider
       
     </span>
   </a>
@@ -523,32 +683,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-test-isolation-kernel-read-fault" class="md-nav__link">
+  <a href="#boundaries" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Test Isolation (Kernel Read Fault)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-test-isolation-kernel-write-fault" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Test Isolation (Kernel Write Fault)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-automated-verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Automated Verification
+        Boundaries
       
     </span>
   </a>
@@ -559,168 +697,6 @@
   
 </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.5.0/agentic_os.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.5.0 Agentic OS
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.5.0/agent_runtime.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.5.0 Agent Runtime
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.5.0/llm_bridge_protocol.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.5.0 LLM Bridge Protocol
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.5.0/fake_llm_bridge.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.5.0 Fake LLM Bridge
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.6.0/agent_transport.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.6.0 QEMU Agent Transport
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../v0.6.0/host_bridge.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    v0.6.0 Host Agent Bridge
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -752,10 +728,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-build-the-os" class="md-nav__link">
+  <a href="#run-with-the-fake-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Build the OS
+        Run with the fake provider
       
     </span>
   </a>
@@ -763,10 +739,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-test-normal-user-execution" class="md-nav__link">
+  <a href="#openai-compatible-provider" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Test Normal User Execution
+        OpenAI-compatible provider
       
     </span>
   </a>
@@ -774,32 +750,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-test-isolation-kernel-read-fault" class="md-nav__link">
+  <a href="#boundaries" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Test Isolation (Kernel Read Fault)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-test-isolation-kernel-write-fault" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Test Isolation (Kernel Write Fault)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#5-automated-verification" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Automated Verification
+        Boundaries
       
     </span>
   </a>
@@ -823,45 +777,46 @@
 
 
 
-<h1 id="release-checklist-for-v040">Release Checklist for v0.4.0</h1>
-<p>This checklist provides a quick way to validate that ring3 execution and memory isolation are working as expected before a release.</p>
-<h2 id="1-build-the-os">1. Build the OS</h2>
-<p>Ensure the ISO is built successfully:</p>
-<pre><code class="language-bash">make clean
-make iso
+<h1 id="v060-host-agent-bridge">v0.6.0 Host Agent Bridge</h1>
+<p>Issue #185 turns the transport probe into a small host service. The service
+reads one framed JSON request at a time, delegates planning to a host provider
+and writes one framed JSON response. The guest still validates every typed plan
+before execution.</p>
+<h2 id="run-with-the-fake-provider">Run with the fake provider</h2>
+<p>Start QEMU with the Agent serial socket:</p>
+<pre><code class="language-sh">make run-agent-transport
 </code></pre>
-<h2 id="2-test-normal-user-execution">2. Test Normal User Execution</h2>
-<p>Run QEMU with the newly built ISO:</p>
-<pre><code class="language-bash">qemu-system-x86_64 -cdrom build/dav-go-os.iso -serial stdio
+<p>Then start the bridge in another terminal:</p>
+<pre><code class="language-sh">python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
 </code></pre>
-<p><strong>Steps:</strong>
-1. Wait for the <code>DavOS &gt;</code> prompt.
-2. Run the command: <code>run hello</code>
-3. <strong>Expected Output:</strong>
-   - <code>hello from userland</code>
-   - <code>Process exited with status 0</code>
-   - The shell prompt <code>&gt;</code> should return normally.</p>
-<h2 id="3-test-isolation-kernel-read-fault">3. Test Isolation (Kernel Read Fault)</h2>
-<p><strong>Steps:</strong>
-1. In the DavOS shell, run: <code>run kread</code>
-2. <strong>Expected Output:</strong>
-   - A protection fault (<code>#PF</code>) should be triggered.
-   - A <code>PF</code> marker should be visible in the debug log.
-   - The QEMU instance should halt (or the kernel should trap and halt as implemented).</p>
-<h2 id="4-test-isolation-kernel-write-fault">4. Test Isolation (Kernel Write Fault)</h2>
-<p><strong>Steps:</strong>
-1. Restart the OS and at the prompt, run: <code>run kwrite</code>
-2. <strong>Expected Output:</strong>
-   - A protection fault (<code>#PF</code>) should be triggered.
-   - A <code>PF</code> marker should be visible in the debug log.
-   - The QEMU instance should halt.</p>
-<h2 id="5-automated-verification">5. Automated Verification</h2>
-<p>For automated validation, run the boot test suite:</p>
-<pre><code class="language-bash">python3 scripts/test_boot.py
+<p>The deterministic fake provider is the default. It needs no network access or
+credentials and uses the mappings from the
+<a href="../v0.5.0/fake_llm_bridge.html">v0.5.0 fake bridge</a>.</p>
+<h2 id="openai-compatible-provider">OpenAI-compatible provider</h2>
+<p>Provider configuration exists only in the host process environment:</p>
+<pre><code class="language-sh">export DAVOS_AGENT_PROVIDER=openai
+export DAVOS_AGENT_API_KEY='&lt;provider API key&gt;'
+export DAVOS_AGENT_MODEL='&lt;model name&gt;'
+export DAVOS_AGENT_BASE_URL='https://provider.example/v1'
+python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
 </code></pre>
-<p><strong>Expected Output:</strong>
-- <code>All QEMU checks passed.</code></p>
-<p>If all the above tests pass, ring3 execution and kernel memory isolation are functioning correctly.</p>
+<p>The base URL must be the provider's API root; the bridge appends
+<code>/chat/completions</code>. The API key is used only in the host HTTP authorization
+header. It is never logged, included in a transport frame or sent to the guest.</p>
+<h2 id="boundaries">Boundaries</h2>
+<ul>
+<li><code>agent_bridge_transport.py</code> owns the QEMU Unix serial connection.</li>
+<li><code>agent_bridge_protocol.py</code> owns <code>DV/1</code> framing and JSON encoding limits.</li>
+<li><code>agent_bridge_provider.py</code> owns fake and OpenAI-compatible provider calls.</li>
+<li><code>agent_bridge.py</code> processes requests sequentially and coordinates errors.</li>
+</ul>
+<p>Requests remain limited to 2048 bytes and responses to 1024 bytes. Provider
+and protocol failures become bounded JSON error objects. Fatal transport errors
+are emitted as the same bounded JSON shape on stderr and terminate the service.
+The service does not expose a public network endpoint and never puts provider
+configuration or credentials in the kernel.</p>
+<p>The constrained prompt and strict semantic response validation are implemented
+separately by issue #186.</p>
 
 
 
@@ -911,10 +866,10 @@ make iso
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
