@@ -336,6 +336,7 @@ vet:
 test:
 	mkdir -p $(BUILD_DIR)/.gocache
 	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing $(TEST_PKGS)
+	python3 -m unittest discover -s scripts -p 'test_*.py'
 
 # -----------------------
 # User hello

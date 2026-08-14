@@ -37,6 +37,9 @@ The guest sends a framed `ping`; the host validates it and returns a framed
 `pong`. A successful round trip prints `Agent transport: connected`. The probe
 contains no provider or networking logic and exists only to verify the channel.
 
+For the host planning service built on this channel, see
+[`host_bridge.md`](./host_bridge.md).
+
 ## Wire frame
 
 Every integer uses network byte order (big-endian).
