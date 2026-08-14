@@ -13,6 +13,7 @@ from agent_bridge_protocol import (
     encode_agent_response,
     error_response,
 )
+from agent_bridge_planner import PlannerError, validate_provider_plan
 from agent_bridge_provider import ProviderError, provider_from_environment
 from agent_bridge_transport import connect
 
@@ -21,8 +22,8 @@ def response_for_payload(payload, provider):
     try:
         request = decode_agent_request(payload)
         response = provider.plan(request)
-        return encode_agent_response(response)
-    except (ProtocolError, ProviderError) as error:
+        return encode_agent_response(validate_provider_plan(request, response))
+    except (PlannerError, ProtocolError, ProviderError) as error:
         safe_error = error_response(error.code, str(error))
         return encode_agent_response(safe_error)
 
