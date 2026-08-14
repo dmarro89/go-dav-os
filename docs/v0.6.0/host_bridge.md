@@ -43,6 +43,7 @@ header. It is never logged, included in a transport frame or sent to the guest.
 
 - `agent_bridge_transport.py` owns the QEMU Unix serial connection.
 - `agent_bridge_protocol.py` owns `DV/1` framing and JSON encoding limits.
+- `agent_bridge_planner.py` owns the constrained prompt and plan validation.
 - `agent_bridge_provider.py` owns fake and OpenAI-compatible provider calls.
 - `agent_bridge.py` processes requests sequentially and coordinates errors.
 
@@ -52,5 +53,8 @@ are emitted as the same bounded JSON shape on stderr and terminate the service.
 The service does not expose a public network endpoint and never puts provider
 configuration or credentials in the kernel.
 
-The constrained prompt and strict semantic response validation are implemented
-separately by issue #186.
+The provider sees only the user input, lightweight context and OS-provided
+action allowlist. Its output must match one known action contract exactly;
+unknown fields, disallowed actions and invalid targets become bounded
+`planner_error` responses. The guest independently validates every accepted
+plan before its safety gate or executor can use it.
