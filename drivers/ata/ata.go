@@ -13,10 +13,6 @@ const (
 	LBAHi     uint16 = 0x1F5
 	DriveHead uint16 = 0x1F6
 	StatusCmd uint16 = 0x1F7
-
-	CmdRead  = 0x20
-	CmdWrite = 0x30
-	CmdFlush = 0xE7
 )
 
 // Timeout constant for ATA operations (iterations)
