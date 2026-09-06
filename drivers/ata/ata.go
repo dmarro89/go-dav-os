@@ -22,6 +22,7 @@ const (
 // Timeout constant for ATA operations (iterations)
 const ataTimeout = 100000
 
+// waitBusy waits for the ATA drive to clear its busy flag, returning false on timeout.
 func waitBusy() bool {
 	for i := 0; i < ataTimeout; i++ {
 		status := inb(StatusCmd)
@@ -32,6 +33,7 @@ func waitBusy() bool {
 	return false // Timeout
 }
 
+// waitDRQ waits for the ATA drive to set its Data Request (DRQ) flag or Error (ERR) flag, returning false if an error or timeout occurs.
 func waitDRQ() bool {
 	for i := 0; i < ataTimeout; i++ {
 		status := inb(StatusCmd)
@@ -45,16 +47,18 @@ func waitDRQ() bool {
 	return false // Timeout
 }
 
+// ReadSector reads a single 512-byte sector from the given 28-bit LBA address into buf.
 func ReadSector(lba uint32, buf *[512]byte) bool {
 	if !waitBusy() {
 		return false
 	}
 
-	outb(DriveHead, 0xE0|byte((lba>>24)&0x0F))
+	regs := LBA28ToRegs(lba)
+	outb(DriveHead, regs.DriveHead)
 	outb(SecCount, 1)
-	outb(LBALo, byte(lba))
-	outb(LBAMid, byte(lba>>8))
-	outb(LBAHi, byte(lba>>16))
+	outb(LBALo, regs.LBALo)
+	outb(LBAMid, regs.LBAMid)
+	outb(LBAHi, regs.LBAHi)
 	outb(StatusCmd, CmdRead)
 
 	if !waitDRQ() {
@@ -65,16 +69,18 @@ func ReadSector(lba uint32, buf *[512]byte) bool {
 	return true
 }
 
+// WriteSector writes a single 512-byte sector from data to the given 28-bit LBA address.
 func WriteSector(lba uint32, data *[512]byte) bool {
 	if !waitBusy() {
 		return false
 	}
 
-	outb(DriveHead, 0xE0|byte((lba>>24)&0x0F))
+	regs := LBA28ToRegs(lba)
+	outb(DriveHead, regs.DriveHead)
 	outb(SecCount, 1)
-	outb(LBALo, byte(lba))
-	outb(LBAMid, byte(lba>>8))
-	outb(LBAHi, byte(lba>>16))
+	outb(LBALo, regs.LBALo)
+	outb(LBAMid, regs.LBAMid)
+	outb(LBAHi, regs.LBAHi)
 	outb(StatusCmd, CmdWrite)
 
 	if !waitDRQ() {
