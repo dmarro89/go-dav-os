@@ -79,6 +79,8 @@ The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified
 
 ## Code formatting and vet
 
+The repository includes an [`.editorconfig`](.editorconfig) file to help editors maintain consistent whitespace and indentation (tabs for Go and Makefiles, spaces for YAML and Markdown, LF line endings, and final newlines).
+
 The CI enforces formatting and runs `go vet` on every PR. Run these locally before pushing to avoid CI failures.
 
 **Fix formatting:**
