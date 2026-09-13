@@ -18,7 +18,7 @@ Anything that helps the project move forward, especially:
 - CI improvements (build checks, automation)
 
 ## Setup / how to run
-Please follow the README for the full setup (Docker/native toolchain, QEMU, etc.).
+Please follow the README for the full setup (Docker/native toolchain, QEMU, etc.). Run `make help` to inspect common developer commands.
 
 
 ## Testing

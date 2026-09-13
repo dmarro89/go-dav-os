@@ -92,9 +92,23 @@ GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
 TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
 SYSCALL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/syscall.gox
 
-.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test
+.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test help
 
 all: $(ISO_IMAGE)
+
+help:
+	@echo "Common developer commands for go-dav-os:"
+	@echo "  make               Build the OS ISO image (default)"
+	@echo "  make iso           Alias to build the bootable ISO image"
+	@echo "  make kernel        Compile the freestanding kernel ELF binary"
+	@echo "  make run           Run the built ISO in QEMU with a raw disk image"
+	@echo "  make test          Run Go unit tests and python script unit tests"
+	@echo "  make vet           Run go vet checks"
+	@echo "  make clean         Remove build artifacts and generated disk image"
+	@echo "  make docker-build-only  Build the Docker toolchain image and kernel ISO"
+	@echo "  make docker-shell       Open an interactive shell inside the Docker toolchain"
+	@echo "  make docker-run         Build and run inside Docker container"
+	@echo "  make help          Display this help message"
 
 kernel: $(KERNEL_ELF)
 
@@ -325,9 +339,6 @@ docker-shell: docker-image
 # -----------------------
 # Unit tests and vet
 # -----------------------
-test:
-	mkdir -p $(BUILD_DIR)/.gocache
-	GOCACHE=$(CURDIR)/$(BUILD_DIR)/.gocache go test -tags testing $(TEST_PKGS)
 
 vet:
 	mkdir -p $(BUILD_DIR)/.gocache
