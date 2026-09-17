@@ -957,3 +957,44 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 		}
 	})
 }
+
+func TestStandardizedUsageMessages(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"mem missing args", "mem", "Usage: mem <hex_addr> [len]\n"},
+		{"free missing args", "free", "Usage: free <hex_addr>\n"},
+		{"write missing args", "write", "Usage: write <name> <text...>\n"},
+		{"cat missing args", "cat", "Usage: cat <name>\n"},
+		{"rm missing args", "rm", "Usage: rm <name>\n"},
+		{"stat missing args", "stat", "Usage: stat <name>\n"},
+		{"disk missing args", "disk", "Usage: disk <read|write> <lba> [text]\n"},
+		{"disk invalid subcommand", "disk foo", "Usage: disk <read|write> <lba> [text]\n"},
+		{"fatcreate missing args", "fatcreate", "Usage: fatcreate <filename> <content>\n"},
+		{"fatread missing args", "fatread", "Usage: fatread <filename>\n"},
+		{"layout invalid arg", "layout fr", "Usage: layout [us|it]\n"},
+		{"run missing args", "run", "Usage: run <program>\n"},
+		{"agent missing args", "agent", "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n"},
+		{"agent show missing args", "agent show", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
+		{"agent show invalid arg", "agent show invalid", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
+		{"agent read missing args", "agent read", "Usage: agent read <name>\n"},
+		{"agent delete missing args", "agent delete", "Usage: agent delete <name>\n"},
+		{"agent stat missing args", "agent stat", "Usage: agent stat <name>\n"},
+		{"agent transport missing args", "agent transport", "Usage: agent transport ping\n"},
+		{"agent transport invalid subcmd", "agent transport pong", "Usage: agent transport ping\n"},
+	}
+
+	terminal.Init()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			terminal.ResetOutputForTesting()
+			setLineBuf(tt.input)
+			execute()
+			if got := terminal.OutputForTesting(); got != tt.want {
+				t.Fatalf("execute(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}

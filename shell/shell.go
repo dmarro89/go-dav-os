@@ -398,14 +398,14 @@ func execute() {
 
 	if matchLiteral(cmdStart, cmdEnd, "free") {
 		// free a previously allocated 4KB page
-		if !mem.PFAReady() {
-			terminal.Print("free: pfa not ready\n")
-			return
-		}
-
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
 			terminal.Print("Usage: free <hex_addr>\n")
+			return
+		}
+
+		if !mem.PFAReady() {
+			terminal.Print("free: pfa not ready\n")
 			return
 		}
 
@@ -618,6 +618,9 @@ func execute() {
 			}
 			return
 		}
+
+		terminal.Print("Usage: disk <read|write> <lba> [text]\n")
+		return
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, "fatinit") {
