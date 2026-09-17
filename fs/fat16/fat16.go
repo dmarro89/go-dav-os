@@ -30,6 +30,16 @@ var (
 
 const (
 	DirEntrySize = 32
+
+	// Status error codes for FAT16 operations
+	StatusOK          = 0
+	ErrNotInitialized = 1
+	ErrFileNotFound   = 2
+	ErrFileExists     = 3
+	ErrNoFreeClusters = 4
+	ErrDirectoryFull  = 5
+	ErrInvalidName    = 6
+	ErrDiskIO         = 7
 )
 
 // Init reads the MBR/BPB from sector 0 and calculates offsets
@@ -238,17 +248,21 @@ func ListDir() {
 	}
 }
 
-// CreateFile creates a file in the root directory
-func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bool {
+// CreateFileWithErr creates a file in the root directory and returns an error code
+func CreateFileWithErr(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) int {
 	if !initialized {
 		terminal.Print("FAT16: Not initialized\n")
-		return false
+		return ErrNotInitialized
+	}
+	if name == nil || name[0] == ' ' || name[0] == 0 {
+		terminal.Print("FAT16: Invalid filename\n")
+		return ErrInvalidName
 	}
 
 	// Check if file with same name already exists
 	for sec := uint32(0); sec < rootSectors; sec++ {
 		if !ata.ReadSector(rootStart+sec, &fatBuf) {
-			return false
+			return ErrDiskIO
 		}
 
 		for i := 0; i < 16; i++ {
@@ -284,7 +298,7 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 			}
 			if match {
 				terminal.Print("FAT16: File already exists\n")
-				return false
+				return ErrFileExists
 			}
 		}
 	}
@@ -293,13 +307,13 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 	cluster := findFreeCluster()
 	if cluster == 0 {
 		terminal.Print("FAT16: No free clusters\n")
-		return false
+		return ErrNoFreeClusters
 	}
 
 	// Mark cluster as end-of-chain in FAT
 	if !setFATEntry(cluster, 0xFFFF) {
 		terminal.Print("FAT16: FAT write error\n")
-		return false
+		return ErrDiskIO
 	}
 
 	// Find free directory entry
@@ -309,7 +323,7 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 
 	for sec := uint32(0); sec < rootSectors && !entryFound; sec++ {
 		if !ata.ReadSector(rootStart+sec, &fatBuf) {
-			return false
+			return ErrDiskIO
 		}
 
 		for i := 0; i < 16; i++ {
@@ -326,12 +340,12 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 
 	if !entryFound {
 		terminal.Print("FAT16: Root directory full\n")
-		return false
+		return ErrDirectoryFull
 	}
 
 	// Re-read sector for modification
 	if !ata.ReadSector(rootStart+dirSec, &fatBuf) {
-		return false
+		return ErrDiskIO
 	}
 
 	// Write directory entry
@@ -359,7 +373,7 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 	fatBuf[dirOff+31] = byte((dataLen >> 24) & 0xFF)
 
 	if !ata.WriteSector(rootStart+dirSec, &fatBuf) {
-		return false
+		return ErrDiskIO
 	}
 
 	// Write data to cluster
@@ -373,22 +387,32 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 		}
 	}
 	if !ata.WriteSector(dataSector, &fatBuf) {
-		return false
+		return ErrDiskIO
 	}
 
-	return true
+	return StatusOK
 }
 
-// ReadFile reads a file by name into the provided buffer
-func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
+// CreateFile creates a file in the root directory
+func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bool {
+	return CreateFileWithErr(name, ext, data, dataLen) == StatusOK
+}
+
+// ReadFileWithErr reads a file by name into the provided buffer and returns size and an error code
+func ReadFileWithErr(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, int) {
 	if !initialized {
-		return 0, false
+		terminal.Print("FAT16: Not initialized\n")
+		return 0, ErrNotInitialized
+	}
+	if name == nil || name[0] == ' ' || name[0] == 0 {
+		terminal.Print("FAT16: Invalid filename\n")
+		return 0, ErrInvalidName
 	}
 
 	// Find file in root directory
 	for sec := uint32(0); sec < rootSectors; sec++ {
 		if !ata.ReadSector(rootStart+sec, &fatBuf) {
-			return 0, false
+			return 0, ErrDiskIO
 		}
 
 		for i := 0; i < 16; i++ {
@@ -396,7 +420,7 @@ func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
 			firstByte := fatBuf[off]
 
 			if firstByte == 0x00 {
-				return 0, false // End of directory
+				return 0, ErrFileNotFound // End of directory
 			}
 			if firstByte == 0xE5 {
 				continue
@@ -428,14 +452,20 @@ func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
 				// Read data from cluster
 				dataSector := clusterToSector(cluster)
 				if !ata.ReadSector(dataSector, outBuf) {
-					return 0, false
+					return 0, ErrDiskIO
 				}
-				return size, true
+				return size, StatusOK
 			}
 		}
 	}
 
-	return 0, false
+	return 0, ErrFileNotFound
+}
+
+// ReadFile reads a file by name into the provided buffer
+func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
+	size, errCode := ReadFileWithErr(name, ext, outBuf)
+	return size, errCode == StatusOK
 }
 
 // findFreeCluster finds a free cluster in the FAT (returns 0 if none)

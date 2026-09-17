@@ -6,6 +6,7 @@ import (
 
 	"github.com/dmarro89/go-dav-os/agent"
 	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/fs/fat16"
 	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
@@ -954,6 +955,139 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 		want := "agent: file not found\n"
 		if got := terminal.OutputForTesting(); got != want {
 			t.Fatalf("execute(%q) output = %q, expected %q", "agent read test.txt after delete", got, want)
+		}
+	})
+}
+
+func TestStandardizedUsageMessages(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"mem missing args", "mem", "Usage: mem <hex_addr> [len]\n"},
+		{"free missing args", "free", "Usage: free <hex_addr>\n"},
+		{"write missing args", "write", "Usage: write <name> <text...>\n"},
+		{"cat missing args", "cat", "Usage: cat <name>\n"},
+		{"rm missing args", "rm", "Usage: rm <name>\n"},
+		{"stat missing args", "stat", "Usage: stat <name>\n"},
+		{"disk missing args", "disk", "Usage: disk <read|write> <lba> [text]\n"},
+		{"disk invalid subcommand", "disk foo", "Usage: disk <read|write> <lba> [text]\n"},
+		{"fatcreate missing args", "fatcreate", "Usage: fatcreate <filename> <content>\n"},
+		{"fatread missing args", "fatread", "Usage: fatread <filename>\n"},
+		{"layout invalid arg", "layout fr", "Usage: layout [us|it]\n"},
+		{"run missing args", "run", "Usage: run <program>\n"},
+		{"agent missing args", "agent", "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n"},
+		{"agent show missing args", "agent show", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
+		{"agent show invalid arg", "agent show invalid", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
+		{"agent read missing args", "agent read", "Usage: agent read <name>\n"},
+		{"agent delete missing args", "agent delete", "Usage: agent delete <name>\n"},
+		{"agent stat missing args", "agent stat", "Usage: agent stat <name>\n"},
+		{"agent transport missing args", "agent transport", "Usage: agent transport ping\n"},
+		{"agent transport invalid subcmd", "agent transport pong", "Usage: agent transport ping\n"},
+	}
+
+	terminal.Init()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			terminal.ResetOutputForTesting()
+			setLineBuf(tt.input)
+			execute()
+			if got := terminal.OutputForTesting(); got != tt.want {
+				t.Fatalf("execute(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFatOperationsErrorCodes(t *testing.T) {
+	terminal.Init()
+
+	t.Run("fatcreate success", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.StatusOK)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "File created\n" {
+			t.Fatalf("execute got %q, want %q", got, "File created\n")
+		}
+	})
+
+	t.Run("fatcreate not initialized", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetInitializedForTesting(false)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Not initialized\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Not initialized\n")
+		}
+	})
+
+	t.Run("fatcreate file already exists", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrFileExists)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: File already exists\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: File already exists\n")
+		}
+	})
+
+	t.Run("fatcreate no free clusters", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrNoFreeClusters)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: No free clusters\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: No free clusters\n")
+		}
+	})
+
+	t.Run("fatcreate root directory full", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrDirectoryFull)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Root directory full\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Root directory full\n")
+		}
+	})
+
+	t.Run("fatcreate generic failure", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockCreateFileErr(fat16.ErrDiskIO)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatcreate file1 hello")
+		execute()
+		if got := terminal.OutputForTesting(); got != "Failed to create file\n" {
+			t.Fatalf("execute got %q, want %q", got, "Failed to create file\n")
+		}
+	})
+
+	t.Run("fatread not found", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetMockReadFile(0, fat16.ErrFileNotFound)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatread notfound")
+		execute()
+		if got := terminal.OutputForTesting(); got != "File not found\n" {
+			t.Fatalf("execute got %q, want %q", got, "File not found\n")
+		}
+	})
+
+	t.Run("fatread not initialized", func(t *testing.T) {
+		fat16.ResetForTesting()
+		fat16.SetInitializedForTesting(false)
+		terminal.ResetOutputForTesting()
+		setLineBuf("fatread myfile")
+		execute()
+		if got := terminal.OutputForTesting(); got != "FAT16: Not initialized\n" {
+			t.Fatalf("execute got %q, want %q", got, "FAT16: Not initialized\n")
 		}
 	})
 }
