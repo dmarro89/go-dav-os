@@ -7,6 +7,7 @@ import (
 	"github.com/dmarro89/go-dav-os/drivers/ata"
 	"github.com/dmarro89/go-dav-os/fs"
 	"github.com/dmarro89/go-dav-os/fs/fat16"
+	"github.com/dmarro89/go-dav-os/keyboard"
 	"github.com/dmarro89/go-dav-os/mem"
 	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
@@ -45,6 +46,11 @@ var (
 	historyHead int
 	// historyCount tracks the total number of items currently stored (max 32)
 	historyCount int
+	// historyPos is the navigation offset from newest command (-1 means editing current new line)
+	historyPos = -1
+	// savedLineBuf and savedLineLen store the in-progress line when user starts navigating history
+	savedLineBuf [maxLine]byte
+	savedLineLen int
 
 	runtimeAgent agent.Runtime
 	agentContext agent.Context
@@ -149,11 +155,52 @@ func NewAgentExecutor() agent.AllowedActionExecutor {
 	return executor
 }
 
+func resetHistory() {
+	historyHead = 0
+	historyCount = 0
+	historyPos = -1
+	savedLineLen = 0
+	for i := 0; i < maxHistory; i++ {
+		historyLen[i] = 0
+	}
+}
+
 func Init() {
 	lineLen = 0
+	historyPos = -1
+	savedLineLen = 0
 	agentContext = agent.Context{}
 	terminal.Print("Welcome to " + osName + " " + osVersion + "\n")
 	terminal.Print(prompt)
+}
+
+func clearCurrentLine() {
+	for lineLen > 0 {
+		lineLen--
+		terminal.Backspace()
+	}
+}
+
+func loadHistoryItem(histOffset int) {
+	clearCurrentLine()
+	if histOffset == -1 {
+		for i := 0; i < savedLineLen; i++ {
+			lineBuf[i] = savedLineBuf[i]
+			terminal.PutRune(rune(savedLineBuf[i]))
+		}
+		lineLen = savedLineLen
+		return
+	}
+
+	// histOffset: 0 is newest command, historyCount-1 is oldest command
+	ringIdx := (historyHead - 1 - histOffset + maxHistory*2) % maxHistory
+	l := historyLen[ringIdx]
+	for i := 0; i < l; i++ {
+		b := historyBuf[ringIdx][i]
+		lineBuf[i] = b
+		terminal.PutRune(rune(b))
+	}
+	lineLen = l
 }
 
 func FeedRune(r rune) {
@@ -170,8 +217,33 @@ func FeedRune(r rune) {
 		terminal.Backspace()
 		return
 
+	case keyboard.KeyUp:
+		if historyCount == 0 {
+			return
+		}
+		if historyPos == -1 {
+			savedLineLen = lineLen
+			for i := 0; i < lineLen; i++ {
+				savedLineBuf[i] = lineBuf[i]
+			}
+		}
+		if historyPos+1 < historyCount {
+			historyPos++
+			loadHistoryItem(historyPos)
+		}
+		return
+
+	case keyboard.KeyDown:
+		if historyPos == -1 {
+			return
+		}
+		historyPos--
+		loadHistoryItem(historyPos)
+		return
+
 	case '\n':
 		terminal.PutRune('\n')
+		historyPos = -1
 		execute()
 		lineLen = 0
 		terminal.Print(prompt)

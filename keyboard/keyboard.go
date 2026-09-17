@@ -15,6 +15,11 @@ const (
 	scCapsLockDown   = 0x3A
 )
 
+const (
+	KeyUp   rune = 0x1000
+	KeyDown rune = 0x1001
+)
+
 var (
 	leftShiftDown  bool
 	rightShiftDown bool

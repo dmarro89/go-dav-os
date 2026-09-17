@@ -53,6 +53,8 @@ var itLayoutData = ITLayout{
 		0x39: ' ',
 		0x1C: '\n',
 		0x0E: '\b',
+		0x48: keyboard.KeyUp,
+		0x50: keyboard.KeyDown,
 	},
 }
 

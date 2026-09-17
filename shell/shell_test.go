@@ -6,6 +6,7 @@ import (
 
 	"github.com/dmarro89/go-dav-os/agent"
 	"github.com/dmarro89/go-dav-os/fs"
+	"github.com/dmarro89/go-dav-os/keyboard"
 	"github.com/dmarro89/go-dav-os/serial"
 	"github.com/dmarro89/go-dav-os/terminal"
 )
@@ -956,4 +957,101 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 			t.Fatalf("execute(%q) output = %q, expected %q", "agent read test.txt after delete", got, want)
 		}
 	})
+}
+
+func feedString(s string) {
+	for _, r := range s {
+		FeedRune(r)
+	}
+}
+
+func getLineBuf() string {
+	return string(lineBuf[:lineLen])
+}
+
+func TestShellHistoryNavigation(t *testing.T) {
+	terminal.Init()
+	Init()
+	resetHistory()
+
+	// Initial state
+	if historyCount != 0 {
+		t.Fatalf("expected initial historyCount == 0, got %d", historyCount)
+	}
+
+	// Pressing KeyUp with empty history does nothing
+	FeedRune(keyboard.KeyUp)
+	if getLineBuf() != "" {
+		t.Fatalf("expected empty lineBuf, got %q", getLineBuf())
+	}
+
+	// Feed first command
+	feedString("echo hello\n")
+	if historyCount != 1 {
+		t.Fatalf("expected historyCount == 1, got %d", historyCount)
+	}
+
+	// Feed second command
+	feedString("version\n")
+	if historyCount != 2 {
+		t.Fatalf("expected historyCount == 2, got %d", historyCount)
+	}
+
+	// Now navigate history with KeyUp:
+	// 1st KeyUp -> should retrieve newest command ("version")
+	FeedRune(keyboard.KeyUp)
+	if got := getLineBuf(); got != "version" {
+		t.Fatalf("expected lineBuf %q after 1st KeyUp, got %q", "version", got)
+	}
+
+	// 2nd KeyUp -> should retrieve older command ("echo hello")
+	FeedRune(keyboard.KeyUp)
+	if got := getLineBuf(); got != "echo hello" {
+		t.Fatalf("expected lineBuf %q after 2nd KeyUp, got %q", "echo hello", got)
+	}
+
+	// 3rd KeyUp -> already at oldest command, remains "echo hello"
+	FeedRune(keyboard.KeyUp)
+	if got := getLineBuf(); got != "echo hello" {
+		t.Fatalf("expected lineBuf %q after 3rd KeyUp, got %q", "echo hello", got)
+	}
+
+	// KeyDown -> should go back to newer command ("version")
+	FeedRune(keyboard.KeyDown)
+	if got := getLineBuf(); got != "version" {
+		t.Fatalf("expected lineBuf %q after KeyDown, got %q", "version", got)
+	}
+
+	// KeyDown again -> should return to original unsubmitted line (empty)
+	FeedRune(keyboard.KeyDown)
+	if got := getLineBuf(); got != "" {
+		t.Fatalf("expected lineBuf empty after returning with KeyDown, got %q", got)
+	}
+
+	// KeyDown when already at newest draft does nothing
+	FeedRune(keyboard.KeyDown)
+	if got := getLineBuf(); got != "" {
+		t.Fatalf("expected lineBuf empty, got %q", got)
+	}
+
+	// Test preserving in-progress line before navigating
+	feedString("cat some_draft")
+	FeedRune(keyboard.KeyUp)
+	if got := getLineBuf(); got != "version" {
+		t.Fatalf("expected lineBuf %q after KeyUp, got %q", "version", got)
+	}
+
+	// Down arrow back to draft
+	FeedRune(keyboard.KeyDown)
+	if got := getLineBuf(); got != "cat some_draft" {
+		t.Fatalf("expected draft restored as %q, got %q", "cat some_draft", got)
+	}
+
+	// Test editing a recalled command with backspace and runes
+	FeedRune(keyboard.KeyUp) // recalls "version"
+	FeedRune(rune(0x08))     // test backspace -> "versio"
+	FeedRune('s')            // "versios"
+	if got := getLineBuf(); got != "versios" {
+		t.Fatalf("expected edited line %q, got %q", "versios", got)
+	}
 }

@@ -1,6 +1,10 @@
 package layout
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dmarro89/go-dav-os/keyboard"
+)
 
 // TestUSLayout_LetterScancodes verifies the canonical letter scancodes
 // produce the expected lowercase letters.
@@ -21,6 +25,8 @@ func TestUSLayout_LetterScancodes(t *testing.T) {
 		{0x20, 'd'},
 		{0x2C, 'z'},
 		{0x32, 'm'},
+		{0x48, keyboard.KeyUp},
+		{0x50, keyboard.KeyDown},
 	}
 	for _, tc := range cases {
 		got, ok := l.GetKey(tc.sc)
@@ -47,6 +53,8 @@ func TestITLayout_LetterScancodes(t *testing.T) {
 		{0x11, 'w'},
 		{0x1E, 'a'},
 		{0x32, 'm'},
+		{0x48, keyboard.KeyUp},
+		{0x50, keyboard.KeyDown},
 	}
 	for _, tc := range cases {
 		got, ok := l.GetKey(tc.sc)

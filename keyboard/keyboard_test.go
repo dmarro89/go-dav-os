@@ -141,3 +141,12 @@ func TestTranslateScancodeIgnoresKeyReleasesAndUnmappedKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestKeyConstants(t *testing.T) {
+	if KeyUp != 0x1000 {
+		t.Fatalf("KeyUp = 0x%X, want 0x1000", KeyUp)
+	}
+	if KeyDown != 0x1001 {
+		t.Fatalf("KeyDown = 0x%X, want 0x1001", KeyDown)
+	}
+}
