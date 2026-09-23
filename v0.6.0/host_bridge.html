@@ -807,6 +807,7 @@ header. It is never logged, included in a transport frame or sent to the guest.<
 <ul>
 <li><code>agent_bridge_transport.py</code> owns the QEMU Unix serial connection.</li>
 <li><code>agent_bridge_protocol.py</code> owns <code>DV/1</code> framing and JSON encoding limits.</li>
+<li><code>agent_bridge_planner.py</code> owns the constrained prompt and plan validation.</li>
 <li><code>agent_bridge_provider.py</code> owns fake and OpenAI-compatible provider calls.</li>
 <li><code>agent_bridge.py</code> processes requests sequentially and coordinates errors.</li>
 </ul>
@@ -815,8 +816,11 @@ and protocol failures become bounded JSON error objects. Fatal transport errors
 are emitted as the same bounded JSON shape on stderr and terminate the service.
 The service does not expose a public network endpoint and never puts provider
 configuration or credentials in the kernel.</p>
-<p>The constrained prompt and strict semantic response validation are implemented
-separately by issue #186.</p>
+<p>The provider sees only the user input, lightweight context and OS-provided
+action allowlist. Its output must match one known action contract exactly;
+unknown fields, disallowed actions and invalid targets become bounded
+<code>planner_error</code> responses. The guest independently validates every accepted
+plan before its safety gate or executor can use it.</p>
 
 
 
