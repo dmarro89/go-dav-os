@@ -92,7 +92,7 @@ GDT_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/gdt.gox
 TSS_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/tss.gox
 SYSCALL_GOX := $(BUILD_DIR)/github.com/dmarro89/go-dav-os/kernel/syscall.gox
 
-.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test
+.PHONY: all kernel iso run run-agent-transport clean docker-build docker-shell docker-run test help
 
 all: $(ISO_IMAGE)
 
@@ -113,6 +113,18 @@ disk.img:
 
 clean:
 	rm -rf $(BUILD_DIR) disk.img
+
+help:
+	@echo "Available commands:"
+	@echo "  make                 - Build the ISO image (default target)"
+	@echo "  make iso             - Build the ISO image"
+	@echo "  make run             - Run the OS in QEMU"
+	@echo "  make run-agent-transport - Run in QEMU with a serial socket for the LLM agent"
+	@echo "  make test            - Run all unit tests"
+	@echo "  make clean           - Remove build artifacts and disk images"
+	@echo "  make docker-build    - Build the toolchain Docker image"
+	@echo "  make docker-shell    - Open a shell inside the toolchain container"
+	@echo "  make docker-run      - Run the default build in the toolchain container"
 
 # -----------------------
 # Build directory
