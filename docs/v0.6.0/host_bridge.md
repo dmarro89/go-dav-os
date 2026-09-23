@@ -19,6 +19,19 @@ Then start the bridge in another terminal:
 python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
 ```
 
+Switch the guest to the bridge-backed planner and submit a request:
+
+```text
+agent mode llm
+agent ask show me the files
+```
+
+The mode switch succeeds only after the guest receives the bridge health
+response. Each `agent ask` request includes the bounded input, the current
+session context and the guest-owned action allowlist. A valid response is
+converted to the existing typed `Plan`, then passes through the same validator,
+safety gate and constrained executor used by deterministic commands.
+
 The deterministic fake provider is the default. It needs no network access or
 credentials and uses the mappings from the
 [v0.5.0 fake bridge](../v0.5.0/fake_llm_bridge.md).
@@ -57,4 +70,6 @@ The provider sees only the user input, lightweight context and OS-provided
 action allowlist. Its output must match one known action contract exactly;
 unknown fields, disallowed actions and invalid targets become bounded
 `planner_error` responses. The guest independently validates every accepted
-plan before its safety gate or executor can use it.
+plan before its safety gate or executor can use it. Transport, protocol and
+bridge failures do not execute an action or update the Agent session context;
+the deterministic command path remains available without a host bridge.

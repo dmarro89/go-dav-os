@@ -21,6 +21,8 @@ from agent_bridge_transport import connect
 def response_for_payload(payload, provider):
     try:
         request = decode_agent_request(payload)
+        if request == {"health": "ping"}:
+            return encode_agent_response({"health": "ok"})
         response = provider.plan(request)
         return encode_agent_response(validate_provider_plan(request, response))
     except (PlannerError, ProtocolError, ProviderError) as error:
