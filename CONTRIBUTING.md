@@ -18,7 +18,7 @@ Anything that helps the project move forward, especially:
 - CI improvements (build checks, automation)
 
 ## Setup / how to run
-Please follow the README for the full setup (Docker/native toolchain, QEMU, etc.).
+Please follow the README for the full setup (Docker/native toolchain, QEMU, etc.). Run `make help` to inspect common developer commands.
 
 
 ## Testing
@@ -68,7 +68,7 @@ git commit -s -m "Describe the change"
 
 For the most recent commit, add a missing sign-off with `git commit --amend -s`. For older commits, use an interactive rebase and amend each affected commit. Rewriting commits requires pushing the updated branch with `--force-with-lease`.
 
-The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every commit in a PR and rejects the PR when any sign-off is missing or malformed. AI disclosure is separate from the human sign-off; see [`AI_POLICY.md`](AI_POLICY.md).
+The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every contribution commit in a PR and rejects the PR when any sign-off is missing or malformed. A merge commit used to synchronize the PR branch with its base is skipped because the underlying contribution commits are checked individually. AI disclosure is separate from the human sign-off; see [`AI_POLICY.md`](AI_POLICY.md).
 
 ## A couple of guidelines (to keep things simple)
 - Prefer **small PRs** (one thing at a time)
@@ -78,6 +78,8 @@ The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified
 - Comments are welcome when they explain **why** (not what)
 
 ## Code formatting and vet
+
+The repository includes an [`.editorconfig`](.editorconfig) file to help editors maintain consistent whitespace and indentation (tabs for Go and Makefiles, spaces for YAML and Markdown, LF line endings, and final newlines).
 
 The CI enforces formatting and runs `go vet` on every PR. Run these locally before pushing to avoid CI failures.
 

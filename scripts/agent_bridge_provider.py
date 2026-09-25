@@ -6,6 +6,7 @@ import urllib.parse
 import urllib.request
 
 import fake_llm_bridge
+from agent_bridge_planner import parse_provider_content, provider_messages
 
 
 MAX_PROVIDER_BODY = 65536
@@ -48,16 +49,7 @@ class OpenAICompatibleProvider(Provider):
         body = json.dumps(
             {
                 "model": self.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "Return only one JSON object matching the Agent bridge "
-                            "response protocol."
-                        ),
-                    },
-                    {"role": "user", "content": json.dumps(request, separators=(",", ":"))},
-                ],
+                "messages": provider_messages(request),
             }
         ).encode("utf-8")
         try:
@@ -80,7 +72,6 @@ class OpenAICompatibleProvider(Provider):
         try:
             envelope = json.loads(raw_response.decode("utf-8"))
             content = envelope["choices"][0]["message"]["content"]
-            plan = json.loads(content)
         except (
             KeyError,
             IndexError,
@@ -90,9 +81,7 @@ class OpenAICompatibleProvider(Provider):
             RecursionError,
         ) as error:
             raise ProviderError("provider returned an invalid response") from error
-        if not isinstance(plan, dict):
-            raise ProviderError("provider returned an invalid response")
-        return plan
+        return parse_provider_content(content)
 
 
 def provider_from_environment(environment):

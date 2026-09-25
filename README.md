@@ -94,6 +94,7 @@ qemu-system-x86_64 -cdrom build/dav-go-os.iso
 ```
 
 Quick targets from the Makefile
+- `make help` displays common developer targets and descriptions
 - `make docker-build-only` builds the image and the ISO
 - `make run` (outside Docker) runs QEMU on an existing ISO
 

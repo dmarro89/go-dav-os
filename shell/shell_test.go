@@ -957,3 +957,410 @@ func TestExecuteAgentCommandSuccessPaths(t *testing.T) {
 		}
 	})
 }
+
+func TestExecute_BuiltinCommands(t *testing.T) {
+	terminal.Init()
+	fs.Init()
+	fs.SetupMockPFA()
+
+	t.Run("empty input does nothing", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("   ")
+		execute()
+		if got := terminal.OutputForTesting(); got != "" {
+			t.Fatalf("expected empty output, got %q", got)
+		}
+	})
+
+	t.Run("help command", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("help")
+		execute()
+		wantPrefix := "Commands: help, history, clear, echo"
+		if got := terminal.OutputForTesting(); !strings.HasPrefix(got, wantPrefix) {
+			t.Fatalf("expected help output to start with %q, got %q", wantPrefix, got)
+		}
+	})
+
+	t.Run("version command", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("version")
+		execute()
+		want := "DavOS 0.5.0 (64bit)\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("version output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("clear command", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		terminal.Print("some text")
+		setLineBuf("clear")
+		execute()
+		// terminal.Clear resets terminal buffer
+		if got := terminal.OutputForTesting(); got != "" {
+			t.Fatalf("expected clear to leave empty output, got %q", got)
+		}
+	})
+
+	t.Run("echo command with message", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("echo hello world from dav-os")
+		execute()
+		want := "hello world from dav-os\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("echo command without message", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("echo")
+		execute()
+		want := "\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("echo command with leading trailing and repeated whitespace", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("   echo    message   with   spaces   ")
+		execute()
+		want := "message   with   spaces\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("echo command with quoted arguments", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("echo \"quoted argument\" 'single quote'")
+		execute()
+		want := "\"quoted argument\" 'single quote'\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("echo output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("ticks command when not wired", func(t *testing.T) {
+		SetTickProvider(nil)
+		terminal.ResetOutputForTesting()
+		setLineBuf("ticks")
+		execute()
+		want := "ticks: not wired yet\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("ticks output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("ticks command when wired", func(t *testing.T) {
+		SetTickProvider(func() uint64 { return 98765 })
+		t.Cleanup(func() { SetTickProvider(nil) })
+		terminal.ResetOutputForTesting()
+		setLineBuf("ticks")
+		execute()
+		want := "98765\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("ticks output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("uptime command when not wired", func(t *testing.T) {
+		getSyscallTicks = nil
+		terminal.ResetOutputForTesting()
+		setLineBuf("uptime")
+		execute()
+		want := "uptime: not wired yet\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("uptime output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("uptime command when wired", func(t *testing.T) {
+		getSyscallTicks = func() uint64 { return 12550 } // 125.5s = 2m 5s
+		t.Cleanup(func() { getSyscallTicks = nil })
+		terminal.ResetOutputForTesting()
+		setLineBuf("uptime")
+		execute()
+		want := "up 2m 5s (12550 ticks via SYS_GETTICKS)\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("uptime output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("layout command without args prints current layout", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("layout")
+		execute()
+		want := "current layout: " + currentLayout + "\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("layout output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("layout command invalid layout argument", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("layout fr")
+		execute()
+		want := "Usage: layout [us|it]\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("layout invalid output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("layout command switcher not wired", func(t *testing.T) {
+		switchLayoutFn = nil
+		terminal.ResetOutputForTesting()
+		setLineBuf("layout us")
+		execute()
+		want := "layout: switcher not wired\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("layout output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("layout command switcher wired and succeeds", func(t *testing.T) {
+		switchLayoutFn = func(layout string) bool { return true }
+		t.Cleanup(func() { switchLayoutFn = nil })
+		terminal.ResetOutputForTesting()
+		setLineBuf("layout us")
+		execute()
+		want := "layout: switched to us\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("layout output = %q, expected %q", got, want)
+		}
+		if currentLayout != "us" {
+			t.Fatalf("currentLayout = %q, expected %q", currentLayout, "us")
+		}
+	})
+
+	t.Run("fs write cat stat and rm lifecycle", func(t *testing.T) {
+		fs.Init()
+
+		// Write missing args
+		terminal.ResetOutputForTesting()
+		setLineBuf("write")
+		execute()
+		if got := terminal.OutputForTesting(); got != "Usage: write <name> <text...>\n" {
+			t.Fatalf("write usage output = %q", got)
+		}
+
+		// Write invalid name (> 16 chars)
+		terminal.ResetOutputForTesting()
+		setLineBuf("write name_is_way_too_long_for_buffer content")
+		execute()
+		if got := terminal.OutputForTesting(); got != "write: invalid name\n" {
+			t.Fatalf("write invalid name output = %q", got)
+		}
+
+		// Write file
+		terminal.ResetOutputForTesting()
+		setLineBuf("write notes.txt hello filesystem")
+		execute()
+		if got := terminal.OutputForTesting(); got != "ok\n" {
+			t.Fatalf("write output = %q, expected ok", got)
+		}
+
+		// Stat file
+		terminal.ResetOutputForTesting()
+		setLineBuf("stat notes.txt")
+		execute()
+		gotStat := terminal.OutputForTesting()
+		if !strings.HasPrefix(gotStat, "page=0x") || !strings.Contains(gotStat, "size=16") {
+			t.Fatalf("stat output = %q, expected size=16 and page address", gotStat)
+		}
+
+		// Cat file
+		terminal.ResetOutputForTesting()
+		setLineBuf("cat notes.txt")
+		execute()
+		if got := terminal.OutputForTesting(); got != "hello filesystem\n" {
+			t.Fatalf("cat output = %q, expected hello filesystem", got)
+		}
+
+		// Cat non-existent file
+		terminal.ResetOutputForTesting()
+		setLineBuf("cat notfound.txt")
+		execute()
+		if got := terminal.OutputForTesting(); got != "cat: not found\n" {
+			t.Fatalf("cat output = %q, expected not found", got)
+		}
+
+		// Ls command
+		terminal.ResetOutputForTesting()
+		setLineBuf("ls")
+		execute()
+		if got := terminal.OutputForTesting(); !strings.Contains(got, "notes.txt") || !strings.Contains(got, "size=16") {
+			t.Fatalf("ls output = %q, expected to list notes.txt", got)
+		}
+
+		// Rm file
+		terminal.ResetOutputForTesting()
+		setLineBuf("rm notes.txt")
+		execute()
+		if got := terminal.OutputForTesting(); got != "ok\n" {
+			t.Fatalf("rm output = %q, expected ok", got)
+		}
+
+		// Rm again (not found)
+		terminal.ResetOutputForTesting()
+		setLineBuf("rm notes.txt")
+		execute()
+		if got := terminal.OutputForTesting(); got != "rm: not found\n" {
+			t.Fatalf("rm non-existent output = %q", got)
+		}
+	})
+
+	t.Run("mem command missing and invalid arguments", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("mem")
+		execute()
+		if got := terminal.OutputForTesting(); got != "Usage: mem <hex_addr> [len]\n" {
+			t.Fatalf("mem missing arg output = %q", got)
+		}
+
+		terminal.ResetOutputForTesting()
+		setLineBuf("mem invalid_addr")
+		execute()
+		if got := terminal.OutputForTesting(); got != "mem: invalid hex address\n" {
+			t.Fatalf("mem invalid addr output = %q", got)
+		}
+
+		terminal.ResetOutputForTesting()
+		setLineBuf("mem 0x1000 bad_len")
+		execute()
+		if got := terminal.OutputForTesting(); got != "mem: invalid length\n" {
+			t.Fatalf("mem invalid length output = %q", got)
+		}
+	})
+
+	t.Run("run command missing arg or not wired", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("run")
+		execute()
+		if got := terminal.OutputForTesting(); got != "Usage: run <program>\n" {
+			t.Fatalf("run missing arg output = %q", got)
+		}
+
+		runProgram = nil
+		terminal.ResetOutputForTesting()
+		setLineBuf("run myprog")
+		execute()
+		if got := terminal.OutputForTesting(); got != "run: runner not wired\n" {
+			t.Fatalf("run not wired output = %q", got)
+		}
+
+		runProgram = func(name *[16]byte, nameLen int) (int, bool) {
+			return 42, true
+		}
+		t.Cleanup(func() { runProgram = nil })
+		terminal.ResetOutputForTesting()
+		setLineBuf("run myprog")
+		execute()
+		if got := terminal.OutputForTesting(); got != "started pid=42\n" {
+			t.Fatalf("run output = %q, expected started pid=42", got)
+		}
+	})
+}
+
+func TestExecute_SuggestionsAndUnknown(t *testing.T) {
+	terminal.Init()
+
+	t.Run("suggests similar command when distance is within threshold", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("hlp") // Levenshtein distance 1 from "help", 2 from "ls"
+		execute()
+		want := "Did you mean 'help ls'?\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("suggestion output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("unknown command when distance exceeds threshold", func(t *testing.T) {
+		terminal.ResetOutputForTesting()
+		setLineBuf("completelyunknowncommand")
+		execute()
+		want := "Unknown command: completelyunknowncommand\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("unknown output = %q, expected %q", got, want)
+		}
+	})
+}
+
+func TestHistory_RingBufferAndDeduplication(t *testing.T) {
+	terminal.Init()
+
+	// Reset history buffer
+	historyBuf = [32][maxLine]byte{}
+	historyLen = [32]int{}
+	historyHead = 0
+	historyCount = 0
+
+	t.Run("commands added to history in order", func(t *testing.T) {
+		setLineBuf("echo first")
+		execute()
+		setLineBuf("echo second")
+		execute()
+
+		terminal.ResetOutputForTesting()
+		setLineBuf("history")
+		execute()
+
+		want := "1 echo first\n2 echo second\n3 history\n"
+		if got := terminal.OutputForTesting(); got != want {
+			t.Fatalf("history output = %q, expected %q", got, want)
+		}
+	})
+
+	t.Run("consecutive duplicate commands are ignored", func(t *testing.T) {
+		setLineBuf("echo third")
+		execute()
+		setLineBuf("echo third") // duplicate
+		execute()
+		setLineBuf("echo third") // duplicate
+		execute()
+
+		terminal.ResetOutputForTesting()
+		setLineBuf("history")
+		execute()
+
+		// Output should contain only one "echo third"
+		got := terminal.OutputForTesting()
+		if strings.Count(got, "echo third") != 1 {
+			t.Fatalf("expected exactly one 'echo third' in history, got %q", got)
+		}
+	})
+
+	t.Run("history wraps around when exceeding maxHistory", func(t *testing.T) {
+		// Reset history state
+		historyBuf = [32][maxLine]byte{}
+		historyLen = [32]int{}
+		historyHead = 0
+		historyCount = 0
+
+		// Add 35 distinct commands (maxHistory is 32)
+		for i := 0; i < 35; i++ {
+			setLineBuf("cmd " + string(rune('A'+i)))
+			execute()
+		}
+
+		if historyCount != maxHistory {
+			t.Fatalf("historyCount = %d, expected capped at maxHistory (%d)", historyCount, maxHistory)
+		}
+
+		terminal.ResetOutputForTesting()
+		setLineBuf("history")
+		execute()
+
+		got := terminal.OutputForTesting()
+		// Oldest commands cmd A, cmd B, cmd C should have been evicted
+		if strings.Contains(got, "cmd A") || strings.Contains(got, "cmd B") {
+			t.Fatalf("expected oldest commands to be evicted from history, got %q", got)
+		}
+		// Recent command cmd Z should still be present
+		if !strings.Contains(got, "cmd Z") {
+			t.Fatalf("expected recent commands to remain in history, got %q", got)
+		}
+	})
+}
