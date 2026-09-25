@@ -68,7 +68,7 @@ git commit -s -m "Describe the change"
 
 For the most recent commit, add a missing sign-off with `git commit --amend -s`. For older commits, use an interactive rebase and amend each affected commit. Rewriting commits requires pushing the updated branch with `--force-with-lease`.
 
-The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every commit in a PR and rejects the PR when any sign-off is missing or malformed. AI disclosure is separate from the human sign-off; see [`AI_POLICY.md`](AI_POLICY.md).
+The sign-off is a commit-message trailer, not a cryptographic GitHub “Verified” signature. CI checks every contribution commit in a PR and rejects the PR when any sign-off is missing or malformed. A merge commit used to synchronize the PR branch with its base is skipped because the underlying contribution commits are checked individually. AI disclosure is separate from the human sign-off; see [`AI_POLICY.md`](AI_POLICY.md).
 
 ## A couple of guidelines (to keep things simple)
 - Prefer **small PRs** (one thing at a time)
