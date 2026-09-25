@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 # examples/run_docker.sh
 # Build and run the OS using the Docker-based toolchain.
 

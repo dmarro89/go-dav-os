@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 # examples/test_all.sh
 # Run all unit tests for the project.
 
