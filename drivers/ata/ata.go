@@ -107,9 +107,5 @@ func WriteSector(lba uint32, data *[512]byte) bool {
 
 	// Flush Cache
 	outb(StatusCmd, CmdFlush)
-	if !waitBusy() {
-		return false
-	}
-
-	return true
+	return waitBusy()
 }
