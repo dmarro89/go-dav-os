@@ -823,11 +823,11 @@ func TestLLMPlannerForwardsSessionContext(t *testing.T) {
 	if !result.OK {
 		t.Fatalf("expected successful plan, got %+v", result)
 	}
-	if bridge.request.Context != &context {
+	if !bridge.request.HasContext {
 		t.Fatalf("bridge did not receive the session context")
 	}
-	if bridge.request.Input != "show files" {
-		t.Fatalf("bridge input = %q, expected %q", bridge.request.Input, "show files")
+	if got := string(bridge.request.Input[:bridge.request.InputLen]); got != "show files" {
+		t.Fatalf("bridge input = %q, expected %q", got, "show files")
 	}
 	if bridge.request.Context.RequestCount != 3 || bridge.request.Context.LastAction != ActionReadFile {
 		t.Fatalf("bridge received unexpected context: %+v", bridge.request.Context)
@@ -839,6 +839,73 @@ func TestLLMPlannerForwardsSessionContext(t *testing.T) {
 		if bridge.request.AllowedActions[i] == ActionWriteFile || bridge.request.AllowedActions[i] == ActionSetMode {
 			t.Fatalf("bridge received unsupported action %v", bridge.request.AllowedActions[i])
 		}
+	}
+}
+
+func TestRuntimeBridgeFailureDoesNotExecuteOrMutateContext(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		ListFiles: func(Action, *Context) ActionResult {
+			executed = true
+			return ActionResult{OK: true, Message: MessageFilesListed}
+		},
+	})
+	bridge := failingBridge{reason: MessageBridgeTimeout}
+	runtime.ConfigureLLMBridge(bridge.Available, bridge.Plan)
+	if switched := runtime.SetPlannerMode(PlannerModeLLM); !switched.OK {
+		t.Fatalf("failed to switch to configured bridge: %+v", switched)
+	}
+	context := Context{
+		LastIntent:        IntentReadFile,
+		LastAction:        ActionReadFile,
+		LastResultSummary: MessageFileRead,
+		RequestCount:      4,
+		PlannerMode:       PlannerModeLLM,
+	}
+	wantContext := context
+	var input [MaxContextInput]byte
+	copy(input[:], "show files")
+
+	response := runtime.RunBridgeRequest(&input, len("show files"), &context)
+
+	if response.Result.OK || response.Result.Message != MessageBridgeTimeout {
+		t.Fatalf("unexpected bridge failure response: %+v", response)
+	}
+	if executed {
+		t.Fatalf("executor ran after bridge failure")
+	}
+	if context != wantContext {
+		t.Fatalf("bridge failure mutated context: got %+v, expected %+v", context, wantContext)
+	}
+}
+
+func TestRuntimeBridgePlanUsesValidatorSafetyAndExecutor(t *testing.T) {
+	executed := false
+	runtime := NewDeterministicAgent(AllowedActionExecutor{
+		ListFiles: func(action Action, context *Context) ActionResult {
+			executed = true
+			if action.Kind != ActionListFiles || context.CurrentTask != ActionListFiles {
+				t.Fatalf("unexpected executor input: action=%+v context=%+v", action, context)
+			}
+			return ActionResult{OK: true, Message: MessageFilesListed}
+		},
+	})
+	bridge := fakeBridge{response: bridgeResponse(IntentListFiles, ActionListFiles, RiskSafe, "")}
+	runtime.ConfigureLLMBridge(bridge.Available, bridge.Plan)
+	if switched := runtime.SetPlannerMode(PlannerModeLLM); !switched.OK {
+		t.Fatalf("failed to switch to configured bridge: %+v", switched)
+	}
+	var context Context
+	var input [MaxContextInput]byte
+	copy(input[:], "show files")
+
+	response := runtime.RunBridgeRequest(&input, len("show files"), &context)
+
+	if !response.Result.OK || response.Result.Message != MessageFilesListed || !executed {
+		t.Fatalf("bridge plan did not execute: %+v", response)
+	}
+	if context.RequestCount != 1 || context.LastIntent != IntentListFiles || context.LastAction != ActionListFiles || context.PlannerMode != PlannerModeLLM {
+		t.Fatalf("unexpected successful bridge context: %+v", context)
 	}
 }
 
@@ -861,7 +928,7 @@ func TestEnumStrings(t *testing.T) {
 }
 
 func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
-	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
+	want := "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent ask <request> - Plan a request through the host bridge\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands"
 	if got := MessageAgentHelp.String(); got != want {
 		t.Fatalf("MessageAgentHelp.String() = %q, expected %q", got, want)
 	}
@@ -870,6 +937,8 @@ func TestMessageAgentHelpStringMatchesAgentCommands(t *testing.T) {
 type fakeBridge struct {
 	response BridgeResponse
 }
+
+func (fakeBridge) Available() bool { return true }
 
 func (b fakeBridge) Plan(request BridgeRequest) BridgeResult {
 	return BridgeResult{OK: true, Response: b.response}
@@ -880,6 +949,8 @@ type contextBridge struct {
 	request  BridgeRequest
 }
 
+func (*contextBridge) Available() bool { return true }
+
 func (b *contextBridge) Plan(request BridgeRequest) BridgeResult {
 	b.request = request
 	return BridgeResult{OK: true, Response: b.response}
@@ -888,6 +959,8 @@ func (b *contextBridge) Plan(request BridgeRequest) BridgeResult {
 type failingBridge struct {
 	reason MessageKind
 }
+
+func (failingBridge) Available() bool { return true }
 
 func (b failingBridge) Plan(request BridgeRequest) BridgeResult {
 	return BridgeResult{OK: false, Reason: b.reason}
