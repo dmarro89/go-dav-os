@@ -33,6 +33,8 @@ Read the [Agent runtime architecture](docs/v0.5.0/agent_runtime.md), [LLM bridge
 
 ## What’s inside
 
+To try the OS in a browser, see the [browser demo deployment guide](docs/browser_demo.md).
+
 - Agent runtime: `agent/` implements typed planning, validation, safety, constrained execution, context and LLM bridge contracts
 
 - Boot: `boot/boot.s` exposes the Multiboot2 header and `_start`, sets up a 16 KB stack, enables long mode, and jumps into `kernel.Main`

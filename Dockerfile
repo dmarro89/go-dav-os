@@ -1,4 +1,6 @@
-FROM debian:12-slim
+ARG FINAL_STAGE=toolchain
+
+FROM debian:12-slim AS toolchain
 
 ARG BINUTILS_VERSION=2.43
 ARG GCC_VERSION=15.2.0
@@ -70,3 +72,31 @@ WORKDIR /work
 
 # 5. Default command: just drop into a shell
 CMD ["bash"]
+
+FROM toolchain AS demo-builder
+
+COPY . /work
+RUN make -j"$(nproc)"
+
+FROM debian:12-slim AS demo-runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PORT=8080
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      nginx \
+      novnc \
+      qemu-system-x86 \
+      python3 && \
+    useradd --system --no-create-home --shell /usr/sbin/nologin demo && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=demo-builder --chown=demo:demo /work/build/dav-go-os.iso /opt/go-dav-os/dav-go-os.iso
+COPY --chown=demo:demo demo/ /opt/go-dav-os/demo/
+
+EXPOSE 8080
+USER demo
+ENTRYPOINT ["python3", "/opt/go-dav-os/demo/server.py"]
+
+FROM ${FINAL_STAGE} AS final
