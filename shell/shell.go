@@ -119,6 +119,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 
 func ConfigureAgentRuntime() {
 	runtimeAgent.CopyPlannerConfiguration(nil)
+	runtimeAgent.ConfigureLLMBridge(serialBridgeAvailable, serialBridgePlan)
 	runtimeAgent.Executor.ListFiles = agentListFiles
 	runtimeAgent.Executor.ReadFile = agentReadFile
 	runtimeAgent.Executor.WriteFile = agentWriteFile
@@ -814,7 +815,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "agent") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n")
+			terminal.Print("Usage: agent <show|read|stat|delete|mode|ask|transport|context|help> [arg]\n")
 			return
 		}
 
@@ -873,6 +874,14 @@ func execute() {
 				return
 			}
 			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, start, end)
+			return
+		} else if matchLiteral(a1s, a1e, "ask") {
+			requestStart := trimLeft(a1e, end)
+			if requestStart >= end {
+				terminal.Print("Usage: agent ask <request>\n")
+				return
+			}
+			runAgentBridge(requestStart, end)
 			return
 		} else if matchLiteral(a1s, a1e, "transport") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -954,6 +963,28 @@ func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.R
 		terminal.Print("Agent understood: delete file \"")
 		printName(&tmpName, targetLen)
 		terminal.Print("\"\n")
+	}
+	printAgentMessage(message)
+	terminal.PutRune('\n')
+}
+
+func runAgentBridge(inputStart, inputEnd int) {
+	var input [agent.MaxContextInput]byte
+	inputLen := inputEnd - inputStart
+	if inputLen > agent.MaxContextInput {
+		inputLen = agent.MaxContextInput
+	}
+	for i := 0; i < inputLen; i++ {
+		input[i] = lineBuf[inputStart+i]
+	}
+	message := runtimeAgent.RunBridgeRequestMessage(&input, inputLen, &agentContext)
+	if message == agent.MessageConfirmationRequired && agentContext.PendingPlan.ActionCount > 0 {
+		action := agentContext.PendingPlan.Actions[0]
+		if action.Kind == agent.ActionDeleteFile {
+			terminal.Print("Agent understood: delete file \"")
+			printName(&action.Target, action.TargetLen)
+			terminal.Print("\"\n")
+		}
 	}
 	printAgentMessage(message)
 	terminal.PutRune('\n')
@@ -1049,6 +1080,7 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> - Delete a file after confirmation\n")
 		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
+		terminal.Print("  agent ask <request> - Plan a request through the host bridge\n")
 		terminal.Print("  agent transport ping - Probe the guest-host transport\n")
 		terminal.Print("  agent context       - Show current agent context\n")
 		terminal.Print("  agent help          - Show agent commands")
@@ -1072,6 +1104,12 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("agent: llm bridge unavailable")
 	case agent.MessageUnsupportedMode:
 		terminal.Print("agent: unsupported mode")
+	case agent.MessageLLMBridgeNotConfigured:
+		terminal.Print("agent: llm bridge unavailable")
+	case agent.MessageLLMBridgeFailed:
+		terminal.Print("agent: llm bridge failed")
+	case agent.MessageBridgeTimeout:
+		terminal.Print("agent: bridge timeout")
 	default:
 		return
 	}

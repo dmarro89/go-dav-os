@@ -466,7 +466,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing command",
 			input: "agent",
-			want:  "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n",
+			want:  "Usage: agent <show|read|stat|delete|mode|ask|transport|context|help> [arg]\n",
 		},
 		{
 			name:  "missing show argument",
@@ -551,7 +551,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent ask <request> - Plan a request through the host bridge\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
 		},
 	}
 
@@ -611,6 +611,47 @@ func TestExecuteAgentTransportRoundTripAndRecovery(t *testing.T) {
 	}
 }
 
+func TestExecuteAgentBridgeHandshakeAndPlan(t *testing.T) {
+	fs.Init()
+	ConfigureAgentRuntime()
+	t.Cleanup(func() {
+		SetAgentRuntime(nil)
+		serial.ResetForTesting()
+	})
+	terminal.Init()
+
+	configureBridgeResponse(t, `{"health":"ok"}`)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent mode llm")
+	execute()
+	if got := terminal.OutputForTesting(); got != "Planner switched to: llm\n" {
+		t.Fatalf("LLM handshake output = %q", got)
+	}
+
+	configureBridgeResponse(t, `{"action":"list_files","args":[],"explanation":"Matched request.","intent":"list_files","risk":"safe"}`)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent ask show me the files")
+	execute()
+	if got := terminal.OutputForTesting(); got != "agent: no files\n" {
+		t.Fatalf("LLM plan output = %q", got)
+	}
+	if agentContext.RequestCount != 2 || agentContext.LastIntent != agent.IntentListFiles || agentContext.LastAction != agent.ActionListFiles || agentContext.PlannerMode != agent.PlannerModeLLM {
+		t.Fatalf("unexpected LLM context: %+v", agentContext)
+	}
+}
+
+func configureBridgeResponse(t *testing.T, responsePayload string) {
+	t.Helper()
+	var payload [serial.MaxPayload]byte
+	copy(payload[:], responsePayload)
+	var response [serial.MaxFrameSize]byte
+	responseLen, result := serial.Encode(serial.FrameResponse, &payload, len(responsePayload), &response)
+	if result != serial.ResultOK {
+		t.Fatalf("serial.Encode() result = %d", result)
+	}
+	serial.ConfigureResponseForTesting(&response, responseLen)
+}
+
 func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
 	runtime := agent.NewDeterministicAgent(NewAgentExecutor())
 	runtime.ConfigureLLMPlanner(agent.LLMPlanner{Bridge: shellBridge{}})
@@ -644,8 +685,90 @@ func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
 
 type shellBridge struct{}
 
+func (shellBridge) Available() bool { return true }
+
 func (shellBridge) Plan(agent.BridgeRequest) agent.BridgeResult {
 	return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+}
+
+func TestBridgeRequestEncodingIncludesInputContextAndAllowlist(t *testing.T) {
+	var input [agent.MaxContextInput]byte
+	copy(input[:], `show "notes"`)
+	context := agent.Context{
+		LastIntent:        agent.IntentReadFile,
+		LastAction:        agent.ActionReadFile,
+		LastResultSummary: agent.MessageFileRead,
+		RequestCount:      3,
+	}
+	request := agent.NewBridgeRequest(&input, len(`show "notes"`), &context)
+	var output [serial.MaxPayload]byte
+
+	length, ok := encodeBridgeRequest(request, &output)
+
+	if !ok {
+		t.Fatalf("encodeBridgeRequest() failed")
+	}
+	got := string(output[:length])
+	want := `{"input":"show \"notes\"","context":{"lastIntent":"read_file","lastAction":"read_file","lastSummary":"file_read","requestCount":3},"allowedActions":["list_files","read_file","stat_file","delete_file","show_history","show_version","show_ticks","show_memory_map"]}`
+	if got != want {
+		t.Fatalf("encoded request = %q, expected %q", got, want)
+	}
+}
+
+func TestBridgeResponseDecodingIsFailClosed(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		ok      bool
+		action  agent.ActionKind
+		target  string
+	}{
+		{
+			name:    "valid target action",
+			payload: `{"action":"read_file","args":["notes"],"explanation":"Read notes.","intent":"read_file","risk":"safe"}`,
+			ok:      true,
+			action:  agent.ActionReadFile,
+			target:  "notes",
+		},
+		{
+			name:    "valid targetless action",
+			payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe"}`,
+			ok:      true,
+			action:  agent.ActionListFiles,
+		},
+		{
+			name:    "valid escaped unicode target",
+			payload: `{"action":"read_file","args":["\ud83d\udd25"],"intent":"read_file","risk":"safe"}`,
+			ok:      true,
+			action:  agent.ActionReadFile,
+			target:  "🔥",
+		},
+		{name: "structured bridge error", payload: `{"error":{"code":"planner_error","message":"invalid"}}`},
+		{name: "invalid unicode target", payload: `{"action":"read_file","args":["\ud800"],"intent":"read_file","risk":"safe"}`},
+		{name: "extra argument", payload: `{"action":"read_file","args":["notes","other"],"intent":"read_file","risk":"safe"}`},
+		{name: "unknown action", payload: `{"action":"shell","args":[],"intent":"shell","risk":"safe"}`},
+		{name: "extra field", payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe","command":"ls"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var payload [serial.MaxPayload]byte
+			copy(payload[:], tt.payload)
+			response, ok := decodeBridgeResponse(&payload, len(tt.payload))
+			if ok != tt.ok {
+				t.Fatalf("decodeBridgeResponse() ok = %v, expected %v", ok, tt.ok)
+			}
+			if !ok {
+				return
+			}
+			if response.Action != tt.action {
+				t.Fatalf("action = %v, expected %v", response.Action, tt.action)
+			}
+			if got := string(response.Target[:response.TargetLen]); got != tt.target {
+				t.Fatalf("target = %q, expected %q", got, tt.target)
+			}
+		})
+	}
 }
 
 func TestExecuteHelpListsImplementedCommands(t *testing.T) {
