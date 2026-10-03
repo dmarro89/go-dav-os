@@ -1,34 +1,20 @@
-# EditorConfig helps developers define and maintain consistent
-# coding styles between different editors and IDEs.
-# https://editorconfig.org
+# EditorConfig is awesome: https://EditorConfig.org
 
+# top-most EditorConfig file
 root = true
 
+# Unix-style newlines with a newline ending every file
 [*]
-charset = utf-8
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+charset = utf-8
 
+# Go uses tabs
 [*.go]
 indent_style = tab
 
-[*.md]
+# YAML and Markdown use spaces
+[*.{yml,yaml,md}]
 indent_style = space
 indent_size = 2
-trim_trailing_whitespace = false
-
-[*.{yml,yaml}]
-indent_style = space
-indent_size = 2
-
-[*.sh]
-indent_style = space
-indent_size = 4
-
-[Makefile]
-indent_style = tab
-
-[*.py]
-indent_style = space
-indent_size = 4
