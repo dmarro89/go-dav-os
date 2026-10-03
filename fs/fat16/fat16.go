@@ -363,7 +363,7 @@ func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bo
 	}
 
 	// Write data to cluster
-	dataSector := clusterToSector(cluster)
+	dataSector := ClusterToSector(dataStart, SecPerClust, cluster)
 	// Copy data to fatBuf
 	for i := 0; i < 512; i++ {
 		if uint32(i) < dataLen {
@@ -402,31 +402,12 @@ func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
 				continue
 			}
 
-			// Compare name
-			match := true
-			for j := 0; j < 8; j++ {
-				if fatBuf[off+j] != name[j] {
-					match = false
-					break
-				}
-			}
-			if match {
-				for j := 0; j < 3; j++ {
-					if fatBuf[off+8+j] != ext[j] {
-						match = false
-						break
-					}
-				}
-			}
-
-			if match {
+			if MatchName(fatBuf[off:off+32], name, ext) {
 				// Found! Get cluster and size
-				cluster := uint16(fatBuf[off+26]) | uint16(fatBuf[off+27])<<8
-				size := uint32(fatBuf[off+28]) | uint32(fatBuf[off+29])<<8 |
-					uint32(fatBuf[off+30])<<16 | uint32(fatBuf[off+31])<<24
+				cluster, size := ParseEntry(fatBuf[off:off+32])
 
 				// Read data from cluster
-				dataSector := clusterToSector(cluster)
+				dataSector := ClusterToSector(dataStart, SecPerClust, cluster)
 				if !ata.ReadSector(dataSector, outBuf) {
 					return 0, false
 				}
@@ -489,6 +470,3 @@ func setFATEntry(cluster uint16, value uint16) bool {
 }
 
 // clusterToSector converts a cluster number to LBA sector
-func clusterToSector(cluster uint16) uint32 {
-	return dataStart + uint32(cluster-2)*uint32(SecPerClust)
-}
