@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 # examples/build_and_run.sh
 # Build the ISO and boot with QEMU using the local toolchain.
 
