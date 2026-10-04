@@ -1,0 +1,66 @@
+worker_processes 1;
+pid /tmp/go-dav-os-nginx.pid;
+error_log /dev/stderr warn;
+
+events {
+    worker_connections 32;
+}
+
+http {
+    access_log /dev/stdout;
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    client_body_temp_path /tmp/nginx-client-body;
+    fastcgi_temp_path /tmp/nginx-fastcgi;
+    proxy_temp_path /tmp/nginx-proxy;
+    scgi_temp_path /tmp/nginx-scgi;
+    uwsgi_temp_path /tmp/nginx-uwsgi;
+    client_max_body_size 1k;
+    keepalive_timeout 15s;
+    limit_conn_zone $server_name zone=demo_session:1m;
+    limit_req_zone $server_name zone=demo_reset:1m rate=6r/m;
+
+    server {
+        listen __PORT__;
+        server_name _;
+        root /opt/go-dav-os/demo;
+        index index.html;
+        limit_conn_status 429;
+
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy no-referrer always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; frame-ancestors 'none'" always;
+
+        location = /api/healthz {
+            proxy_pass http://127.0.0.1:8081/healthz;
+            proxy_set_header Host $host;
+        }
+
+        location = /api/reset {
+            limit_req zone=demo_reset burst=1 nodelay;
+            limit_except POST { deny all; }
+            proxy_pass http://127.0.0.1:8081/reset;
+            proxy_set_header Host $http_host;
+            proxy_set_header Origin $http_origin;
+        }
+
+        location = /websockify {
+            limit_conn demo_session 1;
+            proxy_pass http://127.0.0.1:5700/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_read_timeout 1h;
+            proxy_send_timeout 1h;
+        }
+
+        location /novnc/ {
+            alias /usr/share/novnc/;
+        }
+
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }
+}
