@@ -1,7 +1,5 @@
 package mem
 
-import "unsafe"
-
 const pageSize = 4096
 
 var (
@@ -50,11 +48,6 @@ func maxAvailableEnd() uint64 {
 		}
 	}
 	return maxEnd
-}
-
-func bitmapBytePtr(off uint64) *byte {
-	// assumes identity mapping / paging off: physical == directly addressable pointer
-	return (*byte)(unsafe.Pointer(uintptr(bitmapPhys) + uintptr(off)))
 }
 
 func bitmapGet(page uint64) bool {
@@ -234,7 +227,7 @@ func FreePage(addr uint64) bool {
 	}
 
 	page := addr / pageSize
-	if page >= totalPages {
+	if page < scanStart || page >= totalPages {
 		return false
 	}
 	if !bitmapGet(page) {
