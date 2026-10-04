@@ -28,7 +28,6 @@ list.
   "allowedActions": [
     "list_files",
     "read_file",
-    "write_file",
     "stat_file",
     "delete_file",
     "show_history",
@@ -101,7 +100,6 @@ Supported bridge actions for v0.5.0:
 ```txt
 list_files
 read_file
-write_file
 stat_file
 delete_file
 show_history
@@ -109,6 +107,10 @@ show_version
 show_ticks
 show_memory_map
 ```
+
+`write_file` is a known Agent intent and action, but is not available through
+the v0.5.0 bridge because bridge plans cannot provide file contents. Direct
+typed Agent actions can still use it.
 
 The kernel may provide a smaller `allowedActions` list for a specific request.
 The bridge must choose from that list, or return `intent: "unknown"` and
@@ -121,8 +123,8 @@ safe
 risky
 ```
 
-`delete_file` is `risky` unless the local runtime has already converted a
-confirmed user action into a safe internal action.
+Bridge plans must mark `delete_file` as `risky`; confirmation does not change
+the plan's risk level. All other supported bridge actions use `safe`.
 
 ## Invalid Responses
 

@@ -1206,6 +1206,9 @@ func agentReadFile(action agent.Action, _ *agent.Context) agent.ActionResult {
 }
 
 func agentWriteFile(action agent.Action, _ *agent.Context) agent.ActionResult {
+	if action.DataLen < 0 || action.DataLen > agent.MaxDataLen {
+		return agent.ActionResult{OK: false, Message: agent.MessageActionDataInvalid}
+	}
 	if action.TargetLen <= 0 {
 		return agent.ActionResult{OK: false, Message: agent.MessageMissingFile}
 	}
