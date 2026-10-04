@@ -160,6 +160,60 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             probe.stderr.close()
 
 
+def run_agent_bridge_suite(process, log_file, serial_socket):
+    bridge = subprocess.Popen(
+        [
+            sys.executable,
+            "scripts/agent_bridge.py",
+            "--socket",
+            serial_socket,
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        time.sleep(0.2)
+        if bridge.poll() is not None:
+            fail_with_log("Host Agent bridge exited before the handshake.", process, log_file)
+
+        send_shell_command(process, "agent mode llm")
+        if not check_log_for("Planner switched to: llm", log_file, timeout=6):
+            fail_with_log("Agent bridge handshake did not complete.", process, log_file)
+
+        send_shell_command(process, "agent ask show me the files")
+        if not check_log_for("agent: no files", log_file, timeout=6):
+            fail_with_log("Agent bridge plan did not execute.", process, log_file)
+
+        send_shell_command(process, "agent context")
+        for expected in (
+            "last input: show me the files",
+            "last intent: list_files",
+            "last action: list_files",
+            "planner mode: llm",
+        ):
+            if not check_log_for(expected, log_file, timeout=6):
+                fail_with_log(
+                    f"Agent bridge context did not contain '{expected}'.",
+                    process,
+                    log_file,
+                )
+
+        send_shell_command(process, "agent mode deterministic")
+        if not check_log_for("Planner switched to: deterministic", log_file, timeout=6):
+            fail_with_log("Agent did not return to deterministic mode.", process, log_file)
+    finally:
+        if bridge.poll() is None:
+            bridge.terminate()
+            try:
+                bridge.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                bridge.kill()
+                bridge.wait(timeout=2)
+        if bridge.stderr is not None:
+            bridge.stderr.close()
+
+
 def run_functional_suite(iso_path, disk_img, log_file):
     if os.path.exists(log_file):
         os.remove(log_file)
@@ -222,6 +276,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
                         log_file,
                     )
             print(f"Test Passed: '{cmd_text}' command executed successfully.")
+
+        run_agent_bridge_suite(process, log_file, serial_socket)
     finally:
         stop_qemu(process)
         if os.path.exists(serial_socket):
