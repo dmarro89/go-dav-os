@@ -87,6 +87,14 @@ def request_frame(payload):
 
 
 class AgentBridgeTest(unittest.TestCase):
+    def test_health_handshake_bypasses_provider(self):
+        provider = mock.Mock()
+
+        payload = agent_bridge.response_for_payload(b'{"health":"ping"}', provider)
+
+        self.assertEqual(json.loads(payload), {"health": "ok"})
+        provider.plan.assert_not_called()
+
     def test_fake_provider_serves_one_structured_request(self):
         transport = MemoryTransport(json.dumps(DEFAULT_REQUEST).encode("utf-8"))
 
