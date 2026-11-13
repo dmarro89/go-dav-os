@@ -35,3 +35,17 @@ func ParseEntry(entry []byte) (cluster uint16, size uint32) {
 	size = uint32(entry[28]) | uint32(entry[29])<<8 | uint32(entry[30])<<16 | uint32(entry[31])<<24
 	return cluster, size
 }
+
+// CheckEntry decides how ReadFile should treat a matched directory entry.
+// readData is true only when a data sector must be read. ok is false when the
+// entry points at a reserved cluster (0 or 1) while claiming data.
+// Zero-length files need no data I/O, whatever their cluster field holds.
+func CheckEntry(cluster uint16, size uint32) (readData bool, ok bool) {
+	if size == 0 {
+		return false, true
+	}
+	if cluster < 2 {
+		return false, false
+	}
+	return true, true
+}

@@ -63,3 +63,30 @@ func TestParseEntry(t *testing.T) {
 		t.Errorf("expected size 0xDEADBEEF, got 0x%X", size)
 	}
 }
+
+func TestCheckEntry(t *testing.T) {
+	tests := []struct {
+		name         string
+		cluster      uint16
+		size         uint32
+		wantReadData bool
+		wantOK       bool
+	}{
+		{"zero-length with cluster 0", 0, 0, false, true},
+		{"zero-length with cluster 1", 1, 0, false, true},
+		{"zero-length with valid cluster", 5, 0, false, true},
+		{"non-empty with cluster 0", 0, 10, false, false},
+		{"non-empty with cluster 1", 1, 10, false, false},
+		{"non-empty with cluster 2", 2, 10, true, true},
+		{"non-empty with high cluster", 0xFFF0, 512, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRead, gotOK := CheckEntry(tt.cluster, tt.size)
+			if gotRead != tt.wantReadData || gotOK != tt.wantOK {
+				t.Fatalf("CheckEntry(%d, %d) = (%v, %v), want (%v, %v)",
+					tt.cluster, tt.size, gotRead, gotOK, tt.wantReadData, tt.wantOK)
+			}
+		})
+	}
+}

@@ -406,6 +406,14 @@ func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
 				// Found! Get cluster and size
 				cluster, size := ParseEntry(fatBuf[off : off+32])
 
+				readData, valid := CheckEntry(cluster, size)
+				if !valid {
+					return 0, false
+				}
+				if !readData {
+					return 0, true // zero-length file, no data I/O
+				}
+
 				// Read data from cluster
 				dataSector := ClusterToSector(dataStart, SecPerClust, cluster)
 				if !ata.ReadSector(dataSector, outBuf) {
