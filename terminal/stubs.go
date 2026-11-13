@@ -28,6 +28,7 @@ func Clear() {
 	}
 	cursorRow = 0
 	cursorCol = 0
+	output = ""
 }
 
 func PutRune(ch rune) {
