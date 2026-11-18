@@ -105,6 +105,24 @@ class AgentBridgeTest(unittest.TestCase):
         self.assertEqual(response["action"], "list_files")
         self.assertNotIn("error", response)
 
+    def test_exchange_id_is_echoed_by_host(self):
+        for exchange_id in (1, 42, 2**64 - 1):
+            with self.subTest(exchange_id=exchange_id):
+                request = dict(DEFAULT_REQUEST, exchangeId=exchange_id)
+                payload = agent_bridge.response_for_payload(
+                    json.dumps(request).encode(), agent_bridge_provider.FakeProvider()
+                )
+                self.assertEqual(json.loads(payload)["exchangeId"], exchange_id)
+
+    def test_invalid_exchange_id_fails_closed(self):
+        for exchange_id in (True, "42", 0, -1, 2**64, 42.0, None):
+            with self.subTest(exchange_id=exchange_id):
+                request = dict(DEFAULT_REQUEST, exchangeId=exchange_id)
+                payload = agent_bridge.response_for_payload(
+                    json.dumps(request).encode(), agent_bridge_provider.FakeProvider()
+                )
+                self.assertEqual(json.loads(payload)["error"]["code"], "invalid_request")
+
     def test_valid_provider_plan_gets_canonical_empty_arguments(self):
         provider = mock.Mock()
         provider.plan.return_value = {

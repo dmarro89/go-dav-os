@@ -24,7 +24,13 @@ def response_for_payload(payload, provider):
         if request == {"health": "ping"}:
             return encode_agent_response({"health": "ok"})
         response = provider.plan(request)
-        return encode_agent_response(validate_provider_plan(request, response))
+        plan = validate_provider_plan(request, response)
+        if "exchangeId" in request:
+            exchange_id = request["exchangeId"]
+            if type(exchange_id) is not int or not 0 < exchange_id < 2**64:
+                raise ProtocolError("invalid exchange ID", "invalid_request")
+            plan["exchangeId"] = exchange_id
+        return encode_agent_response(plan)
     except (PlannerError, ProtocolError, ProviderError) as error:
         safe_error = error_response(error.code, str(error))
         return encode_agent_response(safe_error)

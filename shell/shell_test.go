@@ -628,7 +628,8 @@ func TestExecuteAgentBridgeHandshakeAndPlan(t *testing.T) {
 		t.Fatalf("LLM handshake output = %q", got)
 	}
 
-	configureBridgeResponse(t, `{"action":"list_files","args":[],"explanation":"Matched request.","intent":"list_files","risk":"safe"}`)
+	bridgeExchangeID = 41
+	configureBridgeResponse(t, `{"action":"list_files","args":[],"exchangeId":42,"explanation":"Matched request.","intent":"list_files","risk":"safe"}`)
 	terminal.ResetOutputForTesting()
 	setLineBuf("agent ask show me the files")
 	execute()
@@ -637,6 +638,31 @@ func TestExecuteAgentBridgeHandshakeAndPlan(t *testing.T) {
 	}
 	if agentContext.RequestCount != 2 || agentContext.LastIntent != agent.IntentListFiles || agentContext.LastAction != agent.ActionListFiles || agentContext.PlannerMode != agent.PlannerModeLLM {
 		t.Fatalf("unexpected LLM context: %+v", agentContext)
+	}
+}
+
+func TestSerialBridgePlanRejectsStaleResponse(t *testing.T) {
+	previousID := bridgeExchangeID
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		serial.ResetForTesting()
+	})
+	payload := `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`
+	configureBridgeResponse(t, payload)
+	if result := serialBridgePlan(agent.BridgeRequest{}); !result.OK {
+		t.Fatalf("matching response failed: %+v", result)
+	}
+	configureBridgeResponse(t, payload)
+	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || result.Reason != agent.MessageLLMBridgeFailed {
+		t.Fatalf("stale response result: %+v", result)
+	}
+	if bridgeExchangeID != 43 {
+		t.Fatalf("exchange ID = %d, want 43", bridgeExchangeID)
+	}
+	bridgeExchangeID = ^uint64(0)
+	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || bridgeExchangeID != ^uint64(0) {
+		t.Fatalf("exhausted exchange ID was reused: %+v", result)
 	}
 }
 
@@ -703,13 +729,13 @@ func TestBridgeRequestEncodingIncludesInputContextAndAllowlist(t *testing.T) {
 	request := agent.NewBridgeRequest(&input, len(`show "notes"`), &context)
 	var output [serial.MaxPayload]byte
 
-	length, ok := encodeBridgeRequest(request, &output)
+	length, ok := encodeBridgeRequest(request, 42, &output)
 
 	if !ok {
 		t.Fatalf("encodeBridgeRequest() failed")
 	}
 	got := string(output[:length])
-	want := `{"input":"show \"notes\"","context":{"lastIntent":"read_file","lastAction":"read_file","lastSummary":"file_read","requestCount":3},"allowedActions":["list_files","read_file","stat_file","delete_file","show_history","show_version","show_ticks","show_memory_map"]}`
+	want := `{"exchangeId":42,"input":"show \"notes\"","context":{"lastIntent":"read_file","lastAction":"read_file","lastSummary":"file_read","requestCount":3},"allowedActions":["list_files","read_file","stat_file","delete_file","show_history","show_version","show_ticks","show_memory_map"]}`
 	if got != want {
 		t.Fatalf("encoded request = %q, expected %q", got, want)
 	}
@@ -725,36 +751,44 @@ func TestBridgeResponseDecodingIsFailClosed(t *testing.T) {
 	}{
 		{
 			name:    "valid target action",
-			payload: `{"action":"read_file","args":["notes"],"explanation":"Read notes.","intent":"read_file","risk":"safe"}`,
+			payload: `{"action":"read_file","args":["notes"],"exchangeId":42,"explanation":"Read notes.","intent":"read_file","risk":"safe"}`,
 			ok:      true,
 			action:  agent.ActionReadFile,
 			target:  "notes",
 		},
 		{
 			name:    "valid targetless action",
-			payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe"}`,
+			payload: `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`,
 			ok:      true,
 			action:  agent.ActionListFiles,
 		},
 		{
 			name:    "valid escaped unicode target",
-			payload: `{"action":"read_file","args":["\ud83d\udd25"],"intent":"read_file","risk":"safe"}`,
+			payload: `{"action":"read_file","args":["\ud83d\udd25"],"exchangeId":42,"intent":"read_file","risk":"safe"}`,
 			ok:      true,
 			action:  agent.ActionReadFile,
 			target:  "🔥",
 		},
+		{name: "mismatched ID", payload: `{"action":"list_files","args":[],"exchangeId":41,"intent":"list_files","risk":"safe"}`},
+		{name: "string ID", payload: `{"action":"list_files","args":[],"exchangeId":"42","intent":"list_files","risk":"safe"}`},
+		{name: "negative ID", payload: `{"action":"list_files","args":[],"exchangeId":-42,"intent":"list_files","risk":"safe"}`},
+		{name: "overflow ID", payload: `{"action":"list_files","args":[],"exchangeId":18446744073709551616,"intent":"list_files","risk":"safe"}`},
+		{name: "leading zero ID", payload: `{"action":"list_files","args":[],"exchangeId":042,"intent":"list_files","risk":"safe"}`},
+		{name: "fractional ID", payload: `{"action":"list_files","args":[],"exchangeId":42.0,"intent":"list_files","risk":"safe"}`},
+		{name: "duplicate ID", payload: `{"action":"list_files","args":[],"exchangeId":42,"exchangeId":42,"intent":"list_files","risk":"safe"}`},
+		{name: "missing ID", payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe"}`},
 		{name: "structured bridge error", payload: `{"error":{"code":"planner_error","message":"invalid"}}`},
-		{name: "invalid unicode target", payload: `{"action":"read_file","args":["\ud800"],"intent":"read_file","risk":"safe"}`},
-		{name: "extra argument", payload: `{"action":"read_file","args":["notes","other"],"intent":"read_file","risk":"safe"}`},
-		{name: "unknown action", payload: `{"action":"shell","args":[],"intent":"shell","risk":"safe"}`},
-		{name: "extra field", payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe","command":"ls"}`},
+		{name: "invalid unicode target", payload: `{"action":"read_file","args":["\ud800"],"exchangeId":42,"intent":"read_file","risk":"safe"}`},
+		{name: "extra argument", payload: `{"action":"read_file","args":["notes","other"],"exchangeId":42,"intent":"read_file","risk":"safe"}`},
+		{name: "unknown action", payload: `{"action":"shell","args":[],"exchangeId":42,"intent":"shell","risk":"safe"}`},
+		{name: "extra field", payload: `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe","command":"ls"}`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var payload [serial.MaxPayload]byte
 			copy(payload[:], tt.payload)
-			response, ok := decodeBridgeResponse(&payload, len(tt.payload))
+			response, ok := decodeBridgeResponse(&payload, len(tt.payload), 42)
 			if ok != tt.ok {
 				t.Fatalf("decodeBridgeResponse() ok = %v, expected %v", ok, tt.ok)
 			}

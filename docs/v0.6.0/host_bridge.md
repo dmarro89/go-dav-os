@@ -26,11 +26,25 @@ agent mode llm
 agent ask show me the files
 ```
 
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:d888b738f93a94b761052ad03466f32dafd7c15c8b76cf1d01d8408c9909668f -->
+
 The mode switch succeeds only after the guest receives the bridge health
 response. Each `agent ask` request includes the bounded input, the current
 session context and the guest-owned action allowlist. A valid response is
 converted to the existing typed `Plan`, then passes through the same validator,
 safety gate and constrained executor used by deterministic commands.
+
+Serial planning requests also carry a guest-generated `exchangeId`, a positive
+unsigned 64-bit integer unique within the running guest. The host echoes it in
+successful responses; the guest rejects missing or mismatched IDs as bridge
+failures. IDs are never reused after failed exchanges, and planning fails if the
+counter is exhausted. Update the guest and host helper together: older hosts
+omit the required ID. The health handshake and structured error responses retain
+their existing shape. The host still accepts older requests without an ID.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 The deterministic fake provider is the default. It needs no network access or
 credentials and uses the mappings from the
