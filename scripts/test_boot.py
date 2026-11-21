@@ -3,19 +3,25 @@ import os
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
+
+from agent_bridge import response_for_payload
+from agent_bridge_protocol import decode_agent_request, encode_agent_response
+from agent_bridge_provider import FakeProvider
+from agent_bridge_transport import connect
 
 
 def read_log(log_file, offset=0):
     if not os.path.exists(log_file):
         return ""
-    with open(log_file, "r", errors="ignore") as f:
-        f.seek(offset)
-        return f.read()
+    with open(log_file, "rb") as log:
+        log.seek(offset)
+        return log.read().decode(errors="replace")
 
 
 def check_log_for(target, log_file, timeout=5, offset=0):
-    start = time.time()
-    while time.time() - start < timeout:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
         if target in read_log(log_file, offset):
             return True
         time.sleep(0.1)
@@ -136,9 +142,7 @@ def run_agent_transport_probe(process, log_file, serial_socket):
         text=True,
     )
     try:
-        send_shell_command(process, "agent transport ping")
-        if not check_log_for("Agent transport: connected", log_file, timeout=6):
-            fail_with_log("Agent transport probe did not complete.", process, log_file)
+        run_shell_case(process, log_file, "agent transport ping", "Agent transport: connected")
         try:
             probe.wait(timeout=2)
         except subprocess.TimeoutExpired:
@@ -149,13 +153,8 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             print("------------------------------------")
             fail_with_log("Host transport probe failed.", process, log_file)
 
-        send_shell_command(process, "agent transport ping")
-        if not check_log_for("agent: transport timeout", log_file, timeout=6):
-            fail_with_log("Transport timeout was not reported.", process, log_file)
-
-        send_shell_command(process, "version")
-        if not check_log_for("DavOS 0.5.0 (64bit)", log_file, timeout=6):
-            fail_with_log("Shell did not recover from transport timeout.", process, log_file)
+        run_shell_case(process, log_file, "agent transport ping", "agent: transport timeout")
+        run_shell_case(process, log_file, "version", "DavOS 0.5.0 (64bit)")
     finally:
         if probe.poll() is None:
             probe.terminate()
@@ -166,85 +165,94 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             probe.stderr.close()
 
 
+def run_shell_case(process, log_file, command, *expected_outputs, timeout=6):
+    offset = os.path.getsize(log_file)
+    send_shell_command(process, command)
+    for expected in expected_outputs:
+        if not check_log_for(expected, log_file, timeout=timeout, offset=offset):
+            fail_with_log(
+                f"Timeout waiting for {expected!r} from command {command!r}.",
+                process,
+                log_file,
+            )
+    print(f"Test Passed: {command!r} command executed successfully.")
+    return offset
+
+
+def reply_to_bridge_request(transport, provider, fault):
+    payload = transport.receive(time.monotonic() + 8)
+    if fault == "timeout":
+        print(f"Agent bridge DV/1: rx={len(payload)} tx=0 event=withheld")
+        return
+    event = "reply"
+    response = response_for_payload(payload, provider)
+    if fault == "malformed":
+        # Keep the serial frame and exchange ID valid while omitting the plan.
+        exchange_id = decode_agent_request(payload)["exchangeId"]
+        response = encode_agent_response({"exchangeId": exchange_id})
+        event = "malformed_plan"
+    transport.send(response, time.monotonic() + 2)
+    print(f"Agent bridge DV/1: rx={len(payload)} tx={len(response)} event={event}")
+
+
+def read_llm_context(process, log_file):
+    last_field = "  planner mode: llm"
+    offset = run_shell_case(process, log_file, "agent context", "Agent context:", last_field)
+    output = read_log(log_file, offset)
+    return output.partition("Agent context:")[2].partition(last_field)[0]
+
+
+def assert_bridge_failure(process, log_file, command, offset, context):
+    output = read_log(log_file, offset)
+    if "agent: files listed" in output or "agent: no files" in output:
+        fail_with_log(f"{command!r} executed an action after failure.", process, log_file)
+    if read_llm_context(process, log_file) != context:
+        fail_with_log(f"{command!r} changed Agent context after failure.", process, log_file)
+
+
 def run_agent_bridge_suite(process, log_file, serial_socket):
-    bridge = subprocess.Popen(
-        [
-            sys.executable,
-            "scripts/agent_bridge.py",
-            "--socket",
-            serial_socket,
-        ],
-        env=dict(os.environ, DAVOS_AGENT_PROVIDER="fake"),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        time.sleep(0.2)
-        if bridge.poll() is not None:
-            fail_with_log("Host Agent bridge exited before the handshake.", process, log_file)
+    with connect(serial_socket, time.monotonic() + 2) as transport, ThreadPoolExecutor(max_workers=1) as pool:
+        provider = FakeProvider()
 
-        send_shell_command(process, "agent mode llm")
-        if not check_log_for("Planner switched to: llm", log_file, timeout=6):
-            fail_with_log("Agent bridge handshake did not complete.", process, log_file)
+        def bridge_case(command, *expected_outputs, fault=None, timeout=6):
+            host = pool.submit(reply_to_bridge_request, transport, provider, fault)
+            offset = run_shell_case(process, log_file, command, *expected_outputs, timeout=timeout)
+            host.result(timeout=2)
+            return offset
 
-        offset = os.path.getsize(log_file)
-        send_shell_command(process, "agent ask show me the files")
-        if not check_log_for("agent: no files", log_file, timeout=6, offset=offset):
-            fail_with_log("Agent bridge plan did not execute.", process, log_file)
+        bridge_case("agent llm status", "LLM bridge: available", "Provider: fake")
+        bridge_case("agent mode llm", "Planner switched to: llm")
+        run_shell_case(process, log_file, "write notes keep", "ok> ")
+        bridge_case("agent ask show me the files", "notes  size=4", "agent: files listed")
+        bridge_case("agent ask tell me a joke", "agent: no allowed action matched")
+        bridge_case("agent ask delete notes", 'Agent understood: delete file "notes"', "Confirm? type: yes")
+        run_shell_case(process, log_file, "no", "agent: action cancelled")
+        run_shell_case(process, log_file, "cat notes", "keep> ")
+        bridge_case("agent ask delete notes", 'Agent understood: delete file "notes"', "Confirm? type: yes")
+        run_shell_case(process, log_file, "yes", "ok> ")
+        bridge_case("agent ask show me the files", "agent: no files")
 
-        offset = os.path.getsize(log_file)
-        send_shell_command(process, "agent context")
-        for expected in (
-            "last input: show me the files",
-            "last intent: list_files",
-            "last action: list_files",
-            "planner mode: llm",
+        context = read_llm_context(process, log_file)
+        for expected in ("last input: show me the files", "last intent: list_files", "last action: list_files"):
+            if expected not in context:
+                fail_with_log(f"Agent context did not contain {expected!r}.", process, log_file)
+
+        for fault, error in (
+            ("malformed", "agent: malformed bridge response"),
+            ("timeout", "agent: bridge timeout"),
         ):
-            if not check_log_for(expected, log_file, timeout=6, offset=offset):
-                fail_with_log(
-                    f"Agent bridge context did not contain '{expected}'.",
-                    process,
-                    log_file,
-                )
-        context_start = "Agent context:"
-        context_end = "  planner mode: llm"
-        context_body = read_log(log_file, offset).partition(context_start)[2].partition(context_end)[0]
-        baseline_context = context_start + context_body + context_end
+            command = "agent ask list files"
+            offset = bridge_case(command, f"{error}> ", fault=fault, timeout=20)
+            assert_bridge_failure(process, log_file, command, offset, context)
 
-        offset = os.path.getsize(log_file)
-        send_shell_command(process, "agent ask tell me a joke")
-        if not check_log_for("agent: no allowed action matched", log_file, timeout=6, offset=offset):
-            fail_with_log("Agent did not report the unmatched request.", process, log_file)
-    finally:
-        if bridge.poll() is None:
-            bridge.terminate()
-            try:
-                bridge.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                bridge.kill()
-                bridge.wait(timeout=2)
-        if bridge.stderr is not None:
-            bridge.stderr.close()
+        bridge_case("agent ask show me the version", "agent: version shown")
 
-    offset = os.path.getsize(log_file)
-    send_shell_command(process, "agent ask list files")
-    # The guest has one twelve-second deadline for the complete planning exchange.
-    if not check_log_for("agent: bridge timeout", log_file, timeout=16, offset=offset):
-        fail_with_log("Disconnected bridge did not report a planning timeout.", process, log_file)
-    command_output = read_log(log_file, offset)
-    if "agent: no files" in command_output or "agent: files listed" in command_output:
-        fail_with_log("Failed bridge request executed a file-list action.", process, log_file)
-
-    offset = os.path.getsize(log_file)
-    send_shell_command(process, "agent context")
-    if not check_log_for(baseline_context, log_file, timeout=6, offset=offset):
-        fail_with_log("Agent context changed after the failed bridge request.", process, log_file)
-
-    offset = os.path.getsize(log_file)
-    send_shell_command(process, "agent mode deterministic")
-    if not check_log_for("Planner switched to: deterministic", log_file, timeout=6, offset=offset):
-        fail_with_log("Agent did not return to deterministic mode.", process, log_file)
+    command = "agent ask list files"
+    error = "agent: bridge timeout"
+    context = read_llm_context(process, log_file)
+    offset = run_shell_case(process, log_file, command, f"{error}> ", timeout=20)
+    assert_bridge_failure(process, log_file, command, offset, context)
+    run_shell_case(process, log_file, "agent mode deterministic", "Planner switched to: deterministic")
 
 
 def run_functional_suite(iso_path, disk_img, log_file):
@@ -260,7 +268,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
         test_cases = [
             ("help", ["Commands:", "agent"]),
             ("version", ["DavOS 0.5.0 (64bit)"]),
-            ("write notes hi", ["ok"]),
+            ("write notes hi", ["ok> "]),
             ("agent show files", ["notes  size=2", "agent: files listed"]),
             (
                 "agent context",
@@ -281,7 +289,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("agent read notes", ["hi", "agent: file read"]),
             ("agent stat notes", ["page=0x", "size=2", "agent: file stat"]),
             ("agent delete notes", ["Agent understood: delete file \"notes\"", "This action may remove data.", "Confirm? type: yes"]),
-            ("yes", ["ok"]),
+            ("yes", ["ok> "]),
             ("agent show files", ["agent: no files"]),
             ("agent mode", ["Current planner: deterministic"]),
             ("agent mode deterministic", ["Planner switched to: deterministic"]),
@@ -300,16 +308,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
         ]
 
         for cmd_text, expected_outputs in test_cases:
-            send_shell_command(process, cmd_text)
-            for expected in expected_outputs:
-                print(f"Waiting for '{expected}' output...")
-                if not check_log_for(expected, log_file, timeout=6):
-                    fail_with_log(
-                        f"Timeout waiting for '{expected}' from command '{cmd_text}'.",
-                        process,
-                        log_file,
-                    )
-            print(f"Test Passed: '{cmd_text}' command executed successfully.")
+            run_shell_case(process, log_file, cmd_text, *expected_outputs)
 
         run_agent_bridge_suite(process, log_file, serial_socket)
     finally:
