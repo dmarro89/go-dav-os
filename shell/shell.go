@@ -1110,6 +1110,8 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("agent: llm bridge failed")
 	case agent.MessageBridgeTimeout:
 		terminal.Print("agent: bridge timeout")
+	case agent.MessageNoMatchingAction:
+		terminal.Print("agent: no allowed action matched")
 	default:
 		return
 	}

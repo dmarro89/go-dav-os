@@ -5,13 +5,19 @@ import sys
 import time
 
 
-def check_log_for(target, log_file, timeout=5):
+def read_log(log_file, offset=0):
+    if not os.path.exists(log_file):
+        return ""
+    with open(log_file, "r", errors="ignore") as f:
+        f.seek(offset)
+        return f.read()
+
+
+def check_log_for(target, log_file, timeout=5, offset=0):
     start = time.time()
     while time.time() - start < timeout:
-        if os.path.exists(log_file):
-            with open(log_file, "r", errors="ignore") as f:
-                if target in f.read():
-                    return True
+        if target in read_log(log_file, offset):
+            return True
         time.sleep(0.1)
     return False
 
@@ -168,6 +174,7 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
             "--socket",
             serial_socket,
         ],
+        env=dict(os.environ, DAVOS_AGENT_PROVIDER="fake"),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         text=True,
@@ -181,10 +188,12 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
         if not check_log_for("Planner switched to: llm", log_file, timeout=6):
             fail_with_log("Agent bridge handshake did not complete.", process, log_file)
 
+        offset = os.path.getsize(log_file)
         send_shell_command(process, "agent ask show me the files")
-        if not check_log_for("agent: no files", log_file, timeout=6):
+        if not check_log_for("agent: no files", log_file, timeout=6, offset=offset):
             fail_with_log("Agent bridge plan did not execute.", process, log_file)
 
+        offset = os.path.getsize(log_file)
         send_shell_command(process, "agent context")
         for expected in (
             "last input: show me the files",
@@ -192,16 +201,21 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
             "last action: list_files",
             "planner mode: llm",
         ):
-            if not check_log_for(expected, log_file, timeout=6):
+            if not check_log_for(expected, log_file, timeout=6, offset=offset):
                 fail_with_log(
                     f"Agent bridge context did not contain '{expected}'.",
                     process,
                     log_file,
                 )
+        context_start = "Agent context:"
+        context_end = "  planner mode: llm"
+        context_body = read_log(log_file, offset).partition(context_start)[2].partition(context_end)[0]
+        baseline_context = context_start + context_body + context_end
 
-        send_shell_command(process, "agent mode deterministic")
-        if not check_log_for("Planner switched to: deterministic", log_file, timeout=6):
-            fail_with_log("Agent did not return to deterministic mode.", process, log_file)
+        offset = os.path.getsize(log_file)
+        send_shell_command(process, "agent ask tell me a joke")
+        if not check_log_for("agent: no allowed action matched", log_file, timeout=6, offset=offset):
+            fail_with_log("Agent did not report the unmatched request.", process, log_file)
     finally:
         if bridge.poll() is None:
             bridge.terminate()
@@ -212,6 +226,24 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
                 bridge.wait(timeout=2)
         if bridge.stderr is not None:
             bridge.stderr.close()
+
+    offset = os.path.getsize(log_file)
+    send_shell_command(process, "agent ask list files")
+    if not check_log_for("agent: bridge timeout", log_file, timeout=6, offset=offset):
+        fail_with_log("Disconnected bridge did not report a planning timeout.", process, log_file)
+    command_output = read_log(log_file, offset)
+    if "agent: no files" in command_output or "agent: files listed" in command_output:
+        fail_with_log("Failed bridge request executed a file-list action.", process, log_file)
+
+    offset = os.path.getsize(log_file)
+    send_shell_command(process, "agent context")
+    if not check_log_for(baseline_context, log_file, timeout=6, offset=offset):
+        fail_with_log("Agent context changed after the failed bridge request.", process, log_file)
+
+    offset = os.path.getsize(log_file)
+    send_shell_command(process, "agent mode deterministic")
+    if not check_log_for("Planner switched to: deterministic", log_file, timeout=6, offset=offset):
+        fail_with_log("Agent did not return to deterministic mode.", process, log_file)
 
 
 def run_functional_suite(iso_path, disk_img, log_file):

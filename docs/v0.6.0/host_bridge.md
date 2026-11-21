@@ -26,11 +26,33 @@ agent mode llm
 agent ask show me the files
 ```
 
+The bridge waits for the next request while the guest is idle. `--timeout`
+sets the connection and frame I/O deadlines (10 seconds by default). If the
+bridge reports `transport_timeout` and exits, restart it before retrying the
+guest commands. `--once` keeps the bridge available through the health check
+and exits after one planning request.
+
+<!-- coderabbit-ai-generated:v1 -->
+
+<!-- coderabbit-ai-generated-section:v1:d888b738f93a94b761052ad03466f32dafd7c15c8b76cf1d01d8408c9909668f -->
+
 The mode switch succeeds only after the guest receives the bridge health
 response. Each `agent ask` request includes the bounded input, the current
 session context and the guest-owned action allowlist. A valid response is
 converted to the existing typed `Plan`, then passes through the same validator,
 safety gate and constrained executor used by deterministic commands.
+
+Serial planning requests also carry a guest-generated `exchangeId`, a positive
+unsigned 64-bit integer unique within the running guest. The host echoes it in
+plans and structured errors for tagged requests. The guest discards responses
+with another exchange ID while waiting within the original receive budget.
+An untagged plan is a bridge failure. IDs are never reused after failed
+exchanges, and planning fails if the counter is exhausted. Update the guest
+and host helper together so that planning responses carry the required ID.
+The host still accepts older requests without an ID, and the health handshake
+keeps its existing shape.
+
+<!-- /coderabbit-ai-generated:v1 -->
 
 The deterministic fake provider is the default. It needs no network access or
 credentials and uses the mappings from the

@@ -22,7 +22,7 @@ def remaining_timeout(deadline):
 def read_exact(stream, size, deadline):
     data = bytearray()
     while len(data) < size:
-        stream.settimeout(remaining_timeout(deadline))
+        stream.settimeout(None if deadline is None else remaining_timeout(deadline))
         try:
             chunk = stream.recv(size - len(data))
         except socket.timeout as error:
@@ -30,6 +30,8 @@ def read_exact(stream, size, deadline):
         except OSError as error:
             raise ProtocolError("transport read failed", "transport_error") from error
         if not chunk:
+            if deadline is None:
+                raise ProtocolError("transport disconnected", "transport_error")
             raise ProtocolError("partial frame")
         data.extend(chunk)
     return bytes(data)
@@ -49,7 +51,15 @@ class SerialTransport:
         self.stream.close()
 
     def receive(self, deadline):
-        header = read_exact(self.stream, HEADER_SIZE, deadline)
+        return self._receive_frame(b"", deadline)
+
+    def receive_request(self, timeout):
+        # Wait between requests without a deadline, then bound the entire frame.
+        first_byte = read_exact(self.stream, 1, None)
+        return self._receive_frame(first_byte, time.monotonic() + timeout)
+
+    def _receive_frame(self, prefix, deadline):
+        header = prefix + read_exact(self.stream, HEADER_SIZE - len(prefix), deadline)
         payload_len = request_payload_length(header)
         body = read_exact(self.stream, payload_len + 2, deadline)
         return decode_request_body(header, body)

@@ -21,6 +21,10 @@ class ProtocolError(Exception):
         self.recoverable = recoverable
 
 
+class ResponseTooLarge(ProtocolError):
+    pass
+
+
 def checksum(data):
     return binascii.crc_hqx(data, 0xFFFF)
 
@@ -72,17 +76,19 @@ def encode_agent_response(response):
     except (TypeError, ValueError) as error:
         raise ProtocolError("provider response must be valid JSON", "invalid_response") from error
     if len(payload) > MAX_RESPONSE_PAYLOAD:
-        raise ProtocolError("provider response is too large", "invalid_response")
+        raise ResponseTooLarge("provider response is too large", "invalid_response")
     return payload
 
 
-def error_response(code, message):
+def error_response(code, message, exchange_id=None):
     response = {
         "error": {
             "code": str(code)[:32],
             "message": str(message)[:MAX_ERROR_MESSAGE],
         }
     }
+    if exchange_id is not None:
+        response["exchangeId"] = exchange_id
     while (
         len(json.dumps(response, separators=(",", ":"), sort_keys=True).encode("utf-8"))
         > MAX_RESPONSE_PAYLOAD

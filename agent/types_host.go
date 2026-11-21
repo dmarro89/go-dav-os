@@ -209,6 +209,8 @@ func (m MessageKind) String() string {
 		return "agent: llm bridge failed"
 	case MessageBridgeTimeout:
 		return "bridge timeout"
+	case MessageNoMatchingAction:
+		return "agent: no allowed action matched"
 	default:
 		return ""
 	}

@@ -12,12 +12,25 @@ func serialBridgeAvailable() bool {
 	return result == serial.ResultOK && bytesMatchLiteral(&transportResponse, responseLen, `{"health":"ok"}`)
 }
 
+var bridgeExchangeID uint64
+
 func serialBridgePlan(request agent.BridgeRequest) agent.BridgeResult {
-	requestLen, ok := encodeBridgeRequest(request, &transportRequest)
+	// Never reuse an ID, even after a failed exchange or counter exhaustion.
+	if bridgeExchangeID == ^uint64(0) {
+		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+	}
+	bridgeExchangeID++
+	exchangeID := bridgeExchangeID
+	requestLen, ok := encodeBridgeRequest(request, exchangeID, &transportRequest)
 	if !ok {
 		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
 	}
-	responseLen, result := serial.Exchange(&transportRequest, requestLen, &transportResponse)
+	var response agent.BridgeResponse
+	var status bridgeResponseStatus
+	_, result := serial.ExchangeUntil(&transportRequest, requestLen, &transportResponse, func(input *[serial.MaxPayload]byte, length int) bool {
+		response, status = decodeBridgeResponse(input, length, exchangeID)
+		return status != bridgeResponseStale
+	})
 	if result != serial.ResultOK {
 		reason := agent.MessageLLMBridgeFailed
 		if result == serial.ResultWriteTimeout || result == serial.ResultReadTimeout || result == serial.ResultPartialFrame {
@@ -25,8 +38,10 @@ func serialBridgePlan(request agent.BridgeRequest) agent.BridgeResult {
 		}
 		return agent.BridgeResult{OK: false, Reason: reason}
 	}
-	response, ok := decodeBridgeResponse(&transportResponse, responseLen)
-	if !ok {
+	if status == bridgeResponseNoMatch {
+		return agent.BridgeResult{OK: false, Reason: agent.MessageNoMatchingAction}
+	}
+	if status != bridgeResponsePlan {
 		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
 	}
 	return agent.BridgeResult{OK: true, Response: response}
@@ -38,9 +53,11 @@ type bridgeJSONWriter struct {
 	ok     bool
 }
 
-func encodeBridgeRequest(request agent.BridgeRequest, output *[serial.MaxPayload]byte) (int, bool) {
+func encodeBridgeRequest(request agent.BridgeRequest, exchangeID uint64, output *[serial.MaxPayload]byte) (int, bool) {
 	writer := bridgeJSONWriter{buffer: output, ok: output != nil}
-	bridgeWriteLiteral(&writer, `{"input":"`)
+	bridgeWriteLiteral(&writer, `{"exchangeId":`)
+	writer.uint(exchangeID)
+	bridgeWriteLiteral(&writer, `,"input":"`)
 	writer.escaped(request.Input[:], request.InputLen)
 	bridgeWriteLiteral(&writer, `","context":`)
 	if request.HasContext {
@@ -211,73 +228,125 @@ type bridgeJSONReader struct {
 	offset int
 }
 
-func decodeBridgeResponse(input *[serial.MaxPayload]byte, inputLen int) (agent.BridgeResponse, bool) {
+type bridgeResponseStatus uint8
+
+const (
+	bridgeResponseInvalid bridgeResponseStatus = iota
+	bridgeResponsePlan
+	bridgeResponseStale
+	bridgeResponseNoMatch
+)
+
+func decodeBridgeResponse(input *[serial.MaxPayload]byte, inputLen int, exchangeID uint64) (agent.BridgeResponse, bridgeResponseStatus) {
 	var response agent.BridgeResponse
 	if input == nil || inputLen < 0 || inputLen > serial.MaxResponsePayload {
-		return response, false
+		return response, bridgeResponseInvalid
 	}
 	reader := bridgeJSONReader{buffer: input, length: inputLen}
 	if !bridgeReaderLiteral(&reader, `{"`) {
-		return response, false
+		return response, bridgeResponseInvalid
 	}
-	if bridgeReaderPeekLiteral(&reader, `error"`) {
-		return response, false
+	if bridgeReaderLiteral(&reader, `error":{"code":"`) {
+		if reader.skipString() && bridgeReaderLiteral(&reader, `,"message":"`) &&
+			reader.skipString() && reader.consume('}') && bridgeReaderLiteral(&reader, `,"exchangeId":`) {
+			id, ok := reader.uint()
+			if ok && id != 0 && id != exchangeID && reader.consume('}') && reader.offset == reader.length {
+				return response, bridgeResponseStale
+			}
+		}
+		return response, bridgeResponseInvalid
 	}
 	if !bridgeReaderLiteral(&reader, `action":"`) {
-		return response, false
+		return response, bridgeResponseInvalid
 	}
 	var actionName [32]byte
 	actionLen, ok := reader.string(&actionName)
 	if !ok || !bridgeReaderLiteral(&reader, `,"args":[`) {
-		return response, false
+		return response, bridgeResponseInvalid
 	}
-	response.Action, ok = bridgeActionFromBytes(&actionName, actionLen)
-	if !ok {
-		return response, false
-	}
-	if reader.consume(']') {
-		response.TargetLen = 0
-	} else {
+	targetStart := 0
+	if !reader.consume(']') {
 		if !reader.consume('"') {
-			return response, false
+			return response, bridgeResponseInvalid
 		}
+		targetStart = reader.offset
+		if !reader.skipString() || !reader.consume(']') {
+			return response, bridgeResponseInvalid
+		}
+	}
+	if !bridgeReaderLiteral(&reader, `,"exchangeId":`) {
+		return response, bridgeResponseInvalid
+	}
+	responseID, idOK := reader.uint()
+	if !idOK || responseID == 0 || !reader.consume(',') {
+		return response, bridgeResponseInvalid
+	}
+	if bridgeReaderPeekLiteral(&reader, `"explanation":"`) {
+		if !bridgeReaderLiteral(&reader, `"explanation":"`) || !reader.skipString() || !reader.consume(',') {
+			return response, bridgeResponseInvalid
+		}
+	}
+	if !bridgeReaderLiteral(&reader, `"intent":"`) {
+		return response, bridgeResponseInvalid
+	}
+	var intentName [32]byte
+	intentLen, ok := reader.string(&intentName)
+	if !ok || !bridgeReaderLiteral(&reader, `,"risk":"`) {
+		return response, bridgeResponseInvalid
+	}
+	var riskName [32]byte
+	riskLen, ok := reader.string(&riskName)
+	if !ok || !reader.consume('}') || reader.offset != reader.length {
+		return response, bridgeResponseInvalid
+	}
+	if responseID != exchangeID {
+		return response, bridgeResponseStale
+	}
+	if targetStart == 0 && bytesMatchLiteral32(&actionName, actionLen, "unknown") &&
+		bytesMatchLiteral32(&intentName, intentLen, "unknown") && bytesMatchLiteral32(&riskName, riskLen, "safe") {
+		return response, bridgeResponseNoMatch
+	}
+	if targetStart != 0 {
+		reader.offset = targetStart
 		var target [32]byte
 		targetLen, targetOK := reader.string(&target)
-		if !targetOK || targetLen == 0 || targetLen > agent.MaxNameLen || !bridgeReaderLiteral(&reader, `]`) {
-			return response, false
+		if !targetOK || targetLen == 0 || targetLen > agent.MaxNameLen {
+			return response, bridgeResponseInvalid
 		}
 		response.TargetLen = targetLen
 		for i := 0; i < targetLen; i++ {
 			response.Target[i] = target[i]
 		}
 	}
-	if !reader.consume(',') {
-		return response, false
+	response.Action, ok = bridgeActionFromBytes(&actionName, actionLen)
+	intent, intentOK := bridgeIntentFromBytes(&intentName, intentLen)
+	response.Intent = intent
+	risk, riskOK := bridgeRiskFromBytes(&riskName, riskLen)
+	response.Risk = risk
+	if !ok || !intentOK || !riskOK {
+		return response, bridgeResponseInvalid
 	}
-	if bridgeReaderPeekLiteral(&reader, `"explanation":"`) {
-		if !bridgeReaderLiteral(&reader, `"explanation":"`) || !reader.skipString() || !reader.consume(',') {
-			return response, false
+	return response, bridgeResponsePlan
+}
+
+func (r *bridgeJSONReader) uint() (uint64, bool) {
+	start := r.offset
+	var value uint64
+	for r.offset < r.length {
+		digit := r.buffer[r.offset]
+		if digit < '0' || digit > '9' {
+			break
 		}
+		if r.offset > start && r.buffer[start] == '0' {
+			return 0, false
+		}
+		if value > (^uint64(0)-uint64(digit-'0'))/10 {
+			return 0, false
+		}
+		value = value*10 + uint64(digit-'0')
+		r.offset++
 	}
-	if !bridgeReaderLiteral(&reader, `"intent":"`) {
-		return response, false
-	}
-	var intentName [32]byte
-	intentLen, ok := reader.string(&intentName)
-	if !ok || !bridgeReaderLiteral(&reader, `,"risk":"`) {
-		return response, false
-	}
-	response.Intent, ok = bridgeIntentFromBytes(&intentName, intentLen)
-	if !ok {
-		return response, false
-	}
-	var riskName [32]byte
-	riskLen, ok := reader.string(&riskName)
-	if !ok || !reader.consume('}') || reader.offset != reader.length {
-		return response, false
-	}
-	response.Risk, ok = bridgeRiskFromBytes(&riskName, riskLen)
-	return response, ok
+	return value, r.offset > start
 }
 
 func (r *bridgeJSONReader) consume(value byte) bool {
