@@ -15,7 +15,9 @@ The current Agent foundation includes:
 - structured execution traces and session-local context;
 - an LLM planner boundary, bridge protocol and fake host bridge for testing without API keys.
 
-The trust boundary is deliberate: an LLM may propose one allowed typed action, but the OS remains responsible for validation, confirmation and execution. `v0.5.0` establishes this secure foundation. The real QEMU guest-to-host transport and an OpenAI-compatible provider are planned for `v0.6.0`; provider credentials will remain outside the guest and kernel.
+In `v0.6.0`, the QEMU guest sends framed planning requests to a host bridge. The bridge uses either a credential-free fake provider or an OpenAI-compatible endpoint to propose one allowed typed action. The OS validates the plan, asks for confirmation before risky actions and runs the action through its constrained executor. Provider networking and credentials stay on the host.
+
+Find both provider setups, troubleshooting and a recorded QEMU round trip in the [host bridge guide](docs/v0.6.0/host_bridge.md).
 
 ### Try the Agent in QEMU
 
@@ -134,7 +136,7 @@ If you run into issues while building or running the project, check these common
 - `pfa`, `alloc`, `free <hex_addr>` (page allocator)
 - `ls`, `write <name> <text...>`, `cat <name>`, `rm <name>`, `stat <name>` (in-memory filesystem)
 - `run <program>` (task runner)
-- `agent <show|read|stat|delete|mode|context|help> [arg]` (typed Agent runtime)
+- `agent <show|read|stat|delete|mode|context|transport|llm|ask|help> [arg]` (typed Agent runtime)
 
 ### Persistent Storage (FAT16)
 
