@@ -5,6 +5,8 @@ type Runtime struct {
 	ExecutorConfigured bool
 	plannerMode        PlannerMode
 	llmConfigured      bool
+	bridgeAvailable    func() bool
+	bridgePlan         func(request BridgeRequest) BridgeResult
 }
 
 func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
@@ -45,6 +47,9 @@ func (r *Runtime) SetPlannerMode(mode PlannerMode) ActionResult {
 		r.plannerMode = PlannerModeDeterministic
 		return ActionResult{OK: true, Message: MessagePlannerSwitchedDeterministic}
 	case PlannerModeLLM:
+		if r.bridgeAvailable != nil {
+			r.llmConfigured = r.bridgePlan != nil && r.bridgeAvailable()
+		}
 		if !r.llmConfigured {
 			return ActionResult{OK: false, Message: MessageLLMModeNotConfigured}
 		}
@@ -62,10 +67,56 @@ func (r *Runtime) CopyPlannerConfiguration(source *Runtime) {
 	if source == nil {
 		r.plannerMode = PlannerModeDeterministic
 		r.llmConfigured = false
+		r.bridgeAvailable = nil
+		r.bridgePlan = nil
 		return
 	}
 	r.plannerMode = source.plannerMode
 	r.llmConfigured = source.llmConfigured
+	r.bridgeAvailable = source.bridgeAvailable
+	r.bridgePlan = source.bridgePlan
+}
+
+func (r *Runtime) ConfigureLLMBridge(available func() bool, plan func(request BridgeRequest) BridgeResult) {
+	if r == nil {
+		return
+	}
+	r.bridgeAvailable = available
+	r.bridgePlan = plan
+	r.llmConfigured = false
+	if (available == nil || plan == nil) && r.plannerMode == PlannerModeLLM {
+		r.plannerMode = PlannerModeDeterministic
+	}
+}
+
+func (r *Runtime) RunBridgeRequest(input *[MaxContextInput]byte, inputLen int, context *Context) Response {
+	if r == nil || r.bridgeAvailable == nil || r.bridgePlan == nil || !r.llmConfigured || r.plannerMode != PlannerModeLLM {
+		return planningFailureResponse(MessageLLMBridgeNotConfigured)
+	}
+	request := NewBridgeRequest(input, inputLen, context)
+	planning := bridgePlanningResult(request, r.bridgePlan(request))
+	if !planning.OK {
+		return planningFailureResponse(planning.Reason)
+	}
+	if context != nil {
+		context.BeginRequest(input, inputLen, PlannerModeLLM)
+	}
+	return r.runPlan(planning.Plan, context)
+}
+
+func (r *Runtime) RunBridgeRequestMessage(input *[MaxContextInput]byte, inputLen int, context *Context) MessageKind {
+	return r.RunBridgeRequest(input, inputLen, context).Result.Message
+}
+
+func planningFailureResponse(reason MessageKind) Response {
+	if reason == MessageNone {
+		reason = MessagePlannerFailed
+	}
+	var response Response
+	setResponseResult(&response, false, reason)
+	setSafety(&response, SafetyRejected, MessagePlannerFailed)
+	response.AddTrace(TracePlanner, traceFromMessage(reason))
+	return response
 }
 
 func (r Runtime) RunAction(kind ActionKind, intent IntentKind, risk RiskLevel, target *[MaxNameLen]byte, targetLen int, context *Context) Response {

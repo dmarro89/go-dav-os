@@ -139,6 +139,7 @@ const (
 	MessageLLMBridgeNotConfigured
 	MessageLLMBridgeFailed
 	MessageBridgeTimeout
+	MessageNoMatchingAction
 )
 
 type TraceKind uint8
