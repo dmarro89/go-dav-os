@@ -1,8 +1,6 @@
-//go:build !gccgo
-
 package agent
 
-func deterministicPlan(input string, _ *Context) PlanningResult {
+func deterministicPlan(input []byte, _ *Context) PlanningResult {
 	if contains(input, "help") || contains(input, "commands") || contains(input, "what can you do") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
 	}
@@ -42,7 +40,7 @@ func deterministicPlan(input string, _ *Context) PlanningResult {
 	return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentUnknown, ActionUnknown, RiskSafe))
 }
 
-func singleTargetPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel, input string) Plan {
+func singleTargetPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel, input []byte) Plan {
 	plan := singleActionPlan(mode, intent, actionKind, risk)
 	targetStart, targetEnd := lastToken(input)
 	if targetStart < targetEnd && !isActionWord(input, targetStart, targetEnd) {
@@ -62,7 +60,7 @@ func successfulPlan(plan Plan) PlanningResult {
 	return PlanningResult{OK: true, Plan: plan}
 }
 
-func contains(text, token string) bool {
+func contains(text []byte, token string) bool {
 	if len(token) == 0 {
 		return true
 	}
@@ -91,7 +89,7 @@ func lowerASCII(c byte) byte {
 	return c
 }
 
-func lastToken(text string) (int, int) {
+func lastToken(text []byte) (int, int) {
 	end := len(text)
 	for end > 0 && isPlannerSpace(text[end-1]) {
 		end--
@@ -107,7 +105,7 @@ func isPlannerSpace(c byte) bool {
 	return c == ' ' || c == '\t'
 }
 
-func isActionWord(text string, start, end int) bool {
+func isActionWord(text []byte, start, end int) bool {
 	return tokenEquals(text, start, end, "read") ||
 		tokenEquals(text, start, end, "cat") ||
 		tokenEquals(text, start, end, "delete") ||
@@ -118,7 +116,7 @@ func isActionWord(text string, start, end int) bool {
 		tokenEquals(text, start, end, "mode")
 }
 
-func tokenEquals(text string, start, end int, token string) bool {
+func tokenEquals(text []byte, start, end int, token string) bool {
 	if end-start != len(token) {
 		return false
 	}

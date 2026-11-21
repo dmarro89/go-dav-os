@@ -229,7 +229,8 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
 
     offset = os.path.getsize(log_file)
     send_shell_command(process, "agent ask list files")
-    if not check_log_for("agent: bridge timeout", log_file, timeout=6, offset=offset):
+    # The guest has one twelve-second deadline for the complete planning exchange.
+    if not check_log_for("agent: bridge timeout", log_file, timeout=16, offset=offset):
         fail_with_log("Disconnected bridge did not report a planning timeout.", process, log_file)
     command_output = read_log(log_file, offset)
     if "agent: no files" in command_output or "agent: files listed" in command_output:
@@ -272,7 +273,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
                     "planner mode: deterministic",
                 ],
             ),
-            ("agent help", ["Agent commands:", "agent delete <name>"]),
+            ("agent help", ["Agent commands:", "agent delete <name>", "agent llm status"]),
             ("agent show history", ["agent: history listed"]),
             ("agent show version", ["DavOS 0.5.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
@@ -284,6 +285,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("agent show files", ["agent: no files"]),
             ("agent mode", ["Current planner: deterministic"]),
             ("agent mode deterministic", ["Planner switched to: deterministic"]),
+            ("agent llm status", ["LLM bridge: unavailable"]),
             ("agent mode llm", ["agent: llm bridge unavailable"]),
             ("agent mode", ["Current planner: deterministic"]),
             ("fatformat", ["FAT16 Formatted"]),

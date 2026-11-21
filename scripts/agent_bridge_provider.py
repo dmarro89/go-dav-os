@@ -1,5 +1,6 @@
 """Host-only providers for the Agent bridge service."""
 
+import http.client
 import json
 import urllib.error
 import urllib.parse
@@ -24,11 +25,15 @@ class Provider:
 
 
 class FakeProvider(Provider):
+    kind = "fake"
+
     def plan(self, request):
         return fake_llm_bridge.plan_for_request(request)
 
 
 class OpenAICompatibleProvider(Provider):
+    kind = "openai-compatible"
+
     def __init__(self, api_key, model, base_url, timeout=10.0):
         try:
             scheme = urllib.parse.urlsplit(base_url).scheme.lower()
@@ -64,7 +69,17 @@ class OpenAICompatibleProvider(Provider):
             )
             with urllib.request.urlopen(provider_request, timeout=self.timeout) as response:
                 raw_response = response.read(MAX_PROVIDER_BODY + 1)
-        except (OSError, TimeoutError, ValueError, urllib.error.URLError) as error:
+        except urllib.error.URLError as error:
+            if isinstance(error.reason, TimeoutError):
+                raise ProviderError("provider request timed out", "provider_timeout") from error
+            if isinstance(error.reason, ConnectionError):
+                raise ProviderError("provider connection lost", "provider_unavailable") from error
+            raise ProviderError("provider request failed") from error
+        except TimeoutError as error:
+            raise ProviderError("provider request timed out", "provider_timeout") from error
+        except ConnectionError as error:
+            raise ProviderError("provider connection lost", "provider_unavailable") from error
+        except (OSError, ValueError, http.client.HTTPException) as error:
             raise ProviderError("provider request failed") from error
         if len(raw_response) > MAX_PROVIDER_BODY:
             raise ProviderError("provider response is too large")
