@@ -1,6 +1,7 @@
 #!/bin/bash
 # examples/build_and_run.sh
 # Build the ISO and boot with QEMU using the local toolchain.
+set -euo pipefail
 
 # Clean previous builds
 echo "Cleaning old build artifacts..."
