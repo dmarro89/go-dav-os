@@ -654,7 +654,7 @@ func TestSerialBridgePlanRejectsStaleResponse(t *testing.T) {
 		t.Fatalf("matching response failed: %+v", result)
 	}
 	configureBridgeResponse(t, payload)
-	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || result.Reason != agent.MessageLLMBridgeFailed {
+	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || result.Reason != agent.MessageBridgeTimeout {
 		t.Fatalf("stale response result: %+v", result)
 	}
 	if bridgeExchangeID != 43 {
@@ -666,16 +666,57 @@ func TestSerialBridgePlanRejectsStaleResponse(t *testing.T) {
 	}
 }
 
-func configureBridgeResponse(t *testing.T, responsePayload string) {
-	t.Helper()
-	var payload [serial.MaxPayload]byte
-	copy(payload[:], responsePayload)
-	var response [serial.MaxFrameSize]byte
-	responseLen, result := serial.Encode(serial.FrameResponse, &payload, len(responsePayload), &response)
-	if result != serial.ResultOK {
-		t.Fatalf("serial.Encode() result = %d", result)
+func TestSerialBridgePlanContinuesAfterStaleReplies(t *testing.T) {
+	previousID := bridgeExchangeID
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		serial.ResetForTesting()
+	})
+	const stalePlan = `{"action":"read_file","args":["line\nbreak"],"exchangeId":41,"intent":"read_file","risk":"safe"}`
+	const staleError = `{"error":{"code":"provider_error","message":"old failure"},"exchangeId":41}`
+	const plan = `{"action":"read_file","args":["notes"],"exchangeId":42,"intent":"read_file","risk":"safe"}`
+	for _, tc := range []struct {
+		name  string
+		reply string
+		want  agent.MessageKind
+	}{
+		{"matching plan", plan, agent.MessageNone},
+		{"matching error", `{"error":{"code":"provider_error","message":"failed"},"exchangeId":42}`, agent.MessageLLMBridgeFailed},
+		{"legacy error", `{"error":{"code":"provider_error","message":"failed"}}`, agent.MessageLLMBridgeFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bridgeExchangeID = 41
+			configureBridgeResponse(t, staleError, stalePlan, tc.reply)
+			result := serialBridgePlan(agent.BridgeRequest{})
+			if tc.want == agent.MessageNone {
+				if !result.OK || result.Response.Action != agent.ActionReadFile {
+					t.Fatalf("matching plan after stale replies: %+v", result)
+				}
+			} else if result.OK || result.Reason != tc.want {
+				t.Fatalf("error after stale replies: %+v", result)
+			}
+		})
 	}
-	serial.ConfigureResponseForTesting(&response, responseLen)
+}
+
+func configureBridgeResponse(t *testing.T, payloads ...string) {
+	t.Helper()
+	var stream [serial.MaxFrameSize]byte
+	offset := 0
+	for _, responsePayload := range payloads {
+		var payload [serial.MaxPayload]byte
+		copy(payload[:], responsePayload)
+		var response [serial.MaxFrameSize]byte
+		responseLen, result := serial.Encode(serial.FrameResponse, &payload, len(responsePayload), &response)
+		if result != serial.ResultOK {
+			t.Fatalf("serial.Encode() result = %d", result)
+		}
+		if copy(stream[offset:], response[:responseLen]) != responseLen {
+			t.Fatal("response stream exceeded the test buffer")
+		}
+		offset += responseLen
+	}
+	serial.ConfigureResponseForTesting(&stream, offset)
 }
 
 func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
@@ -745,31 +786,31 @@ func TestBridgeResponseDecodingIsFailClosed(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload string
-		ok      bool
+		status  bridgeResponseStatus
 		action  agent.ActionKind
 		target  string
 	}{
 		{
 			name:    "valid target action",
 			payload: `{"action":"read_file","args":["notes"],"exchangeId":42,"explanation":"Read notes.","intent":"read_file","risk":"safe"}`,
-			ok:      true,
+			status:  bridgeResponsePlan,
 			action:  agent.ActionReadFile,
 			target:  "notes",
 		},
 		{
 			name:    "valid targetless action",
 			payload: `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`,
-			ok:      true,
+			status:  bridgeResponsePlan,
 			action:  agent.ActionListFiles,
 		},
 		{
 			name:    "valid escaped unicode target",
 			payload: `{"action":"read_file","args":["\ud83d\udd25"],"exchangeId":42,"intent":"read_file","risk":"safe"}`,
-			ok:      true,
+			status:  bridgeResponsePlan,
 			action:  agent.ActionReadFile,
 			target:  "🔥",
 		},
-		{name: "mismatched ID", payload: `{"action":"list_files","args":[],"exchangeId":41,"intent":"list_files","risk":"safe"}`},
+		{name: "mismatched ID", status: bridgeResponseStale, payload: `{"action":"list_files","args":[],"exchangeId":41,"intent":"list_files","risk":"safe"}`},
 		{name: "string ID", payload: `{"action":"list_files","args":[],"exchangeId":"42","intent":"list_files","risk":"safe"}`},
 		{name: "negative ID", payload: `{"action":"list_files","args":[],"exchangeId":-42,"intent":"list_files","risk":"safe"}`},
 		{name: "overflow ID", payload: `{"action":"list_files","args":[],"exchangeId":18446744073709551616,"intent":"list_files","risk":"safe"}`},
@@ -788,11 +829,11 @@ func TestBridgeResponseDecodingIsFailClosed(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var payload [serial.MaxPayload]byte
 			copy(payload[:], tt.payload)
-			response, ok := decodeBridgeResponse(&payload, len(tt.payload), 42)
-			if ok != tt.ok {
-				t.Fatalf("decodeBridgeResponse() ok = %v, expected %v", ok, tt.ok)
+			response, status := decodeBridgeResponse(&payload, len(tt.payload), 42)
+			if status != tt.status {
+				t.Fatalf("decodeBridgeResponse() status = %v, expected %v", status, tt.status)
 			}
-			if !ok {
+			if status != bridgeResponsePlan {
 				return
 			}
 			if response.Action != tt.action {

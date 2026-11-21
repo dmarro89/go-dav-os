@@ -9,6 +9,7 @@ import time
 
 from agent_bridge_protocol import (
     ProtocolError,
+    ResponseTooLarge,
     decode_agent_request,
     encode_agent_response,
     error_response,
@@ -19,20 +20,29 @@ from agent_bridge_transport import connect
 
 
 def response_for_payload(payload, provider):
+    exchange_id = None
     try:
         request = decode_agent_request(payload)
         if request == {"health": "ping"}:
             return encode_agent_response({"health": "ok"})
+        if "exchangeId" in request:
+            candidate = request["exchangeId"]
+            if type(candidate) is not int or not 0 < candidate < 2**64:
+                raise ProtocolError("invalid exchange ID", "invalid_request")
+            exchange_id = candidate
         response = provider.plan(request)
         plan = validate_provider_plan(request, response)
-        if "exchangeId" in request:
-            exchange_id = request["exchangeId"]
-            if type(exchange_id) is not int or not 0 < exchange_id < 2**64:
-                raise ProtocolError("invalid exchange ID", "invalid_request")
+        if exchange_id is not None:
             plan["exchangeId"] = exchange_id
-        return encode_agent_response(plan)
+        try:
+            return encode_agent_response(plan)
+        except ResponseTooLarge:
+            if exchange_id is None or "explanation" not in plan:
+                raise
+            del plan["explanation"]
+            return encode_agent_response(plan)
     except (PlannerError, ProtocolError, ProviderError) as error:
-        safe_error = error_response(error.code, str(error))
+        safe_error = error_response(error.code, str(error), exchange_id)
         return encode_agent_response(safe_error)
 
 

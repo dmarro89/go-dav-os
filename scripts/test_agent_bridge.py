@@ -104,6 +104,7 @@ class AgentBridgeTest(unittest.TestCase):
         self.assertEqual(response["intent"], "list_files")
         self.assertEqual(response["action"], "list_files")
         self.assertNotIn("error", response)
+        self.assertNotIn("exchangeId", response)
 
     def test_exchange_id_is_echoed_by_host(self):
         for exchange_id in (1, 42, 2**64 - 1):
@@ -118,10 +119,36 @@ class AgentBridgeTest(unittest.TestCase):
         for exchange_id in (True, "42", 0, -1, 2**64, 42.0, None):
             with self.subTest(exchange_id=exchange_id):
                 request = dict(DEFAULT_REQUEST, exchangeId=exchange_id)
+                provider = mock.Mock()
                 payload = agent_bridge.response_for_payload(
-                    json.dumps(request).encode(), agent_bridge_provider.FakeProvider()
+                    json.dumps(request).encode(), provider
                 )
-                self.assertEqual(json.loads(payload)["error"]["code"], "invalid_request")
+                response = json.loads(payload)
+                self.assertEqual(response["error"]["code"], "invalid_request")
+                self.assertNotIn("exchangeId", response)
+                provider.plan.assert_not_called()
+
+    def test_tagged_plan_only_drops_explanation_when_it_exceeds_frame_limit(self):
+        exchange_id = 2**64 - 1
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=exchange_id)).encode()
+        plan = dict(action="list_files", args=[], intent="list_files", risk="safe")
+        limit = agent_bridge_protocol.MAX_RESPONSE_PAYLOAD
+        empty_len = len(agent_bridge_protocol.encode_agent_response(
+            dict(plan, exchangeId=exchange_id, explanation="")
+        ))
+        escaped_chars, padding = divmod(limit - empty_len, 6)
+        fits = "\0" * escaped_chars + "a" * padding
+        provider = mock.Mock()
+
+        for explanation, expected in ((fits, fits), (fits + "a", None)):
+            with self.subTest(expected_to_fit=expected is not None):
+                provider.plan.return_value = dict(plan, explanation=explanation)
+                payload = agent_bridge.response_for_payload(request, provider)
+                response = dict(plan, exchangeId=exchange_id)
+                if expected is not None:
+                    response["explanation"] = expected
+                self.assertEqual(json.loads(payload), response)
+                self.assertLessEqual(len(payload), limit)
 
     def test_valid_provider_plan_gets_canonical_empty_arguments(self):
         provider = mock.Mock()
@@ -146,9 +173,13 @@ class AgentBridgeTest(unittest.TestCase):
             json.dumps(DEFAULT_REQUEST).encode("utf-8"), FailingProvider()
         )
 
-        response = json.loads(payload)
-        self.assertEqual(response["error"]["code"], "provider_error")
-        self.assertEqual(response["error"]["message"], "provider request failed")
+        error = {"code": "provider_error", "message": "provider request failed"}
+        self.assertEqual(json.loads(payload), {"error": error})
+        request = dict(DEFAULT_REQUEST, exchangeId=2**64 - 1)
+        payload = agent_bridge.response_for_payload(
+            json.dumps(request).encode(), FailingProvider()
+        )
+        self.assertEqual(json.loads(payload), {"error": error, "exchangeId": 2**64 - 1})
         self.assertLessEqual(len(payload), agent_bridge_protocol.MAX_RESPONSE_PAYLOAD)
 
     def test_invalid_provider_plans_fail_closed(self):

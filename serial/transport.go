@@ -7,9 +7,14 @@ var (
 	responseDecoder Decoder
 )
 
-// Exchange sends one request and waits for one response. It is intentionally
-// single-flight so the freestanding guest can use fixed-size storage only.
+// Exchange sends one request and waits for the first response.
 func Exchange(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]byte) (int, Result) {
+	return ExchangeUntil(request, requestLen, response, nil)
+}
+
+// ExchangeUntil shares one receive budget across all frames. Like Exchange,
+// it is single-flight so the freestanding guest can use fixed-size storage.
+func ExchangeUntil(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]byte, accept func(*[MaxPayload]byte, int) bool) (int, Result) {
 	if response == nil {
 		return 0, ResultInvalidPayload
 	}
@@ -55,7 +60,11 @@ func Exchange(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]b
 		for i := 0; i < frame.Length; i++ {
 			response[i] = frame.Payload[i]
 		}
-		return frame.Length, ResultOK
+		if accept == nil || accept(response, frame.Length) {
+			return frame.Length, ResultOK
+		}
+		responseDecoder.Reset()
+		bytesRead = 0
 	}
 	if bytesRead != 0 {
 		return 0, ResultPartialFrame
