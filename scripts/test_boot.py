@@ -154,7 +154,7 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             fail_with_log("Host transport probe failed.", process, log_file)
 
         run_shell_case(process, log_file, "agent transport ping", "agent: transport timeout")
-        run_shell_case(process, log_file, "version", "DavOS 0.5.0 (64bit)")
+        run_shell_case(process, log_file, "version", "DavOS 0.6.0 (64bit)")
     finally:
         if probe.poll() is None:
             probe.terminate()
@@ -267,7 +267,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
 
         test_cases = [
             ("help", ["Commands:", "agent"]),
-            ("version", ["DavOS 0.5.0 (64bit)"]),
+            ("version", ["DavOS 0.6.0 (64bit)"]),
             ("write notes hi", ["ok> "]),
             ("agent show files", ["notes  size=2", "agent: files listed"]),
             (
@@ -283,7 +283,7 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ),
             ("agent help", ["Agent commands:", "agent delete <name>", "agent llm status"]),
             ("agent show history", ["agent: history listed"]),
-            ("agent show version", ["DavOS 0.5.0 (64bit)", "agent: version shown"]),
+            ("agent show version", ["DavOS 0.6.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
             ("agent show memorymap", ["base=0x", "agent: memory map shown"]),
             ("agent read notes", ["hi", "agent: file read"]),

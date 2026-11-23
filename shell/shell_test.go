@@ -476,7 +476,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "show version",
 			input: "agent show version",
-			want:  "DavOS 0.5.0 (64bit)\nagent: version shown\n",
+			want:  "DavOS 0.6.0 (64bit)\nagent: version shown\n",
 		},
 		{
 			name:  "show ticks",
@@ -606,7 +606,7 @@ func TestExecuteAgentTransportRoundTripAndRecovery(t *testing.T) {
 	terminal.ResetOutputForTesting()
 	setLineBuf("version")
 	execute()
-	if got := terminal.OutputForTesting(); got != "DavOS 0.5.0 (64bit)\n" {
+	if got := terminal.OutputForTesting(); got != "DavOS 0.6.0 (64bit)\n" {
 		t.Fatalf("shell output after transport failure = %q", got)
 	}
 }
@@ -1281,7 +1281,7 @@ func TestExecute_BuiltinCommands(t *testing.T) {
 		terminal.ResetOutputForTesting()
 		setLineBuf("version")
 		execute()
-		want := "DavOS 0.5.0 (64bit)\n"
+		want := "DavOS 0.6.0 (64bit)\n"
 		if got := terminal.OutputForTesting(); got != want {
 			t.Fatalf("version output = %q, expected %q", got, want)
 		}

@@ -7,7 +7,7 @@ before execution.
 
 ## Run with the fake provider
 
-Build the ISO using the [repository build instructions](../../README.md#build-and-run-docker).
+Build the ISO using the [repository build instructions](https://github.com/dmarro89/go-dav-os#build-and-run-docker).
 Start QEMU on the host with the Agent serial socket.
 
 ```sh
