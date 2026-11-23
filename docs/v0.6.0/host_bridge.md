@@ -7,7 +7,8 @@ before execution.
 
 ## Run with the fake provider
 
-Start QEMU with the Agent serial socket:
+Build the ISO using the [repository build instructions](../../README.md#build-and-run-docker).
+Start QEMU on the host with the Agent serial socket.
 
 ```sh
 make run-agent-transport
@@ -16,7 +17,7 @@ make run-agent-transport
 Then start the bridge in another terminal:
 
 ```sh
-python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+DAVOS_AGENT_PROVIDER=fake python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
 ```
 
 Switch the guest to the bridge-backed planner and submit a request:
@@ -24,12 +25,15 @@ Switch the guest to the bridge-backed planner and submit a request:
 ```text
 agent llm status
 agent mode llm
-agent ask show me the files
+write notes hello
+agent ask what files are available
+agent context
+agent mode deterministic
 ```
 
-`agent llm status` reports whether the host bridge answered and identifies its
-provider kind (`fake` or `openai-compatible`). The check neither calls the
-provider nor exposes its URL, model or credentials.
+Expect `LLM bridge: available` and `Provider: fake`. The request lists `notes`,
+and `agent context` shows `list_files` as the last action. The status command
+checks the host bridge handshake and reports only its provider kind.
 
 The bridge waits for the next request while the guest is idle. `--timeout`
 sets the connection and frame I/O deadlines (10 seconds by default). If the
@@ -84,19 +88,50 @@ when fallback is on.
 
 ## OpenAI-compatible provider
 
-Provider configuration exists only in the host process environment:
+Start QEMU as above. In a separate Bash terminal on the host, set the endpoint
+and model for your provider and enter the key at the hidden prompt. The subshell
+keeps the key scoped to the bridge session.
 
-```sh
-export DAVOS_AGENT_PROVIDER=openai
-export DAVOS_AGENT_API_KEY='<provider API key>'
-export DAVOS_AGENT_MODEL='<model name>'
-export DAVOS_AGENT_BASE_URL='https://provider.example/v1'
-python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+```bash
+(
+  export DAVOS_AGENT_PROVIDER=openai
+  export DAVOS_AGENT_MODEL='<model name>'
+  export DAVOS_AGENT_BASE_URL='https://provider.example/v1'
+  read -r -s -p 'Provider API key: ' DAVOS_AGENT_API_KEY || exit 1
+  printf '\n'
+  export DAVOS_AGENT_API_KEY
+  python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+)
 ```
 
 The base URL must be the provider's API root; the bridge appends
 `/chat/completions`. The API key is used only in the host HTTP authorization
 header. It is never logged, included in a transport frame or sent to the guest.
+Repeat the guest commands above with the new bridge. The status command should
+report `Provider: openai-compatible`. The planning request verifies that the
+configured endpoint can return a valid typed plan.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| `LLM bridge: unavailable` | Start QEMU before starting the bridge. Match `AGENT_SERIAL_SOCKET` and `--socket` if you use a custom path, and close any transport probe still attached. |
+| `provider_config` on bridge startup | Check the provider kind, API key, model and API root. The bridge appends `/chat/completions`. |
+| `agent: bridge timeout` | Check that the host bridge is running and the provider responds within the planning budget described above. Recheck the guest handshake with `agent llm status`. |
+| `agent: malformed bridge response` or a provider plan error | Check the chat-completion message for one JSON object with an allowed action and matching arguments. Try the fake provider to isolate the transport and guest runtime. |
+
+After building the ISO, `python3 scripts/test_boot.py --functional` exercises
+the QEMU guest with the fake provider and requires no credentials.
+
+## Recorded round trip
+
+The recording runs a pre-release QEMU guest and a local OpenAI-compatible
+llama.cpp server with Qwen2.5-1.5B-Instruct (Q4_K_M). The model selects
+`list_files` for the sample request. DavOS validates and executes that typed
+action, listing `notes`. `agent context` shows the action and its result before
+the shell switches back to deterministic mode.
+
+![QEMU recording of the Agent listing a file through the local LLM bridge](./agent-round-trip.gif)
 
 ## Boundaries
 
