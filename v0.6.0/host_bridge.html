@@ -694,6 +694,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recorded-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recorded round trip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#boundaries" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -772,6 +794,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recorded-round-trip" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recorded round trip
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#boundaries" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -805,20 +849,24 @@ reads one framed JSON request at a time, delegates planning to a host provider
 and writes one framed JSON response. The guest still validates every typed plan
 before execution.</p>
 <h2 id="run-with-the-fake-provider">Run with the fake provider</h2>
-<p>Start QEMU with the Agent serial socket:</p>
+<p>Build the ISO using the <a href="https://github.com/dmarro89/go-dav-os#build-and-run-docker">repository build instructions</a>.
+Start QEMU on the host with the Agent serial socket.</p>
 <pre><code class="language-sh">make run-agent-transport
 </code></pre>
 <p>Then start the bridge in another terminal:</p>
-<pre><code class="language-sh">python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+<pre><code class="language-sh">DAVOS_AGENT_PROVIDER=fake python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
 </code></pre>
 <p>Switch the guest to the bridge-backed planner and submit a request:</p>
 <pre><code class="language-text">agent llm status
 agent mode llm
-agent ask show me the files
+write notes hello
+agent ask what files are available
+agent context
+agent mode deterministic
 </code></pre>
-<p><code>agent llm status</code> reports whether the host bridge answered and identifies its
-provider kind (<code>fake</code> or <code>openai-compatible</code>). The check neither calls the
-provider nor exposes its URL, model or credentials.</p>
+<p>Expect <code>LLM bridge: available</code> and <code>Provider: fake</code>. The request lists <code>notes</code>,
+and <code>agent context</code> shows <code>list_files</code> as the last action. The status command
+checks the host bridge handshake and reports only its provider kind.</p>
 <p>The bridge waits for the next request while the guest is idle. <code>--timeout</code>
 sets the connection and frame I/O deadlines (10 seconds by default). If the
 bridge reports <code>transport_timeout</code> and exits, restart it before retrying the
@@ -864,16 +912,61 @@ keeps its selected planner mode. Fallback plans use the same action allowlist,
 validation and confirmation rules. A malformed response remains an error even
 when fallback is on.</p>
 <h2 id="openai-compatible-provider">OpenAI-compatible provider</h2>
-<p>Provider configuration exists only in the host process environment:</p>
-<pre><code class="language-sh">export DAVOS_AGENT_PROVIDER=openai
-export DAVOS_AGENT_API_KEY='&lt;provider API key&gt;'
-export DAVOS_AGENT_MODEL='&lt;model name&gt;'
-export DAVOS_AGENT_BASE_URL='https://provider.example/v1'
-python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+<p>Start QEMU as above. In a separate Bash terminal on the host, set the endpoint
+and model for your provider and enter the key at the hidden prompt. The subshell
+keeps the key scoped to the bridge session.</p>
+<pre><code class="language-bash">(
+  export DAVOS_AGENT_PROVIDER=openai
+  export DAVOS_AGENT_MODEL='&lt;model name&gt;'
+  export DAVOS_AGENT_BASE_URL='https://provider.example/v1'
+  read -r -s -p 'Provider API key: ' DAVOS_AGENT_API_KEY || exit 1
+  printf '\n'
+  export DAVOS_AGENT_API_KEY
+  python3 scripts/agent_bridge.py --socket /tmp/davos-agent.sock
+)
 </code></pre>
 <p>The base URL must be the provider's API root; the bridge appends
 <code>/chat/completions</code>. The API key is used only in the host HTTP authorization
-header. It is never logged, included in a transport frame or sent to the guest.</p>
+header. It is never logged, included in a transport frame or sent to the guest.
+Repeat the guest commands above with the new bridge. The status command should
+report <code>Provider: openai-compatible</code>. The planning request verifies that the
+configured endpoint can return a valid typed plan.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LLM bridge: unavailable</code></td>
+<td>Start QEMU before starting the bridge. Match <code>AGENT_SERIAL_SOCKET</code> and <code>--socket</code> if you use a custom path, and close any transport probe still attached.</td>
+</tr>
+<tr>
+<td><code>provider_config</code> on bridge startup</td>
+<td>Check the provider kind, API key, model and API root. The bridge appends <code>/chat/completions</code>.</td>
+</tr>
+<tr>
+<td><code>agent: bridge timeout</code></td>
+<td>Check that the host bridge is running and the provider responds within the planning budget described above. Recheck the guest handshake with <code>agent llm status</code>.</td>
+</tr>
+<tr>
+<td><code>agent: malformed bridge response</code> or a provider plan error</td>
+<td>Check the chat-completion message for one JSON object with an allowed action and matching arguments. Try the fake provider to isolate the transport and guest runtime.</td>
+</tr>
+</tbody>
+</table>
+<p>After building the ISO, <code>python3 scripts/test_boot.py --functional</code> exercises
+the QEMU guest with the fake provider and requires no credentials.</p>
+<h2 id="recorded-round-trip">Recorded round trip</h2>
+<p>The recording runs a pre-release QEMU guest and a local OpenAI-compatible
+llama.cpp server with Qwen2.5-1.5B-Instruct (Q4_K_M). The model selects
+<code>list_files</code> for the sample request. DavOS validates and executes that typed
+action, listing <code>notes</code>. <code>agent context</code> shows the action and its result before
+the shell switches back to deterministic mode.</p>
+<p><img alt="QEMU recording of the Agent listing a file through the local LLM bridge" src="agent-round-trip.gif" /></p>
 <h2 id="boundaries">Boundaries</h2>
 <ul>
 <li><code>agent_bridge_transport.py</code> owns the QEMU Unix serial connection.</li>
