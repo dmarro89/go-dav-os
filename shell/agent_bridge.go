@@ -102,7 +102,7 @@ func serialBridgePlan(request agent.BridgeRequest) agent.BridgeResult {
 	switch result {
 	case serial.ResultPortUnavailable:
 		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeUnavailable}
-	case serial.ResultReadTimeout, serial.ResultWriteTimeout:
+	case serial.ResultReadTimeout, serial.ResultWriteTimeout, serial.ResultPartialFrame:
 		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeTimeout}
 	case serial.ResultOK:
 	default:

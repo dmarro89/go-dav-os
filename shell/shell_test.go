@@ -705,6 +705,34 @@ func TestExecuteAgentBridgeFallbackIsExplicit(t *testing.T) {
 	}
 }
 
+func TestSerialBridgePlanReportsIncompleteFrameAsTimeout(t *testing.T) {
+	previousID, previousTicks := bridgeExchangeID, getTicks
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		SetTickProvider(previousTicks)
+		serial.ResetForTesting()
+	})
+	var ticks uint64
+	SetTickProvider(func() uint64 {
+		ticks++
+		return ticks
+	})
+
+	const payload = `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`
+	var raw [serial.MaxPayload]byte
+	copy(raw[:], payload)
+	var frame [serial.MaxFrameSize]byte
+	length, result := serial.Encode(serial.FrameResponse, &raw, len(payload), &frame)
+	if result != serial.ResultOK {
+		t.Fatalf("encoding bridge response: %v", result)
+	}
+	serial.ConfigureResponseForTesting(&frame, length-1)
+	if got := serialBridgePlan(agent.BridgeRequest{}); got.OK || got.Reason != agent.MessageBridgeTimeout {
+		t.Fatalf("incomplete response: %+v", got)
+	}
+}
+
 func TestSerialBridgePlanRejectsStaleResponse(t *testing.T) {
 	previousID := bridgeExchangeID
 	bridgeExchangeID = 41
