@@ -77,7 +77,7 @@ class OpenAICompatibleProvider(Provider):
             raise ProviderError("provider request failed") from error
         except TimeoutError as error:
             raise ProviderError("provider request timed out", "provider_timeout") from error
-        except ConnectionError as error:
+        except (ConnectionError, http.client.IncompleteRead) as error:
             raise ProviderError("provider connection lost", "provider_unavailable") from error
         except (OSError, ValueError, http.client.HTTPException) as error:
             raise ProviderError("provider request failed") from error

@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import sys
@@ -123,6 +124,20 @@ class AgentBridgeTest(unittest.TestCase):
                 self.assertEqual(json.loads(payload)["error"]["code"], code)
                 self.assertEqual(json.loads(payload)["exchangeId"], 42)
                 self.assertNotIn(b"private", payload)
+
+    def test_incomplete_provider_response_is_unavailable(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=42)).encode()
+        with mock.patch.object(agent_bridge_provider.urllib.request, "urlopen") as urlopen:
+            response = urlopen.return_value.__enter__.return_value
+            response.read.side_effect = http.client.IncompleteRead(b"private response")
+            payload = agent_bridge.response_for_payload(request, provider)
+
+        self.assertEqual(json.loads(payload)["error"]["code"], "provider_unavailable")
+        self.assertEqual(json.loads(payload)["exchangeId"], 42)
+        self.assertNotIn(b"private", payload)
 
     def test_fake_provider_serves_one_structured_request(self):
         transport = MemoryTransport(json.dumps(DEFAULT_REQUEST).encode("utf-8"))
