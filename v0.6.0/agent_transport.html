@@ -894,8 +894,8 @@ fixed serial poll budget expires and the exchange returns a partial-frame
 error. A later exchange starts with a reset decoder and drains buffered input.</p>
 <p>All read and write loops have a fixed upper bound, so an unavailable or broken
 host cannot hold the shell indefinitely. <code>agent transport ping</code> reports the
-transport error and returns to the prompt. Higher-level request timeouts,
-bridge health and planner fallback remain part of issue #188.</p>
+transport error and returns to the prompt. The <a href="host_bridge.html">host bridge guide</a>
+describes the planner timeouts, bridge health and fallback behavior.</p>
 <h2 id="trust-boundary">Trust boundary</h2>
 <p>The serial payload is untrusted transport data. Future bridge responses must
 still pass the existing Agent plan validation, safety gate and constrained
