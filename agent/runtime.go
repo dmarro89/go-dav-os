@@ -111,11 +111,14 @@ func (r *Runtime) RunBridgeRequest(input *[MaxContextInput]byte, inputLen int, c
 		if !r.bridgeFallback || (planning.Reason != MessageBridgeTimeout && planning.Reason != MessageBridgeUnavailable) {
 			return planningFailureResponse(planning.Reason)
 		}
-		fallback := deterministicPlan(request.Input[:request.InputLen], context).Plan
-		if !request.allows(fallback.Actions[0].Kind) || !validatePlan(fallback).OK {
+		fallback := deterministicPlan(request.Input[:request.InputLen], context)
+		if !fallback.OK {
+			return planningFailureResponse(fallback.Reason)
+		}
+		if !request.allows(fallback.Plan.Actions[0].Kind) || !validatePlan(fallback.Plan).OK {
 			return planningFailureResponse(planning.Reason)
 		}
-		planning.Plan = fallback
+		planning = fallback
 	}
 	if context != nil {
 		context.BeginRequest(input, inputLen, planning.Plan.Planner)

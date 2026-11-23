@@ -688,9 +688,10 @@ func TestExecuteAgentBridgeFallbackIsExplicit(t *testing.T) {
 		{"agent llm fallback on", "", "Deterministic fallback: on\n"},
 		{"agent ask show me the files", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":43}`, "Agent trace: deterministic fallback\nagent: no files\n"},
 		{"agent ask show me the files", `{"action":true}`, "agent: malformed bridge response\n"},
+		{"agent ask read abcdefghijklmnopQ", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":45}`, "agent: action target is invalid\n"},
 		{"agent mode", "", "Current planner: llm\n"},
 		{"agent llm fallback off", "", "Deterministic fallback: off\n"},
-		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":45}`, "agent: bridge timeout\n"},
+		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":46}`, "agent: bridge timeout\n"},
 	} {
 		if test.reply != "" {
 			configureBridgeResponse(t, test.reply)

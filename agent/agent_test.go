@@ -670,6 +670,21 @@ func TestDeterministicPlannerReturnsUnknownForUnsupportedRequests(t *testing.T) 
 	}
 }
 
+func TestDeterministicPlannerRejectsOversizedTargets(t *testing.T) {
+	for _, input := range []string{"read abcdefghijklmnopQ", "delete abcdefghijklmnopQ", "show abcdefghijklmnopQ"} {
+		result := (DeterministicPlanner{}).Plan(input, nil)
+		if result.OK || result.Reason != MessageActionTargetInvalid {
+			t.Errorf("%q produced %+v", input, result)
+		}
+	}
+
+	result := (DeterministicPlanner{}).Plan("read abcdefghijklmnop", nil)
+	action := result.Plan.Actions[0]
+	if !result.OK || action.TargetLen != MaxNameLen || string(action.Target[:]) != "abcdefghijklmnop" {
+		t.Errorf("maximum-length target changed: %+v", result)
+	}
+}
+
 func TestDeterministicPlannerLeavesTargetEmptyWhenMissing(t *testing.T) {
 	result := DeterministicPlanner{}.Plan("read", nil)
 	if !result.OK {
