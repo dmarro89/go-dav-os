@@ -688,9 +688,10 @@ func TestExecuteAgentBridgeFallbackIsExplicit(t *testing.T) {
 		{"agent llm fallback on", "", "Deterministic fallback: on\n"},
 		{"agent ask show me the files", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":43}`, "Agent trace: deterministic fallback\nagent: no files\n"},
 		{"agent ask show me the files", `{"action":true}`, "agent: malformed bridge response\n"},
+		{"agent ask read abcdefghijklmnopQ", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":45}`, "agent: action target is invalid\n"},
 		{"agent mode", "", "Current planner: llm\n"},
 		{"agent llm fallback off", "", "Deterministic fallback: off\n"},
-		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":45}`, "agent: bridge timeout\n"},
+		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":46}`, "agent: bridge timeout\n"},
 	} {
 		if test.reply != "" {
 			configureBridgeResponse(t, test.reply)
@@ -701,6 +702,34 @@ func TestExecuteAgentBridgeFallbackIsExplicit(t *testing.T) {
 		if got := terminal.OutputForTesting(); got != test.want {
 			t.Fatalf("%s with %q returned %q, want %q", test.command, test.reply, got, test.want)
 		}
+	}
+}
+
+func TestSerialBridgePlanReportsIncompleteFrameAsTimeout(t *testing.T) {
+	previousID, previousTicks := bridgeExchangeID, getTicks
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		SetTickProvider(previousTicks)
+		serial.ResetForTesting()
+	})
+	var ticks uint64
+	SetTickProvider(func() uint64 {
+		ticks++
+		return ticks
+	})
+
+	const payload = `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`
+	var raw [serial.MaxPayload]byte
+	copy(raw[:], payload)
+	var frame [serial.MaxFrameSize]byte
+	length, result := serial.Encode(serial.FrameResponse, &raw, len(payload), &frame)
+	if result != serial.ResultOK {
+		t.Fatalf("encoding bridge response: %v", result)
+	}
+	serial.ConfigureResponseForTesting(&frame, length-1)
+	if got := serialBridgePlan(agent.BridgeRequest{}); got.OK || got.Reason != agent.MessageBridgeTimeout {
+		t.Fatalf("incomplete response: %+v", got)
 	}
 }
 
