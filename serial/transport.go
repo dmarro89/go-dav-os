@@ -1,6 +1,9 @@
 package serial
 
-const maxPortPolls = 1000000
+const (
+	maxPortPolls      = 1000000
+	maxTimedPortPolls = 100000000
+)
 
 var (
 	encodedRequest  [MaxFrameSize]byte
@@ -15,6 +18,12 @@ func Exchange(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]b
 // ExchangeUntil shares one receive budget across all frames. Like Exchange,
 // it is single-flight so the freestanding guest can use fixed-size storage.
 func ExchangeUntil(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]byte, accept func(*[MaxPayload]byte, int) bool) (int, Result) {
+	return ExchangeBefore(request, requestLen, response, accept, nil, 0)
+}
+
+// ExchangeBefore uses one tick budget for sending and receiving, including
+// discarded replies. The poll limit also bounds waits if the clock stalls.
+func ExchangeBefore(request *[MaxPayload]byte, requestLen int, response *[MaxPayload]byte, accept func(*[MaxPayload]byte, int) bool, ticks func() uint64, timeout uint64) (int, Result) {
 	if response == nil {
 		return 0, ResultInvalidPayload
 	}
@@ -26,9 +35,18 @@ func ExchangeUntil(request *[MaxPayload]byte, requestLen int, response *[MaxPayl
 		return 0, ResultPortUnavailable
 	}
 
+	var started uint64
+	pollLimit := maxPortPolls
+	if ticks != nil {
+		started = ticks()
+		pollLimit = maxTimedPortPolls
+	}
 	drainInput()
 	written := 0
-	for polls := 0; written < frameLen && polls < maxPortPolls; polls++ {
+	for polls := 0; written < frameLen && polls < pollLimit; polls++ {
+		if ticks != nil && ticks()-started >= timeout {
+			return 0, ResultWriteTimeout
+		}
 		if tryWriteByte(encodedRequest[written]) {
 			written++
 		}
@@ -39,7 +57,10 @@ func ExchangeUntil(request *[MaxPayload]byte, requestLen int, response *[MaxPayl
 
 	responseDecoder.Reset()
 	bytesRead := 0
-	for polls := 0; polls < maxPortPolls; polls++ {
+	for polls := 0; polls < pollLimit; polls++ {
+		if ticks != nil && ticks()-started >= timeout {
+			break
+		}
 		value, ok := tryReadByte()
 		if !ok {
 			continue

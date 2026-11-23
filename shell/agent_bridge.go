@@ -5,46 +5,123 @@ import (
 	"github.com/dmarro89/go-dav-os/serial"
 )
 
-func serialBridgeAvailable() bool {
-	const healthRequest = `{"health":"ping"}`
-	requestLen := copyLiteral(&transportRequest, healthRequest)
-	responseLen, result := serial.Exchange(&transportRequest, requestLen, &transportResponse)
-	return result == serial.ResultOK && bytesMatchLiteral(&transportResponse, responseLen, `{"health":"ok"}`)
-}
+// The PIT runs at 100 Hz. The plan budget leaves time for the host to
+// report its default ten-second provider timeout.
+const (
+	bridgeHealthTicks = 100
+	bridgePlanTicks   = 1200
+)
 
 var bridgeExchangeID uint64
 
-func serialBridgePlan(request agent.BridgeRequest) agent.BridgeResult {
+func nextBridgeExchangeID() (uint64, bool) {
 	// Never reuse an ID, even after a failed exchange or counter exhaustion.
 	if bridgeExchangeID == ^uint64(0) {
-		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+		return 0, false
 	}
 	bridgeExchangeID++
-	exchangeID := bridgeExchangeID
+	return bridgeExchangeID, true
+}
+
+func serialBridgeAvailable() bool {
+	return serialBridgeProvider() != ""
+}
+
+func serialBridgeProvider() string {
+	exchangeID, ok := nextBridgeExchangeID()
+	if !ok {
+		return ""
+	}
+	writer := bridgeJSONWriter{buffer: &transportRequest, ok: true}
+	bridgeWriteLiteral(&writer, `{"exchangeId":`)
+	writer.uint(exchangeID)
+	bridgeWriteLiteral(&writer, `,"health":"ping"}`)
+	var provider string
+	_, result := serial.ExchangeBefore(&transportRequest, writer.length, &transportResponse, func(input *[serial.MaxPayload]byte, length int) bool {
+		var stale bool
+		provider, stale = decodeBridgeHealth(input, length, exchangeID)
+		if stale {
+			return false
+		}
+		if provider != "" {
+			return true
+		}
+		_, status := decodeBridgeResponse(input, length, exchangeID)
+		return status != bridgeResponseStale
+	}, getTicks, bridgeHealthTicks)
+	if result != serial.ResultOK {
+		return ""
+	}
+	return provider
+}
+
+func decodeBridgeHealth(input *[serial.MaxPayload]byte, length int, exchangeID uint64) (string, bool) {
+	reader := bridgeJSONReader{buffer: input, length: length}
+	if !bridgeReaderLiteral(&reader, `{"exchangeId":`) {
+		return "", false
+	}
+	id, ok := reader.uint()
+	if !ok || id == 0 || !bridgeReaderLiteral(&reader, `,"health":"ok","provider":"`) {
+		return "", false
+	}
+	var kind [32]byte
+	kindLen, ok := reader.string(&kind)
+	if !ok || !reader.consume('}') || reader.offset != reader.length {
+		return "", false
+	}
+	if id != exchangeID {
+		return "", true
+	}
+	if bytesMatchLiteral32(&kind, kindLen, "fake") {
+		return "fake", false
+	}
+	if bytesMatchLiteral32(&kind, kindLen, "openai-compatible") {
+		return "openai-compatible", false
+	}
+	return "", false
+}
+
+func serialBridgePlan(request agent.BridgeRequest) agent.BridgeResult {
+	exchangeID, ok := nextBridgeExchangeID()
+	if !ok {
+		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+	}
 	requestLen, ok := encodeBridgeRequest(request, exchangeID, &transportRequest)
 	if !ok {
 		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
 	}
 	var response agent.BridgeResponse
 	var status bridgeResponseStatus
-	_, result := serial.ExchangeUntil(&transportRequest, requestLen, &transportResponse, func(input *[serial.MaxPayload]byte, length int) bool {
+	_, result := serial.ExchangeBefore(&transportRequest, requestLen, &transportResponse, func(input *[serial.MaxPayload]byte, length int) bool {
+		if _, stale := decodeBridgeHealth(input, length, exchangeID); stale {
+			return false
+		}
 		response, status = decodeBridgeResponse(input, length, exchangeID)
 		return status != bridgeResponseStale
-	})
-	if result != serial.ResultOK {
-		reason := agent.MessageLLMBridgeFailed
-		if result == serial.ResultWriteTimeout || result == serial.ResultReadTimeout || result == serial.ResultPartialFrame {
-			reason = agent.MessageBridgeTimeout
-		}
-		return agent.BridgeResult{OK: false, Reason: reason}
+	}, getTicks, bridgePlanTicks)
+	switch result {
+	case serial.ResultPortUnavailable:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeUnavailable}
+	case serial.ResultReadTimeout, serial.ResultWriteTimeout, serial.ResultPartialFrame:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeTimeout}
+	case serial.ResultOK:
+	default:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeMalformedResponse}
 	}
-	if status == bridgeResponseNoMatch {
+	switch status {
+	case bridgeResponsePlan:
+		return agent.BridgeResult{OK: true, Response: response}
+	case bridgeResponseNoMatch:
 		return agent.BridgeResult{OK: false, Reason: agent.MessageNoMatchingAction}
-	}
-	if status != bridgeResponsePlan {
+	case bridgeResponseTimedOut:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeTimeout}
+	case bridgeResponseUnavailable:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeUnavailable}
+	case bridgeResponseError:
 		return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+	default:
+		return agent.BridgeResult{OK: false, Reason: agent.MessageBridgeMalformedResponse}
 	}
-	return agent.BridgeResult{OK: true, Response: response}
 }
 
 type bridgeJSONWriter struct {
@@ -235,6 +312,9 @@ const (
 	bridgeResponsePlan
 	bridgeResponseStale
 	bridgeResponseNoMatch
+	bridgeResponseError
+	bridgeResponseTimedOut
+	bridgeResponseUnavailable
 )
 
 func decodeBridgeResponse(input *[serial.MaxPayload]byte, inputLen int, exchangeID uint64) (agent.BridgeResponse, bridgeResponseStatus) {
@@ -247,14 +327,7 @@ func decodeBridgeResponse(input *[serial.MaxPayload]byte, inputLen int, exchange
 		return response, bridgeResponseInvalid
 	}
 	if bridgeReaderLiteral(&reader, `error":{"code":"`) {
-		if reader.skipString() && bridgeReaderLiteral(&reader, `,"message":"`) &&
-			reader.skipString() && reader.consume('}') && bridgeReaderLiteral(&reader, `,"exchangeId":`) {
-			id, ok := reader.uint()
-			if ok && id != 0 && id != exchangeID && reader.consume('}') && reader.offset == reader.length {
-				return response, bridgeResponseStale
-			}
-		}
-		return response, bridgeResponseInvalid
+		return response, decodeBridgeError(&reader, exchangeID)
 	}
 	if !bridgeReaderLiteral(&reader, `action":"`) {
 		return response, bridgeResponseInvalid
@@ -327,6 +400,34 @@ func decodeBridgeResponse(input *[serial.MaxPayload]byte, inputLen int, exchange
 		return response, bridgeResponseInvalid
 	}
 	return response, bridgeResponsePlan
+}
+
+func decodeBridgeError(reader *bridgeJSONReader, exchangeID uint64) bridgeResponseStatus {
+	var code [32]byte
+	length, ok := reader.string(&code)
+	if !ok || !bridgeReaderLiteral(reader, `,"message":"`) || !reader.skipString() || !reader.consume('}') {
+		return bridgeResponseInvalid
+	}
+	if reader.consume('}') && reader.offset == reader.length {
+		return bridgeResponseError
+	}
+	if !bridgeReaderLiteral(reader, `,"exchangeId":`) {
+		return bridgeResponseInvalid
+	}
+	id, ok := reader.uint()
+	if !ok || id == 0 || !reader.consume('}') || reader.offset != reader.length {
+		return bridgeResponseInvalid
+	}
+	if id != exchangeID {
+		return bridgeResponseStale
+	}
+	if bytesMatchLiteral32(&code, length, "provider_timeout") {
+		return bridgeResponseTimedOut
+	}
+	if bytesMatchLiteral32(&code, length, "provider_unavailable") {
+		return bridgeResponseUnavailable
+	}
+	return bridgeResponseError
 }
 
 func (r *bridgeJSONReader) uint() (uint64, bool) {
@@ -578,25 +679,6 @@ func bridgeRiskFromBytes(value *[32]byte, length int) (agent.RiskLevel, bool) {
 		return agent.RiskRisky, true
 	}
 	return agent.RiskSafe, false
-}
-
-func copyLiteral(output *[serial.MaxPayload]byte, value string) int {
-	for i := 0; i < len(value); i++ {
-		output[i] = value[i]
-	}
-	return len(value)
-}
-
-func bytesMatchLiteral(value *[serial.MaxPayload]byte, length int, literal string) bool {
-	if value == nil || length != len(literal) {
-		return false
-	}
-	for i := 0; i < length; i++ {
-		if value[i] != literal[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func bytesMatchLiteral32(value *[32]byte, length int, literal string) bool {

@@ -1,8 +1,6 @@
-//go:build !gccgo
-
 package agent
 
-func deterministicPlan(input string, _ *Context) PlanningResult {
+func deterministicPlan(input []byte, _ *Context) PlanningResult {
 	if contains(input, "help") || contains(input, "commands") || contains(input, "what can you do") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHelp, ActionShowHelp, RiskSafe))
 	}
@@ -19,50 +17,50 @@ func deterministicPlan(input string, _ *Context) PlanningResult {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentShowHistory, ActionShowHistory, RiskSafe))
 	}
 	if contains(input, "mode") {
-		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentSetMode, ActionSetMode, RiskSafe, input))
+		return singleTargetPlan(PlannerModeDeterministic, IntentSetMode, ActionSetMode, RiskSafe, input)
 	}
 	if contains(input, "delete") || contains(input, "remove") {
-		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentDeleteFile, ActionDeleteFile, RiskRisky, input))
+		return singleTargetPlan(PlannerModeDeterministic, IntentDeleteFile, ActionDeleteFile, RiskRisky, input)
 	}
 	if contains(input, "read") || contains(input, "cat") {
-		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe, input))
+		return singleTargetPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe, input)
 	}
 	if contains(input, "stat") || contains(input, "status") {
-		return successfulPlan(singleTargetPlan(PlannerModeDeterministic, IntentStatFile, ActionStatFile, RiskSafe, input))
+		return singleTargetPlan(PlannerModeDeterministic, IntentStatFile, ActionStatFile, RiskSafe, input)
 	}
 	if contains(input, "ls") || contains(input, "list") || contains(input, "files") || contains(input, "file") {
 		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
 	}
 	if contains(input, "show") {
-		plan := singleTargetPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe, input)
-		if plan.Actions[0].TargetLen > 0 {
-			return successfulPlan(plan)
+		planning := singleTargetPlan(PlannerModeDeterministic, IntentReadFile, ActionReadFile, RiskSafe, input)
+		if !planning.OK || planning.Plan.Actions[0].TargetLen > 0 {
+			return planning
 		}
 	}
 	return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentUnknown, ActionUnknown, RiskSafe))
 }
 
-func singleTargetPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel, input string) Plan {
+func singleTargetPlan(mode PlannerMode, intent IntentKind, actionKind ActionKind, risk RiskLevel, input []byte) PlanningResult {
 	plan := singleActionPlan(mode, intent, actionKind, risk)
 	targetStart, targetEnd := lastToken(input)
 	if targetStart < targetEnd && !isActionWord(input, targetStart, targetEnd) {
 		targetLen := targetEnd - targetStart
 		if targetLen > MaxNameLen {
-			targetLen = MaxNameLen
+			return PlanningResult{Reason: MessageActionTargetInvalid}
 		}
 		plan.Actions[0].TargetLen = targetLen
 		for i := 0; i < targetLen; i++ {
 			plan.Actions[0].Target[i] = input[targetStart+i]
 		}
 	}
-	return plan
+	return successfulPlan(plan)
 }
 
 func successfulPlan(plan Plan) PlanningResult {
 	return PlanningResult{OK: true, Plan: plan}
 }
 
-func contains(text, token string) bool {
+func contains(text []byte, token string) bool {
 	if len(token) == 0 {
 		return true
 	}
@@ -91,7 +89,7 @@ func lowerASCII(c byte) byte {
 	return c
 }
 
-func lastToken(text string) (int, int) {
+func lastToken(text []byte) (int, int) {
 	end := len(text)
 	for end > 0 && isPlannerSpace(text[end-1]) {
 		end--
@@ -107,7 +105,7 @@ func isPlannerSpace(c byte) bool {
 	return c == ' ' || c == '\t'
 }
 
-func isActionWord(text string, start, end int) bool {
+func isActionWord(text []byte, start, end int) bool {
 	return tokenEquals(text, start, end, "read") ||
 		tokenEquals(text, start, end, "cat") ||
 		tokenEquals(text, start, end, "delete") ||
@@ -118,7 +116,7 @@ func isActionWord(text string, start, end int) bool {
 		tokenEquals(text, start, end, "mode")
 }
 
-func tokenEquals(text string, start, end int, token string) bool {
+func tokenEquals(text []byte, start, end int, token string) bool {
 	if end-start != len(token) {
 		return false
 	}

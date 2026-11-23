@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import sys
@@ -95,6 +96,49 @@ class AgentBridgeTest(unittest.TestCase):
         self.assertEqual(json.loads(payload), {"health": "ok"})
         provider.plan.assert_not_called()
 
+    def test_tagged_health_handshake_reports_only_provider_kind(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        with mock.patch.object(provider, "plan") as plan:
+            payload = agent_bridge.response_for_payload(
+                b'{"exchangeId":42,"health":"ping"}', provider
+            )
+        self.assertEqual(json.loads(payload), {
+            "exchangeId": 42, "health": "ok", "provider": "openai-compatible"
+        })
+        plan.assert_not_called()
+
+    def test_provider_timeout_and_disconnect_use_safe_guest_errors(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=42)).encode()
+        for error, code in (
+            (TimeoutError("private URL"), "provider_timeout"),
+            (ConnectionResetError("private URL"), "provider_unavailable"),
+        ):
+            with self.subTest(code=code):
+                with mock.patch.object(agent_bridge_provider.urllib.request, "urlopen", side_effect=error):
+                    payload = agent_bridge.response_for_payload(request, provider)
+                self.assertEqual(json.loads(payload)["error"]["code"], code)
+                self.assertEqual(json.loads(payload)["exchangeId"], 42)
+                self.assertNotIn(b"private", payload)
+
+    def test_incomplete_provider_response_is_unavailable(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=42)).encode()
+        with mock.patch.object(agent_bridge_provider.urllib.request, "urlopen") as urlopen:
+            response = urlopen.return_value.__enter__.return_value
+            response.read.side_effect = http.client.IncompleteRead(b"private response")
+            payload = agent_bridge.response_for_payload(request, provider)
+
+        self.assertEqual(json.loads(payload)["error"]["code"], "provider_unavailable")
+        self.assertEqual(json.loads(payload)["exchangeId"], 42)
+        self.assertNotIn(b"private", payload)
+
     def test_fake_provider_serves_one_structured_request(self):
         transport = MemoryTransport(json.dumps(DEFAULT_REQUEST).encode("utf-8"))
 
@@ -108,9 +152,10 @@ class AgentBridgeTest(unittest.TestCase):
 
     def test_one_shot_serves_health_before_one_planning_request(self):
         health = b'{"health":"ping"}'
+        tagged_health = b'{"exchangeId":42,"health":"ping"}'
         planning = json.dumps(DEFAULT_REQUEST).encode("utf-8")
         next_frame = request_frame(planning)
-        stream = FakeStream(request_frame(health) + next_frame + next_frame)
+        stream = FakeStream(request_frame(health) + request_frame(tagged_health) + next_frame + next_frame)
         transport = agent_bridge_transport.SerialTransport(stream)
         provider = agent_bridge_provider.FakeProvider()
 
@@ -120,6 +165,9 @@ class AgentBridgeTest(unittest.TestCase):
         self.assertEqual(
             stream.sent,
             agent_bridge_protocol.encode_response_frame(b'{"health":"ok"}')
+            + agent_bridge_protocol.encode_response_frame(
+                b'{"exchangeId":42,"health":"ok","provider":"fake"}'
+            )
             + agent_bridge_protocol.encode_response_frame(
                 agent_bridge.response_for_payload(planning, provider)
             ),

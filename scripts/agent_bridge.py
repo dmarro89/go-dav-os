@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import math
 import os
 import sys
 import time
@@ -33,6 +34,10 @@ def response_for_payload(payload, provider):
             if type(candidate) is not int or not 0 < candidate < 2**64:
                 raise ProtocolError("invalid exchange ID", "invalid_request")
             exchange_id = candidate
+            if request == {"exchangeId": exchange_id, "health": "ping"}:
+                return encode_agent_response(
+                    {"exchangeId": exchange_id, "health": "ok", "provider": provider.kind}
+                )
         response = provider.plan(request)
         plan = validate_provider_plan(request, response)
         if exchange_id is not None:
@@ -63,7 +68,7 @@ def serve(transport, provider, timeout, once=False):
             continue
         response = response_for_payload(payload, provider)
         transport.send(response, time.monotonic() + timeout)
-        if once and response != HEALTH_RESPONSE:
+        if once and json.loads(response).get("health") != "ok":
             return
 
 
@@ -73,6 +78,8 @@ def main():
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--once", action="store_true", help="exit after one planning request")
     args = parser.parse_args()
+    if not math.isfinite(args.timeout) or args.timeout <= 0:
+        parser.error("--timeout must be a positive finite duration")
 
     try:
         provider = provider_from_environment(os.environ)

@@ -7,6 +7,7 @@ type Runtime struct {
 	llmConfigured      bool
 	bridgeAvailable    func() bool
 	bridgePlan         func(request BridgeRequest) BridgeResult
+	bridgeFallback     bool
 }
 
 func NewDeterministicAgent(executor AllowedActionExecutor) Runtime {
@@ -48,7 +49,10 @@ func (r *Runtime) SetPlannerMode(mode PlannerMode) ActionResult {
 		return ActionResult{OK: true, Message: MessagePlannerSwitchedDeterministic}
 	case PlannerModeLLM:
 		if r.bridgeAvailable != nil {
-			r.llmConfigured = r.bridgePlan != nil && r.bridgeAvailable()
+			if r.bridgePlan == nil || !r.bridgeAvailable() {
+				return ActionResult{OK: false, Message: MessageLLMModeNotConfigured}
+			}
+			r.llmConfigured = true
 		}
 		if !r.llmConfigured {
 			return ActionResult{OK: false, Message: MessageLLMModeNotConfigured}
@@ -69,12 +73,20 @@ func (r *Runtime) CopyPlannerConfiguration(source *Runtime) {
 		r.llmConfigured = false
 		r.bridgeAvailable = nil
 		r.bridgePlan = nil
+		r.bridgeFallback = false
 		return
 	}
 	r.plannerMode = source.plannerMode
 	r.llmConfigured = source.llmConfigured
 	r.bridgeAvailable = source.bridgeAvailable
 	r.bridgePlan = source.bridgePlan
+	r.bridgeFallback = source.bridgeFallback
+}
+
+func (r *Runtime) SetBridgeFallback(enabled bool) {
+	if r != nil {
+		r.bridgeFallback = enabled
+	}
 }
 
 func (r *Runtime) ConfigureLLMBridge(available func() bool, plan func(request BridgeRequest) BridgeResult) {
@@ -96,12 +108,26 @@ func (r *Runtime) RunBridgeRequest(input *[MaxContextInput]byte, inputLen int, c
 	request := NewBridgeRequest(input, inputLen, context)
 	planning := bridgePlanningResult(request, r.bridgePlan(request))
 	if !planning.OK {
-		return planningFailureResponse(planning.Reason)
+		if !r.bridgeFallback || (planning.Reason != MessageBridgeTimeout && planning.Reason != MessageBridgeUnavailable) {
+			return planningFailureResponse(planning.Reason)
+		}
+		fallback := deterministicPlan(request.Input[:request.InputLen], context)
+		if !fallback.OK {
+			return planningFailureResponse(fallback.Reason)
+		}
+		if !request.allows(fallback.Plan.Actions[0].Kind) || !validatePlan(fallback.Plan).OK {
+			return planningFailureResponse(planning.Reason)
+		}
+		planning = fallback
 	}
 	if context != nil {
-		context.BeginRequest(input, inputLen, PlannerModeLLM)
+		context.BeginRequest(input, inputLen, planning.Plan.Planner)
 	}
-	return r.runPlan(planning.Plan, context)
+	response := r.runPlan(planning.Plan, context)
+	if planning.Plan.Planner == PlannerModeDeterministic {
+		response.AddTrace(TracePlanner, TraceDetailFallback)
+	}
+	return response
 }
 
 func (r *Runtime) RunBridgeRequestMessage(input *[MaxContextInput]byte, inputLen int, context *Context) MessageKind {
