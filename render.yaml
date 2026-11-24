@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: go-dav-os-demo
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/healthz
+    autoDeployTrigger: checksPass
+    numInstances: 1
+    envVars:
+      - key: FINAL_STAGE
+        value: demo-runtime
