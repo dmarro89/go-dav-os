@@ -99,7 +99,6 @@ button:disabled {
 
 .console-frame {
   overflow: hidden;
-  min-height: 500px;
   border: 1px solid #34434e;
   border-radius: 8px;
   background: #000;
@@ -107,12 +106,11 @@ button:disabled {
 
 #screen {
   width: 100%;
-  min-height: 500px;
+  height: 500px;
 }
 
 #screen canvas {
   display: block;
-  width: 100%;
 }
 
 footer {
@@ -155,8 +153,7 @@ a {
     justify-content: flex-start;
   }
 
-  .console-frame,
   #screen {
-    min-height: 420px;
+    height: 420px;
   }
 }
