@@ -18,7 +18,6 @@ http {
     client_max_body_size 1k;
     keepalive_timeout 15s;
     limit_conn_zone $server_name zone=demo_session:1m;
-    limit_req_zone $server_name zone=demo_reset:1m rate=6r/m;
 
     server {
         listen __PORT__;
@@ -37,7 +36,6 @@ http {
         }
 
         location = /api/reset {
-            limit_req zone=demo_reset burst=1 nodelay;
             limit_except POST { deny all; }
             proxy_pass http://127.0.0.1:8081/reset;
             proxy_set_header Host $http_host;

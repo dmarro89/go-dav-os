@@ -56,7 +56,6 @@ class VMController:
             QEMU_COMMAND,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
             close_fds=True,
         )
 
@@ -114,9 +113,21 @@ class ControlHandler(http.server.BaseHTTPRequestHandler):
         if self.path != "/reset":
             self.send_error(404)
             return
-        origin = urlsplit(self.headers.get("Origin", ""))
+        try:
+            origin = urlsplit(self.headers.get("Origin", ""))
+        except ValueError:
+            self.send_error(403, "Invalid reset origin")
+            return
         host = self.headers.get("Host", "").lower()
-        if not origin.netloc or origin.netloc.lower() != host:
+        if (
+            origin.scheme not in ("http", "https")
+            or not origin.netloc
+            or origin.netloc.lower() != host
+            or origin.path
+            or origin.query
+            or origin.fragment
+            or origin.username is not None
+        ):
             self.send_error(403, "Reset requests must come from this site")
             return
         try:
