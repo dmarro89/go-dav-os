@@ -19,6 +19,9 @@ func deterministicPlan(input []byte, _ *Context) PlanningResult {
 	if containsToken(input, "mode") {
 		return singleTargetPlan(PlannerModeDeterministic, IntentSetMode, ActionSetMode, RiskSafe, input)
 	}
+	if startsWithList(input) {
+		return successfulPlan(singleActionPlan(PlannerModeDeterministic, IntentListFiles, ActionListFiles, RiskSafe))
+	}
 	if containsToken(input, "delete") || containsToken(input, "remove") {
 		return singleTargetPlan(PlannerModeDeterministic, IntentDeleteFile, ActionDeleteFile, RiskRisky, input)
 	}
@@ -130,15 +133,34 @@ func showAsksForList(input []byte) bool {
 		for j < len(input) && !isPlannerSpace(input[j]) {
 			j++
 		}
-		if seenShow && isListWord(input, i, j) {
+		end := j
+		for end > i && !isPlannerWordByte(input[end-1]) {
+			end--
+		}
+		if seenShow && isListWord(input, i, end) {
 			return true
 		}
-		if tokenEquals(input, i, j, "show") {
+		if tokenEquals(input, i, end, "show") {
 			seenShow = true
 		}
 		i = j
 	}
 	return false
+}
+
+// startsWithList reports whether the first whitespace-separated token is an
+// explicit list command, so "list files named delete.txt" lists instead of
+// treating a filename as a file action.
+func startsWithList(input []byte) bool {
+	i := 0
+	for i < len(input) && isPlannerSpace(input[i]) {
+		i++
+	}
+	j := i
+	for j < len(input) && !isPlannerSpace(input[j]) {
+		j++
+	}
+	return tokenEquals(input, i, j, "list") || tokenEquals(input, i, j, "ls")
 }
 
 func isListWord(text []byte, start, end int) bool {

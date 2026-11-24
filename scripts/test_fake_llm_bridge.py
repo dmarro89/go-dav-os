@@ -110,6 +110,9 @@ class FakeLLMBridgeTest(unittest.TestCase):
             ("show me the files", "list_files", []),
             ("list", "list_files", []),
             ("file", "list_files", []),
+            ("show files?", "list_files", []),
+            ("list files named delete.txt", "list_files", []),
+            ("delete files", "delete_file", ["files"]),
         ):
             with self.subTest(input=input_text):
                 response = self.plan(input_text)

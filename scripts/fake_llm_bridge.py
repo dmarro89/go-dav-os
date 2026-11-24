@@ -82,6 +82,8 @@ def map_input(input_text):
         return "show_ticks", "show_ticks", [], "safe", "Matched request to show PIT ticks."
     if contains_token(text, "history"):
         return "show_history", "show_history", [], "safe", "Matched request to show Agent history."
+    if starts_with_list(text):
+        return "list_files", "list_files", [], "safe", "Matched request to list files."
     if contains_token(text, "delete") or contains_token(text, "remove"):
         target = last_token(input_text)
         if target:
@@ -177,14 +179,23 @@ def last_token(text):
 
 
 def show_asks_for_list(text):
-    # Whitespace-separated tokens keep "files" distinct from "files.txt".
+    # Whitespace-separated tokens keep "files" distinct from "files.txt";
+    # trailing sentence punctuation is dropped so "files?" still lists.
     seen_show = False
     for part in text.split():
+        while part and not part[-1].isalnum():
+            part = part[:-1]
         if seen_show and part in {"ls", "list", "file", "files"}:
             return True
         if part == "show":
             seen_show = True
     return False
+
+
+def starts_with_list(text):
+    # A leading list command wins over action keywords inside file names.
+    parts = text.split()
+    return bool(parts) and parts[0] in {"list", "ls"}
 
 
 if __name__ == "__main__":

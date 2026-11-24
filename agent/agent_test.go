@@ -574,6 +574,8 @@ func TestDeterministicPlannerRecognizesHelpAndDefaultsSafely(t *testing.T) {
 		{input: "list files in showcase", intent: IntentListFiles, action: ActionListFiles},
 		{input: "list files in deleted", intent: IntentListFiles, action: ActionListFiles},
 		{input: "show files in showcase", intent: IntentListFiles, action: ActionListFiles},
+		{input: "show files?", intent: IntentListFiles, action: ActionListFiles},
+		{input: "list files named delete.txt", intent: IntentListFiles, action: ActionListFiles},
 	}
 
 	for _, tt := range tests {
