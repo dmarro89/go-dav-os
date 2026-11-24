@@ -571,6 +571,9 @@ func TestDeterministicPlannerRecognizesHelpAndDefaultsSafely(t *testing.T) {
 		{input: "LS", intent: IntentListFiles, action: ActionListFiles},
 		{input: "show files", intent: IntentListFiles, action: ActionListFiles},
 		{input: "list files", intent: IntentListFiles, action: ActionListFiles},
+		{input: "list files in showcase", intent: IntentListFiles, action: ActionListFiles},
+		{input: "list files in deleted", intent: IntentListFiles, action: ActionListFiles},
+		{input: "show files in showcase", intent: IntentListFiles, action: ActionListFiles},
 	}
 
 	for _, tt := range tests {
@@ -648,6 +651,39 @@ func TestDeterministicPlannerRecognizesSystemActions(t *testing.T) {
 			action := result.Plan.Actions[0]
 			if result.Plan.Intent != tt.intent || action.Kind != tt.action {
 				t.Fatalf("unexpected plan: intent=%v action=%v", result.Plan.Intent, action.Kind)
+			}
+		})
+	}
+}
+
+func TestDeterministicPlannerDoesNotMisreadFilenamesAsListRequests(t *testing.T) {
+	tests := []struct {
+		input  string
+		intent IntentKind
+		action ActionKind
+		risk   RiskLevel
+		target string
+	}{
+		{input: "show tools", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "tools"},
+		{input: "show pulse", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "pulse"},
+		{input: "show profile", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "profile"},
+		{input: "show files.txt", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "files.txt"},
+		{input: "read files", intent: IntentReadFile, action: ActionReadFile, risk: RiskSafe, target: "files"},
+		{input: "delete notes_files", intent: IntentDeleteFile, action: ActionDeleteFile, risk: RiskRisky, target: "notes_files"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := DeterministicPlanner{}.Plan(tt.input, nil)
+			if !result.OK {
+				t.Fatalf("expected deterministic plan to succeed")
+			}
+			action := result.Plan.Actions[0]
+			if result.Plan.Intent != tt.intent || action.Kind != tt.action || action.Risk != tt.risk {
+				t.Fatalf("unexpected plan: intent=%v action=%v risk=%v", result.Plan.Intent, action.Kind, action.Risk)
+			}
+			if action.TargetLen != len(tt.target) || string(action.Target[:action.TargetLen]) != tt.target {
+				t.Fatalf("unexpected target %q", action.Target[:action.TargetLen])
 			}
 		})
 	}
