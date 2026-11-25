@@ -13,6 +13,10 @@ const (
 	scRightShiftDown = 0x36
 	scRightShiftUp   = 0xB6
 	scCapsLockDown   = 0x3A
+
+	scExtendedPrefix = 0xE0
+	scArrowUp        = 0x48
+	scArrowDown      = 0x50
 )
 
 const (
@@ -24,6 +28,10 @@ var (
 	leftShiftDown  bool
 	rightShiftDown bool
 	capsLockOn     bool
+	// extendedPrefix is set after 0xE0 so the next scancode is read as an
+	// extended key. Arrow keys share their codes with keypad 8 and 2, which
+	// arrive without the prefix.
+	extendedPrefix bool
 )
 
 var currentLayout Layout
@@ -42,6 +50,23 @@ func readScancode() byte {
 }
 
 func translateScancode(sc byte) (rune, bool) {
+	if sc == scExtendedPrefix {
+		extendedPrefix = true
+		return 0, false
+	}
+	extended := extendedPrefix
+	extendedPrefix = false
+	if extended {
+		switch sc {
+		case scArrowUp:
+			return KeyUp, true
+		case scArrowDown:
+			return KeyDown, true
+		case scArrowUp | 0x80, scArrowDown | 0x80:
+			return 0, false
+		}
+	}
+
 	if handleModifier(sc) {
 		return 0, false
 	}

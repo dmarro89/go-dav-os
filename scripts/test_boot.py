@@ -34,6 +34,37 @@ def create_disk_image(disk_img):
         f.write(b"\0" * (20 * 1024 * 1024))
 
 
+def send_keys(process, *keys):
+    """Send raw QEMU key names without pressing Enter."""
+    for key in keys:
+        try:
+            process.stdin.write(f"sendkey {key}\n")
+            process.stdin.flush()
+        except BrokenPipeError:
+            print("Error: QEMU closed stdin (crashed?)")
+            return
+        time.sleep(0.1)
+
+
+def run_history_navigation_case(process, log_file):
+    """Check Up/Down history navigation and draft restore through the guest."""
+    run_shell_case(process, log_file, "version", "DavOS 0.6.0 (64bit)")
+
+    # Up recalls the previous command, Enter runs it again.
+    offset = os.path.getsize(log_file)
+    send_keys(process, "up", "ret")
+    if not check_log_for("DavOS 0.6.0 (64bit)", log_file, timeout=6, offset=offset):
+        fail_with_log("Up arrow did not recall the previous command.", process, log_file)
+
+    # A half-typed draft is restored when navigating back down.
+    # Type "he", Up (shows "version"), Down (draft "he" returns), finish "lp".
+    offset = os.path.getsize(log_file)
+    send_keys(process, "h", "e", "up", "down", "l", "p", "ret")
+    if not check_log_for("Commands:", log_file, timeout=6, offset=offset):
+        fail_with_log("Draft was not restored after Up then Down.", process, log_file)
+    print("Test Passed: history navigation and draft restore.")
+
+
 def start_qemu(iso_path, disk_img, log_file, serial_socket=None):
     cmd = [
         "qemu-system-x86_64",
@@ -309,6 +340,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
 
         for cmd_text, expected_outputs in test_cases:
             run_shell_case(process, log_file, cmd_text, *expected_outputs)
+
+        run_history_navigation_case(process, log_file)
 
         run_agent_bridge_suite(process, log_file, serial_socket)
     finally:
