@@ -31,13 +31,10 @@ func (r Runtime) Run(input string, context *Context) Response {
 	} else if mode == PlannerModeLLM {
 		planning = configuredLLMPlanner.Plan(input, context)
 	} else {
-		planning = deterministicPlan(input, context)
+		planning = deterministicPlan([]byte(input), context)
 	}
 	if !planning.OK {
-		var response Response
-		setResponseResult(&response, false, planning.Reason)
-		setSafety(&response, SafetyRejected, MessagePlannerFailed)
-		response.AddTrace(TracePlanner, traceFromMessage(planning.Reason))
+		response := planningFailureResponse(planning.Reason)
 		if context != nil {
 			context.CurrentTask = ActionNone
 			context.LastIntent = IntentUnknown

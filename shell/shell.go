@@ -18,7 +18,7 @@ const (
 	maxLine              = 128
 	osName               = "DavOS"
 	maxDistanceThreshold = 3
-	osVersion            = "0.5.0"
+	osVersion            = "0.6.0"
 	commandHelp          = "help"
 	commandHistory       = "history"
 )
@@ -125,6 +125,7 @@ func SetAgentRuntime(runtime *agent.Runtime) {
 
 func ConfigureAgentRuntime() {
 	runtimeAgent.CopyPlannerConfiguration(nil)
+	runtimeAgent.ConfigureLLMBridge(serialBridgeAvailable, serialBridgePlan)
 	runtimeAgent.Executor.ListFiles = agentListFiles
 	runtimeAgent.Executor.ReadFile = agentReadFile
 	runtimeAgent.Executor.WriteFile = agentWriteFile
@@ -886,7 +887,7 @@ func execute() {
 	if matchLiteral(cmdStart, cmdEnd, "agent") {
 		a1s, a1e, ok := nextArg(cmdEnd, end)
 		if !ok {
-			terminal.Print("Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n")
+			terminal.Print("Usage: agent <show|read|stat|delete|mode|ask|transport|context|help> [arg]\n")
 			return
 		}
 
@@ -945,6 +946,17 @@ func execute() {
 				return
 			}
 			runAgentNoTarget(agent.ActionSetMode, agent.IntentSetMode, agent.RiskSafe, start, end)
+			return
+		} else if matchLiteral(a1s, a1e, "llm") {
+			runAgentLLM(a1e, end)
+			return
+		} else if matchLiteral(a1s, a1e, "ask") {
+			requestStart := trimLeft(a1e, end)
+			if requestStart >= end {
+				terminal.Print("Usage: agent ask <request>\n")
+				return
+			}
+			runAgentBridge(requestStart, end)
 			return
 		} else if matchLiteral(a1s, a1e, "transport") {
 			a2s, a2e, ok := nextArg(a1e, end)
@@ -1029,6 +1041,72 @@ func runAgentAction(kind agent.ActionKind, intent agent.IntentKind, risk agent.R
 	}
 	printAgentMessage(message)
 	terminal.PutRune('\n')
+}
+
+func runAgentBridge(inputStart, inputEnd int) {
+	var input [agent.MaxContextInput]byte
+	inputLen := inputEnd - inputStart
+	if inputLen > agent.MaxContextInput {
+		inputLen = agent.MaxContextInput
+	}
+	for i := 0; i < inputLen; i++ {
+		input[i] = lineBuf[inputStart+i]
+	}
+	response := runtimeAgent.RunBridgeRequest(&input, inputLen, &agentContext)
+	for i := 0; i < response.TraceCount; i++ {
+		if response.Trace[i].Detail == agent.TraceDetailFallback {
+			terminal.Print("Agent trace: deterministic fallback\n")
+			break
+		}
+	}
+	message := response.Result.Message
+	if message == agent.MessageConfirmationRequired && agentContext.PendingPlan.ActionCount > 0 {
+		action := agentContext.PendingPlan.Actions[0]
+		if action.Kind == agent.ActionDeleteFile {
+			terminal.Print("Agent understood: delete file \"")
+			printName(&action.Target, action.TargetLen)
+			terminal.Print("\"\n")
+		}
+	}
+	printAgentMessage(message)
+	terminal.PutRune('\n')
+}
+
+func runAgentLLM(start, end int) {
+	const usage = "Usage: agent llm status | agent llm fallback <on|off>\n"
+	subStart, subEnd, ok := nextArg(start, end)
+	if !ok {
+		terminal.Print(usage)
+		return
+	}
+	valueStart, valueEnd, hasValue := nextArg(subEnd, end)
+	if matchLiteral(subStart, subEnd, "status") && !hasValue {
+		provider := serialBridgeProvider()
+		if provider == "" {
+			terminal.Print("LLM bridge: unavailable\n")
+			return
+		}
+		terminal.Print("LLM bridge: available\nProvider: ")
+		terminal.Print(provider)
+		terminal.PutRune('\n')
+		return
+	}
+	if !matchLiteral(subStart, subEnd, "fallback") || !hasValue {
+		terminal.Print(usage)
+		return
+	}
+	_, _, extra := nextArg(valueEnd, end)
+	on := matchLiteral(valueStart, valueEnd, "on")
+	if extra || !on && !matchLiteral(valueStart, valueEnd, "off") {
+		terminal.Print(usage)
+		return
+	}
+	runtimeAgent.SetBridgeFallback(on)
+	if on {
+		terminal.Print("Deterministic fallback: on\n")
+	} else {
+		terminal.Print("Deterministic fallback: off\n")
+	}
 }
 
 func runAgentTransportProbe() {
@@ -1121,6 +1199,9 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("  agent stat <name>   - Show file metadata through the agent\n")
 		terminal.Print("  agent delete <name> - Delete a file after confirmation\n")
 		terminal.Print("  agent mode [mode]   - Show or switch agent mode\n")
+		terminal.Print("  agent ask <request> - Plan a request through the host bridge\n")
+		terminal.Print("  agent llm status   - Show bridge availability and provider\n")
+		terminal.Print("  agent llm fallback <on|off> - Set deterministic fallback\n")
 		terminal.Print("  agent transport ping - Probe the guest-host transport\n")
 		terminal.Print("  agent context       - Show current agent context\n")
 		terminal.Print("  agent help          - Show agent commands")
@@ -1144,6 +1225,18 @@ func printAgentMessage(message agent.MessageKind) {
 		terminal.Print("agent: llm bridge unavailable")
 	case agent.MessageUnsupportedMode:
 		terminal.Print("agent: unsupported mode")
+	case agent.MessageLLMBridgeNotConfigured:
+		terminal.Print("agent: llm bridge unavailable")
+	case agent.MessageLLMBridgeFailed:
+		terminal.Print("agent: llm bridge failed")
+	case agent.MessageBridgeTimeout:
+		terminal.Print("agent: bridge timeout")
+	case agent.MessageNoMatchingAction:
+		terminal.Print("agent: no allowed action matched")
+	case agent.MessageBridgeMalformedResponse:
+		terminal.Print("agent: malformed bridge response")
+	case agent.MessageBridgeUnavailable:
+		terminal.Print("agent: llm bridge unavailable")
 	default:
 		return
 	}

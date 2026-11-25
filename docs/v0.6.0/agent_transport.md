@@ -75,8 +75,8 @@ error. A later exchange starts with a reset decoder and drains buffered input.
 
 All read and write loops have a fixed upper bound, so an unavailable or broken
 host cannot hold the shell indefinitely. `agent transport ping` reports the
-transport error and returns to the prompt. Higher-level request timeouts,
-bridge health and planner fallback remain part of issue #188.
+transport error and returns to the prompt. The [host bridge guide](./host_bridge.md)
+describes the planner timeouts, bridge health and fallback behavior.
 
 ## Trust boundary
 

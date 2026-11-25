@@ -139,6 +139,9 @@ const (
 	MessageLLMBridgeNotConfigured
 	MessageLLMBridgeFailed
 	MessageBridgeTimeout
+	MessageNoMatchingAction
+	MessageBridgeMalformedResponse
+	MessageBridgeUnavailable
 )
 
 type TraceKind uint8
@@ -178,6 +181,7 @@ const (
 	TraceDetailShowTicks
 	TraceDetailShowMemoryMap
 	TraceDetailSetMode
+	TraceDetailFallback
 )
 
 // Action is the only executable unit the agent runtime understands.
