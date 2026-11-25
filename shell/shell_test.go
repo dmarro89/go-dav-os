@@ -1271,7 +1271,7 @@ func TestStandardizedUsageMessages(t *testing.T) {
 		{"fatread missing args", "fatread", "Usage: fatread <filename>\n"},
 		{"layout invalid arg", "layout fr", "Usage: layout [us|it]\n"},
 		{"run missing args", "run", "Usage: run <program>\n"},
-		{"agent missing args", "agent", "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n"},
+		{"agent missing args", "agent", "Usage: agent <show|read|stat|delete|mode|ask|transport|context|help> [arg]\n"},
 		{"agent show missing args", "agent show", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
 		{"agent show invalid arg", "agent show invalid", "Usage: agent show <files|history|version|ticks|memorymap>\n"},
 		{"agent read missing args", "agent read", "Usage: agent read <name>\n"},

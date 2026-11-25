@@ -301,6 +301,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("fatcreate test hi", ["File created"]),
             ("fatls", ["TEST"]),
             ("fatread test", ["hi"]),
+            ("free", ["Usage: free <hex_addr>"]),
+            ("disk foo", ["Usage: disk <read|write> <lba> [text]"]),
             ("layout", ["current layout:"]),
             ("layout us", ["layout: switched to us"]),
             ("layout it", ["layout: switched to it"]),
