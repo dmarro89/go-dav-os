@@ -206,6 +206,27 @@ func TestExchangeRecoversAfterMalformedResponse(t *testing.T) {
 	ResetForTesting()
 }
 
+func TestExchangeBeforeSharesTheSendAndReceiveDeadline(t *testing.T) {
+	reply, replyLen := encodedForTest(t, FrameResponse, "pong")
+	ConfigureResponseForTesting(&reply, replyLen)
+	t.Cleanup(ResetForTesting)
+
+	var tick uint64
+	ticks := func() uint64 {
+		tick++
+		return tick
+	}
+	request := payloadForTest("ping")
+	var response [MaxPayload]byte
+	deadline := uint64(replyLen + 2)
+	if _, result := ExchangeBefore(&request, 4, &response, nil, ticks, deadline); result != ResultPartialFrame {
+		t.Fatalf("shared deadline result = %d, want %d", result, ResultPartialFrame)
+	}
+	if tick != deadline+1 {
+		t.Fatalf("clock polled past deadline: tick = %d, budget = %d", tick, deadline)
+	}
+}
+
 func payloadForTest(value string) [MaxPayload]byte {
 	var payload [MaxPayload]byte
 	for i := 0; i < len(value); i++ {

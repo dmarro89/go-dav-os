@@ -3,15 +3,27 @@ import os
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
+
+from agent_bridge import response_for_payload
+from agent_bridge_protocol import decode_agent_request, encode_agent_response
+from agent_bridge_provider import FakeProvider
+from agent_bridge_transport import connect
 
 
-def check_log_for(target, log_file, timeout=5):
-    start = time.time()
-    while time.time() - start < timeout:
-        if os.path.exists(log_file):
-            with open(log_file, "r", errors="ignore") as f:
-                if target in f.read():
-                    return True
+def read_log(log_file, offset=0):
+    if not os.path.exists(log_file):
+        return ""
+    with open(log_file, "rb") as log:
+        log.seek(offset)
+        return log.read().decode(errors="replace")
+
+
+def check_log_for(target, log_file, timeout=5, offset=0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if target in read_log(log_file, offset):
+            return True
         time.sleep(0.1)
     return False
 
@@ -130,9 +142,7 @@ def run_agent_transport_probe(process, log_file, serial_socket):
         text=True,
     )
     try:
-        send_shell_command(process, "agent transport ping")
-        if not check_log_for("Agent transport: connected", log_file, timeout=6):
-            fail_with_log("Agent transport probe did not complete.", process, log_file)
+        run_shell_case(process, log_file, "agent transport ping", "Agent transport: connected")
         try:
             probe.wait(timeout=2)
         except subprocess.TimeoutExpired:
@@ -143,13 +153,8 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             print("------------------------------------")
             fail_with_log("Host transport probe failed.", process, log_file)
 
-        send_shell_command(process, "agent transport ping")
-        if not check_log_for("agent: transport timeout", log_file, timeout=6):
-            fail_with_log("Transport timeout was not reported.", process, log_file)
-
-        send_shell_command(process, "version")
-        if not check_log_for("DavOS 0.5.0 (64bit)", log_file, timeout=6):
-            fail_with_log("Shell did not recover from transport timeout.", process, log_file)
+        run_shell_case(process, log_file, "agent transport ping", "agent: transport timeout")
+        run_shell_case(process, log_file, "version", "DavOS 0.6.0 (64bit)")
     finally:
         if probe.poll() is None:
             probe.terminate()
@@ -158,6 +163,96 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             probe.stdout.close()
         if probe.stderr is not None:
             probe.stderr.close()
+
+
+def run_shell_case(process, log_file, command, *expected_outputs, timeout=6):
+    offset = os.path.getsize(log_file)
+    send_shell_command(process, command)
+    for expected in expected_outputs:
+        if not check_log_for(expected, log_file, timeout=timeout, offset=offset):
+            fail_with_log(
+                f"Timeout waiting for {expected!r} from command {command!r}.",
+                process,
+                log_file,
+            )
+    print(f"Test Passed: {command!r} command executed successfully.")
+    return offset
+
+
+def reply_to_bridge_request(transport, provider, fault):
+    payload = transport.receive(time.monotonic() + 8)
+    if fault == "timeout":
+        print(f"Agent bridge DV/1: rx={len(payload)} tx=0 event=withheld")
+        return
+    event = "reply"
+    response = response_for_payload(payload, provider)
+    if fault == "malformed":
+        # Keep the serial frame and exchange ID valid while omitting the plan.
+        exchange_id = decode_agent_request(payload)["exchangeId"]
+        response = encode_agent_response({"exchangeId": exchange_id})
+        event = "malformed_plan"
+    transport.send(response, time.monotonic() + 2)
+    print(f"Agent bridge DV/1: rx={len(payload)} tx={len(response)} event={event}")
+
+
+def read_llm_context(process, log_file):
+    last_field = "  planner mode: llm"
+    offset = run_shell_case(process, log_file, "agent context", "Agent context:", last_field)
+    output = read_log(log_file, offset)
+    return output.partition("Agent context:")[2].partition(last_field)[0]
+
+
+def assert_bridge_failure(process, log_file, command, offset, context):
+    output = read_log(log_file, offset)
+    if "agent: files listed" in output or "agent: no files" in output:
+        fail_with_log(f"{command!r} executed an action after failure.", process, log_file)
+    if read_llm_context(process, log_file) != context:
+        fail_with_log(f"{command!r} changed Agent context after failure.", process, log_file)
+
+
+def run_agent_bridge_suite(process, log_file, serial_socket):
+    with connect(serial_socket, time.monotonic() + 2) as transport, ThreadPoolExecutor(max_workers=1) as pool:
+        provider = FakeProvider()
+
+        def bridge_case(command, *expected_outputs, fault=None, timeout=6):
+            host = pool.submit(reply_to_bridge_request, transport, provider, fault)
+            offset = run_shell_case(process, log_file, command, *expected_outputs, timeout=timeout)
+            host.result(timeout=2)
+            return offset
+
+        bridge_case("agent llm status", "LLM bridge: available", "Provider: fake")
+        bridge_case("agent mode llm", "Planner switched to: llm")
+        run_shell_case(process, log_file, "write notes keep", "ok> ")
+        bridge_case("agent ask show me the files", "notes  size=4", "agent: files listed")
+        bridge_case("agent ask tell me a joke", "agent: no allowed action matched")
+        bridge_case("agent ask delete notes", 'Agent understood: delete file "notes"', "Confirm? type: yes")
+        run_shell_case(process, log_file, "no", "agent: action cancelled")
+        run_shell_case(process, log_file, "cat notes", "keep> ")
+        bridge_case("agent ask delete notes", 'Agent understood: delete file "notes"', "Confirm? type: yes")
+        run_shell_case(process, log_file, "yes", "ok> ")
+        bridge_case("agent ask show me the files", "agent: no files")
+
+        context = read_llm_context(process, log_file)
+        for expected in ("last input: show me the files", "last intent: list_files", "last action: list_files"):
+            if expected not in context:
+                fail_with_log(f"Agent context did not contain {expected!r}.", process, log_file)
+
+        for fault, error in (
+            ("malformed", "agent: malformed bridge response"),
+            ("timeout", "agent: bridge timeout"),
+        ):
+            command = "agent ask list files"
+            offset = bridge_case(command, f"{error}> ", fault=fault, timeout=20)
+            assert_bridge_failure(process, log_file, command, offset, context)
+
+        bridge_case("agent ask show me the version", "agent: version shown")
+
+    command = "agent ask list files"
+    error = "agent: bridge timeout"
+    context = read_llm_context(process, log_file)
+    offset = run_shell_case(process, log_file, command, f"{error}> ", timeout=20)
+    assert_bridge_failure(process, log_file, command, offset, context)
+    run_shell_case(process, log_file, "agent mode deterministic", "Planner switched to: deterministic")
 
 
 def run_functional_suite(iso_path, disk_img, log_file):
@@ -172,8 +267,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
 
         test_cases = [
             ("help", ["Commands:", "agent"]),
-            ("version", ["DavOS 0.5.0 (64bit)"]),
-            ("write notes hi", ["ok"]),
+            ("version", ["DavOS 0.6.0 (64bit)"]),
+            ("write notes hi", ["ok> "]),
             ("agent show files", ["notes  size=2", "agent: files listed"]),
             (
                 "agent context",
@@ -186,18 +281,19 @@ def run_functional_suite(iso_path, disk_img, log_file):
                     "planner mode: deterministic",
                 ],
             ),
-            ("agent help", ["Agent commands:", "agent delete <name>"]),
+            ("agent help", ["Agent commands:", "agent delete <name>", "agent llm status"]),
             ("agent show history", ["agent: history listed"]),
-            ("agent show version", ["DavOS 0.5.0 (64bit)", "agent: version shown"]),
+            ("agent show version", ["DavOS 0.6.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
             ("agent show memorymap", ["base=0x", "agent: memory map shown"]),
             ("agent read notes", ["hi", "agent: file read"]),
             ("agent stat notes", ["page=0x", "size=2", "agent: file stat"]),
             ("agent delete notes", ["Agent understood: delete file \"notes\"", "This action may remove data.", "Confirm? type: yes"]),
-            ("yes", ["ok"]),
+            ("yes", ["ok> "]),
             ("agent show files", ["agent: no files"]),
             ("agent mode", ["Current planner: deterministic"]),
             ("agent mode deterministic", ["Planner switched to: deterministic"]),
+            ("agent llm status", ["LLM bridge: unavailable"]),
             ("agent mode llm", ["agent: llm bridge unavailable"]),
             ("agent mode", ["Current planner: deterministic"]),
             ("fatformat", ["FAT16 Formatted"]),
@@ -212,16 +308,9 @@ def run_functional_suite(iso_path, disk_img, log_file):
         ]
 
         for cmd_text, expected_outputs in test_cases:
-            send_shell_command(process, cmd_text)
-            for expected in expected_outputs:
-                print(f"Waiting for '{expected}' output...")
-                if not check_log_for(expected, log_file, timeout=6):
-                    fail_with_log(
-                        f"Timeout waiting for '{expected}' from command '{cmd_text}'.",
-                        process,
-                        log_file,
-                    )
-            print(f"Test Passed: '{cmd_text}' command executed successfully.")
+            run_shell_case(process, log_file, cmd_text, *expected_outputs)
+
+        run_agent_bridge_suite(process, log_file, serial_socket)
     finally:
         stop_qemu(process)
         if os.path.exists(serial_socket):

@@ -466,7 +466,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "missing command",
 			input: "agent",
-			want:  "Usage: agent <show|read|stat|delete|mode|transport|context|help> [arg]\n",
+			want:  "Usage: agent <show|read|stat|delete|mode|ask|transport|context|help> [arg]\n",
 		},
 		{
 			name:  "missing show argument",
@@ -476,7 +476,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "show version",
 			input: "agent show version",
-			want:  "DavOS 0.5.0 (64bit)\nagent: version shown\n",
+			want:  "DavOS 0.6.0 (64bit)\nagent: version shown\n",
 		},
 		{
 			name:  "show ticks",
@@ -551,7 +551,7 @@ func TestExecuteAgentCommand(t *testing.T) {
 		{
 			name:  "help",
 			input: "agent help",
-			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
+			want:  "Agent commands:\n  agent show files    - Show files managed by the agent\n  agent show history  - Show command history stored by the agent\n  agent show version  - Show OS version through the agent\n  agent show ticks    - Show PIT ticks through the agent\n  agent show memorymap - Show memory map through the agent\n  agent read <name>   - Read a file through the agent\n  agent stat <name>   - Show file metadata through the agent\n  agent delete <name> - Delete a file after confirmation\n  agent mode [mode]   - Show or switch agent mode\n  agent ask <request> - Plan a request through the host bridge\n  agent llm status   - Show bridge availability and provider\n  agent llm fallback <on|off> - Set deterministic fallback\n  agent transport ping - Probe the guest-host transport\n  agent context       - Show current agent context\n  agent help          - Show agent commands\n",
 		},
 	}
 
@@ -606,9 +606,209 @@ func TestExecuteAgentTransportRoundTripAndRecovery(t *testing.T) {
 	terminal.ResetOutputForTesting()
 	setLineBuf("version")
 	execute()
-	if got := terminal.OutputForTesting(); got != "DavOS 0.5.0 (64bit)\n" {
+	if got := terminal.OutputForTesting(); got != "DavOS 0.6.0 (64bit)\n" {
 		t.Fatalf("shell output after transport failure = %q", got)
 	}
+}
+
+func TestExecuteAgentBridgeHandshakeAndPlan(t *testing.T) {
+	fs.Init()
+	ConfigureAgentRuntime()
+	previousID := bridgeExchangeID
+	bridgeExchangeID = 40
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		SetAgentRuntime(nil)
+		serial.ResetForTesting()
+	})
+	terminal.Init()
+
+	configureBridgeResponse(t, `{"exchangeId":41,"health":"ok","provider":"fake"}`)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent mode llm")
+	execute()
+	if got := terminal.OutputForTesting(); got != "Planner switched to: llm\n" {
+		t.Fatalf("LLM handshake output = %q", got)
+	}
+
+	configureBridgeResponse(t, `{"action":"list_files","args":[],"exchangeId":42,"explanation":"Matched request.","intent":"list_files","risk":"safe"}`)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent ask show me the files")
+	execute()
+	if got := terminal.OutputForTesting(); got != "agent: no files\n" {
+		t.Fatalf("LLM plan output = %q", got)
+	}
+	if agentContext.RequestCount != 2 || agentContext.LastIntent != agent.IntentListFiles || agentContext.LastAction != agent.ActionListFiles || agentContext.PlannerMode != agent.PlannerModeLLM {
+		t.Fatalf("unexpected LLM context: %+v", agentContext)
+	}
+}
+
+func TestExecuteAgentLLMStatus(t *testing.T) {
+	previousID := bridgeExchangeID
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		serial.ResetForTesting()
+	})
+	terminal.Init()
+	const stale = `{"action":"list_files","args":[],"exchangeId":41,"intent":"list_files","risk":"safe"}`
+	configureBridgeResponse(t, stale, `{"exchangeId":42,"health":"ok","provider":"fake"}`)
+	terminal.ResetOutputForTesting()
+	setLineBuf("agent llm status")
+	execute()
+	if got := terminal.OutputForTesting(); got != "LLM bridge: available\nProvider: fake\n" {
+		t.Fatalf("bridge status = %q", got)
+	}
+	configureBridgeResponse(t, `{"exchangeId":43,"health":"ok","provider":"untrusted"}`)
+	terminal.ResetOutputForTesting()
+	execute()
+	if got := terminal.OutputForTesting(); got != "LLM bridge: unavailable\n" {
+		t.Fatalf("unknown provider status = %q", got)
+	}
+}
+
+func TestExecuteAgentBridgeFallbackIsExplicit(t *testing.T) {
+	fs.Init()
+	ConfigureAgentRuntime()
+	previousID := bridgeExchangeID
+	bridgeExchangeID = 40
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		SetAgentRuntime(nil)
+		serial.ResetForTesting()
+	})
+	terminal.Init()
+	for _, test := range []struct {
+		command string
+		reply   string
+		want    string
+	}{
+		{"agent mode llm", `{"exchangeId":41,"health":"ok","provider":"fake"}`, "Planner switched to: llm\n"},
+		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":42}`, "agent: bridge timeout\n"},
+		{"agent llm fallback on", "", "Deterministic fallback: on\n"},
+		{"agent ask show me the files", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":43}`, "Agent trace: deterministic fallback\nagent: no files\n"},
+		{"agent ask show me the files", `{"action":true}`, "agent: malformed bridge response\n"},
+		{"agent ask read abcdefghijklmnopQ", `{"error":{"code":"provider_unavailable","message":"connection lost"},"exchangeId":45}`, "agent: action target is invalid\n"},
+		{"agent mode", "", "Current planner: llm\n"},
+		{"agent llm fallback off", "", "Deterministic fallback: off\n"},
+		{"agent ask show me the files", `{"error":{"code":"provider_timeout","message":"timed out"},"exchangeId":46}`, "agent: bridge timeout\n"},
+	} {
+		if test.reply != "" {
+			configureBridgeResponse(t, test.reply)
+		}
+		terminal.ResetOutputForTesting()
+		setLineBuf(test.command)
+		execute()
+		if got := terminal.OutputForTesting(); got != test.want {
+			t.Fatalf("%s with %q returned %q, want %q", test.command, test.reply, got, test.want)
+		}
+	}
+}
+
+func TestSerialBridgePlanReportsIncompleteFrameAsTimeout(t *testing.T) {
+	previousID, previousTicks := bridgeExchangeID, getTicks
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		SetTickProvider(previousTicks)
+		serial.ResetForTesting()
+	})
+	var ticks uint64
+	SetTickProvider(func() uint64 {
+		ticks++
+		return ticks
+	})
+
+	const payload = `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`
+	var raw [serial.MaxPayload]byte
+	copy(raw[:], payload)
+	var frame [serial.MaxFrameSize]byte
+	length, result := serial.Encode(serial.FrameResponse, &raw, len(payload), &frame)
+	if result != serial.ResultOK {
+		t.Fatalf("encoding bridge response: %v", result)
+	}
+	serial.ConfigureResponseForTesting(&frame, length-1)
+	if got := serialBridgePlan(agent.BridgeRequest{}); got.OK || got.Reason != agent.MessageBridgeTimeout {
+		t.Fatalf("incomplete response: %+v", got)
+	}
+}
+
+func TestSerialBridgePlanRejectsStaleResponse(t *testing.T) {
+	previousID := bridgeExchangeID
+	bridgeExchangeID = 41
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		serial.ResetForTesting()
+	})
+	payload := `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`
+	configureBridgeResponse(t, payload)
+	if result := serialBridgePlan(agent.BridgeRequest{}); !result.OK {
+		t.Fatalf("matching response failed: %+v", result)
+	}
+	configureBridgeResponse(t, payload)
+	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || result.Reason != agent.MessageBridgeTimeout {
+		t.Fatalf("stale response result: %+v", result)
+	}
+	if bridgeExchangeID != 43 {
+		t.Fatalf("exchange ID = %d, want 43", bridgeExchangeID)
+	}
+	bridgeExchangeID = ^uint64(0)
+	if result := serialBridgePlan(agent.BridgeRequest{}); result.OK || bridgeExchangeID != ^uint64(0) {
+		t.Fatalf("exhausted exchange ID was reused: %+v", result)
+	}
+}
+
+func TestSerialBridgePlanContinuesAfterStaleReplies(t *testing.T) {
+	previousID := bridgeExchangeID
+	t.Cleanup(func() {
+		bridgeExchangeID = previousID
+		serial.ResetForTesting()
+	})
+	const stalePlan = `{"action":"read_file","args":["line\nbreak"],"exchangeId":41,"intent":"read_file","risk":"safe"}`
+	const staleError = `{"error":{"code":"provider_error","message":"old failure"},"exchangeId":41}`
+	const plan = `{"action":"read_file","args":["notes"],"exchangeId":42,"intent":"read_file","risk":"safe"}`
+	for _, tc := range []struct {
+		name  string
+		reply string
+		want  agent.MessageKind
+	}{
+		{"matching plan", plan, agent.MessageNone},
+		{"matching error", `{"error":{"code":"provider_error","message":"failed"},"exchangeId":42}`, agent.MessageLLMBridgeFailed},
+		{"legacy error", `{"error":{"code":"provider_error","message":"failed"}}`, agent.MessageLLMBridgeFailed},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			bridgeExchangeID = 41
+			configureBridgeResponse(t, staleError, stalePlan, tc.reply)
+			result := serialBridgePlan(agent.BridgeRequest{})
+			if tc.want == agent.MessageNone {
+				if !result.OK || result.Response.Action != agent.ActionReadFile {
+					t.Fatalf("matching plan after stale replies: %+v", result)
+				}
+			} else if result.OK || result.Reason != tc.want {
+				t.Fatalf("error after stale replies: %+v", result)
+			}
+		})
+	}
+}
+
+func configureBridgeResponse(t *testing.T, payloads ...string) {
+	t.Helper()
+	var stream [serial.MaxFrameSize]byte
+	offset := 0
+	for _, responsePayload := range payloads {
+		var payload [serial.MaxPayload]byte
+		copy(payload[:], responsePayload)
+		var response [serial.MaxFrameSize]byte
+		responseLen, result := serial.Encode(serial.FrameResponse, &payload, len(responsePayload), &response)
+		if result != serial.ResultOK {
+			t.Fatalf("serial.Encode() result = %d", result)
+		}
+		if copy(stream[offset:], response[:responseLen]) != responseLen {
+			t.Fatal("response stream exceeded the test buffer")
+		}
+		offset += responseLen
+	}
+	serial.ConfigureResponseForTesting(&stream, offset)
 }
 
 func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
@@ -644,8 +844,103 @@ func TestExecuteAgentSwitchesConfiguredPlannerModes(t *testing.T) {
 
 type shellBridge struct{}
 
+func (shellBridge) Available() bool { return true }
+
 func (shellBridge) Plan(agent.BridgeRequest) agent.BridgeResult {
 	return agent.BridgeResult{OK: false, Reason: agent.MessageLLMBridgeFailed}
+}
+
+func TestBridgeRequestEncodingIncludesInputContextAndAllowlist(t *testing.T) {
+	var input [agent.MaxContextInput]byte
+	copy(input[:], `show "notes"`)
+	context := agent.Context{
+		LastIntent:        agent.IntentReadFile,
+		LastAction:        agent.ActionReadFile,
+		LastResultSummary: agent.MessageFileRead,
+		RequestCount:      3,
+	}
+	request := agent.NewBridgeRequest(&input, len(`show "notes"`), &context)
+	var output [serial.MaxPayload]byte
+
+	length, ok := encodeBridgeRequest(request, 42, &output)
+
+	if !ok {
+		t.Fatalf("encodeBridgeRequest() failed")
+	}
+	got := string(output[:length])
+	want := `{"exchangeId":42,"input":"show \"notes\"","context":{"lastIntent":"read_file","lastAction":"read_file","lastSummary":"file_read","requestCount":3},"allowedActions":["list_files","read_file","stat_file","delete_file","show_history","show_version","show_ticks","show_memory_map"]}`
+	if got != want {
+		t.Fatalf("encoded request = %q, expected %q", got, want)
+	}
+}
+
+func TestBridgeResponseDecodingIsFailClosed(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+		status  bridgeResponseStatus
+		action  agent.ActionKind
+		target  string
+	}{
+		{
+			name:    "valid target action",
+			payload: `{"action":"read_file","args":["notes"],"exchangeId":42,"explanation":"Read notes.","intent":"read_file","risk":"safe"}`,
+			status:  bridgeResponsePlan,
+			action:  agent.ActionReadFile,
+			target:  "notes",
+		},
+		{
+			name:    "valid targetless action",
+			payload: `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`,
+			status:  bridgeResponsePlan,
+			action:  agent.ActionListFiles,
+		},
+		{
+			name:    "valid escaped unicode target",
+			payload: `{"action":"read_file","args":["\ud83d\udd25"],"exchangeId":42,"intent":"read_file","risk":"safe"}`,
+			status:  bridgeResponsePlan,
+			action:  agent.ActionReadFile,
+			target:  "🔥",
+		},
+		{name: "mismatched ID", status: bridgeResponseStale, payload: `{"action":"list_files","args":[],"exchangeId":41,"intent":"list_files","risk":"safe"}`},
+		{name: "string ID", payload: `{"action":"list_files","args":[],"exchangeId":"42","intent":"list_files","risk":"safe"}`},
+		{name: "negative ID", payload: `{"action":"list_files","args":[],"exchangeId":-42,"intent":"list_files","risk":"safe"}`},
+		{name: "overflow ID", payload: `{"action":"list_files","args":[],"exchangeId":18446744073709551616,"intent":"list_files","risk":"safe"}`},
+		{name: "leading zero ID", payload: `{"action":"list_files","args":[],"exchangeId":042,"intent":"list_files","risk":"safe"}`},
+		{name: "fractional ID", payload: `{"action":"list_files","args":[],"exchangeId":42.0,"intent":"list_files","risk":"safe"}`},
+		{name: "duplicate ID", payload: `{"action":"list_files","args":[],"exchangeId":42,"exchangeId":42,"intent":"list_files","risk":"safe"}`},
+		{name: "missing ID", payload: `{"action":"list_files","args":[],"intent":"list_files","risk":"safe"}`},
+		{name: "structured bridge error", status: bridgeResponseError, payload: `{"error":{"code":"planner_error","message":"invalid"}}`},
+		{name: "invalid unicode target", payload: `{"action":"read_file","args":["\ud800"],"exchangeId":42,"intent":"read_file","risk":"safe"}`},
+		{name: "extra argument", payload: `{"action":"read_file","args":["notes","other"],"exchangeId":42,"intent":"read_file","risk":"safe"}`},
+		{name: "unknown action", payload: `{"action":"shell","args":[],"exchangeId":42,"intent":"shell","risk":"safe"}`},
+		{name: "no matching action", status: bridgeResponseNoMatch, payload: `{"action":"unknown","args":[],"exchangeId":42,"intent":"unknown","risk":"safe"}`},
+		{name: "stale no match", status: bridgeResponseStale, payload: `{"action":"unknown","args":[],"exchangeId":41,"intent":"unknown","risk":"safe"}`},
+		{name: "no match with target", payload: `{"action":"unknown","args":["notes"],"exchangeId":42,"intent":"unknown","risk":"safe"}`},
+		{name: "no match with known intent", payload: `{"action":"unknown","args":[],"exchangeId":42,"intent":"list_files","risk":"safe"}`},
+		{name: "no match with unsafe risk", payload: `{"action":"unknown","args":[],"exchangeId":42,"intent":"unknown","risk":"risky"}`},
+		{name: "extra field", payload: `{"action":"list_files","args":[],"exchangeId":42,"intent":"list_files","risk":"safe","command":"ls"}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var payload [serial.MaxPayload]byte
+			copy(payload[:], tt.payload)
+			response, status := decodeBridgeResponse(&payload, len(tt.payload), 42)
+			if status != tt.status {
+				t.Fatalf("decodeBridgeResponse() status = %v, expected %v", status, tt.status)
+			}
+			if status != bridgeResponsePlan {
+				return
+			}
+			if response.Action != tt.action {
+				t.Fatalf("action = %v, expected %v", response.Action, tt.action)
+			}
+			if got := string(response.Target[:response.TargetLen]); got != tt.target {
+				t.Fatalf("target = %q, expected %q", got, tt.target)
+			}
+		})
+	}
 }
 
 func TestExecuteHelpListsImplementedCommands(t *testing.T) {
@@ -1027,7 +1322,7 @@ func TestExecute_BuiltinCommands(t *testing.T) {
 		terminal.ResetOutputForTesting()
 		setLineBuf("version")
 		execute()
-		want := "DavOS 0.5.0 (64bit)\n"
+		want := "DavOS 0.6.0 (64bit)\n"
 		if got := terminal.OutputForTesting(); got != want {
 			t.Fatalf("version output = %q, expected %q", got, want)
 		}

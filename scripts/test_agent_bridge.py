@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import sys
@@ -28,11 +29,11 @@ class MemoryTransport:
     def __init__(self, payload):
         self.payload = payload
         self.response = None
-        self.receive_deadline = None
+        self.receive_timeout = None
         self.send_deadline = None
 
-    def receive(self, deadline):
-        self.receive_deadline = deadline
+    def receive_request(self, timeout):
+        self.receive_timeout = timeout
         return self.payload
 
     def send(self, payload, deadline):
@@ -87,6 +88,57 @@ def request_frame(payload):
 
 
 class AgentBridgeTest(unittest.TestCase):
+    def test_health_handshake_bypasses_provider(self):
+        provider = mock.Mock()
+
+        payload = agent_bridge.response_for_payload(b'{"health":"ping"}', provider)
+
+        self.assertEqual(json.loads(payload), {"health": "ok"})
+        provider.plan.assert_not_called()
+
+    def test_tagged_health_handshake_reports_only_provider_kind(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        with mock.patch.object(provider, "plan") as plan:
+            payload = agent_bridge.response_for_payload(
+                b'{"exchangeId":42,"health":"ping"}', provider
+            )
+        self.assertEqual(json.loads(payload), {
+            "exchangeId": 42, "health": "ok", "provider": "openai-compatible"
+        })
+        plan.assert_not_called()
+
+    def test_provider_timeout_and_disconnect_use_safe_guest_errors(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=42)).encode()
+        for error, code in (
+            (TimeoutError("private URL"), "provider_timeout"),
+            (ConnectionResetError("private URL"), "provider_unavailable"),
+        ):
+            with self.subTest(code=code):
+                with mock.patch.object(agent_bridge_provider.urllib.request, "urlopen", side_effect=error):
+                    payload = agent_bridge.response_for_payload(request, provider)
+                self.assertEqual(json.loads(payload)["error"]["code"], code)
+                self.assertEqual(json.loads(payload)["exchangeId"], 42)
+                self.assertNotIn(b"private", payload)
+
+    def test_incomplete_provider_response_is_unavailable(self):
+        provider = agent_bridge_provider.OpenAICompatibleProvider(
+            "private credential", "private model", "http://localhost/v1"
+        )
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=42)).encode()
+        with mock.patch.object(agent_bridge_provider.urllib.request, "urlopen") as urlopen:
+            response = urlopen.return_value.__enter__.return_value
+            response.read.side_effect = http.client.IncompleteRead(b"private response")
+            payload = agent_bridge.response_for_payload(request, provider)
+
+        self.assertEqual(json.loads(payload)["error"]["code"], "provider_unavailable")
+        self.assertEqual(json.loads(payload)["exchangeId"], 42)
+        self.assertNotIn(b"private", payload)
+
     def test_fake_provider_serves_one_structured_request(self):
         transport = MemoryTransport(json.dumps(DEFAULT_REQUEST).encode("utf-8"))
 
@@ -96,6 +148,74 @@ class AgentBridgeTest(unittest.TestCase):
         self.assertEqual(response["intent"], "list_files")
         self.assertEqual(response["action"], "list_files")
         self.assertNotIn("error", response)
+        self.assertNotIn("exchangeId", response)
+
+    def test_one_shot_serves_health_before_one_planning_request(self):
+        health = b'{"health":"ping"}'
+        tagged_health = b'{"exchangeId":42,"health":"ping"}'
+        planning = json.dumps(DEFAULT_REQUEST).encode("utf-8")
+        next_frame = request_frame(planning)
+        stream = FakeStream(request_frame(health) + request_frame(tagged_health) + next_frame + next_frame)
+        transport = agent_bridge_transport.SerialTransport(stream)
+        provider = agent_bridge_provider.FakeProvider()
+
+        agent_bridge.serve(transport, provider, 1.0, once=True)
+
+        self.assertEqual(stream.incoming, next_frame)
+        self.assertEqual(
+            stream.sent,
+            agent_bridge_protocol.encode_response_frame(b'{"health":"ok"}')
+            + agent_bridge_protocol.encode_response_frame(
+                b'{"exchangeId":42,"health":"ok","provider":"fake"}'
+            )
+            + agent_bridge_protocol.encode_response_frame(
+                agent_bridge.response_for_payload(planning, provider)
+            ),
+        )
+
+    def test_exchange_id_is_echoed_by_host(self):
+        for exchange_id in (1, 42, 2**64 - 1):
+            with self.subTest(exchange_id=exchange_id):
+                request = dict(DEFAULT_REQUEST, exchangeId=exchange_id)
+                payload = agent_bridge.response_for_payload(
+                    json.dumps(request).encode(), agent_bridge_provider.FakeProvider()
+                )
+                self.assertEqual(json.loads(payload)["exchangeId"], exchange_id)
+
+    def test_invalid_exchange_id_fails_closed(self):
+        for exchange_id in (True, "42", 0, -1, 2**64, 42.0, None):
+            with self.subTest(exchange_id=exchange_id):
+                request = dict(DEFAULT_REQUEST, exchangeId=exchange_id)
+                provider = mock.Mock()
+                payload = agent_bridge.response_for_payload(
+                    json.dumps(request).encode(), provider
+                )
+                response = json.loads(payload)
+                self.assertEqual(response["error"]["code"], "invalid_request")
+                self.assertNotIn("exchangeId", response)
+                provider.plan.assert_not_called()
+
+    def test_tagged_plan_only_drops_explanation_when_it_exceeds_frame_limit(self):
+        exchange_id = 2**64 - 1
+        request = json.dumps(dict(DEFAULT_REQUEST, exchangeId=exchange_id)).encode()
+        plan = dict(action="list_files", args=[], intent="list_files", risk="safe")
+        limit = agent_bridge_protocol.MAX_RESPONSE_PAYLOAD
+        empty_len = len(agent_bridge_protocol.encode_agent_response(
+            dict(plan, exchangeId=exchange_id, explanation="")
+        ))
+        escaped_chars, padding = divmod(limit - empty_len, 6)
+        fits = "\0" * escaped_chars + "a" * padding
+        provider = mock.Mock()
+
+        for explanation, expected in ((fits, fits), (fits + "a", None)):
+            with self.subTest(expected_to_fit=expected is not None):
+                provider.plan.return_value = dict(plan, explanation=explanation)
+                payload = agent_bridge.response_for_payload(request, provider)
+                response = dict(plan, exchangeId=exchange_id)
+                if expected is not None:
+                    response["explanation"] = expected
+                self.assertEqual(json.loads(payload), response)
+                self.assertLessEqual(len(payload), limit)
 
     def test_valid_provider_plan_gets_canonical_empty_arguments(self):
         provider = mock.Mock()
@@ -120,9 +240,13 @@ class AgentBridgeTest(unittest.TestCase):
             json.dumps(DEFAULT_REQUEST).encode("utf-8"), FailingProvider()
         )
 
-        response = json.loads(payload)
-        self.assertEqual(response["error"]["code"], "provider_error")
-        self.assertEqual(response["error"]["message"], "provider request failed")
+        error = {"code": "provider_error", "message": "provider request failed"}
+        self.assertEqual(json.loads(payload), {"error": error})
+        request = dict(DEFAULT_REQUEST, exchangeId=2**64 - 1)
+        payload = agent_bridge.response_for_payload(
+            json.dumps(request).encode(), FailingProvider()
+        )
+        self.assertEqual(json.loads(payload), {"error": error, "exchangeId": 2**64 - 1})
         self.assertLessEqual(len(payload), agent_bridge_protocol.MAX_RESPONSE_PAYLOAD)
 
     def test_invalid_provider_plans_fail_closed(self):
@@ -232,13 +356,24 @@ class AgentBridgeTest(unittest.TestCase):
     def test_provider_processing_gets_a_separate_send_window(self):
         transport = MemoryTransport(json.dumps(DEFAULT_REQUEST).encode("utf-8"))
 
-        with mock.patch.object(agent_bridge.time, "monotonic", side_effect=(10.0, 20.0)):
+        with mock.patch.object(agent_bridge.time, "monotonic", return_value=20.0):
             agent_bridge.serve(
                 transport, agent_bridge_provider.FakeProvider(), 1.0, once=True
             )
 
-        self.assertEqual(transport.receive_deadline, 11.0)
+        self.assertEqual(transport.receive_timeout, 1.0)
         self.assertEqual(transport.send_deadline, 21.0)
+
+    def test_serial_service_waits_for_first_byte_before_starting_frame_deadline(self):
+        payload = json.dumps(DEFAULT_REQUEST).encode("utf-8")
+        stream = FakeStream(request_frame(payload))
+        transport = agent_bridge_transport.SerialTransport(stream)
+
+        with mock.patch.object(stream, "settimeout") as set_timeout:
+            with mock.patch.object(time, "monotonic", side_effect=(100.0, 100.25, 100.5)):
+                self.assertEqual(transport.receive_request(1.0), payload)
+
+        self.assertEqual(set_timeout.call_args_list, [mock.call(None), mock.call(0.75), mock.call(0.5)])
 
     def test_serial_transport_reads_and_writes_dv1_frames(self):
         payload = json.dumps(DEFAULT_REQUEST).encode("utf-8")
