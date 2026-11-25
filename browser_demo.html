@@ -695,18 +695,26 @@ control ports bind to loopback inside the container; nginx exposes the page and
 WebSocket endpoint on the web service port. Keep the service at one instance so
 the single-session limit and reset behavior apply globally.</p>
 <h2 id="deploy-with-render">Deploy with Render</h2>
+<p>The <strong>Browser demo</strong> workflow builds and smoke-tests the Linux AMD64 image. On
+pushes to <code>main</code>, it publishes that same image as
+<code>ghcr.io/dmarro89/go-dav-os-demo</code> with the commit SHA and <code>latest</code> tags.</p>
 <ol>
-<li>In Render, create a Blueprint from the branch you want to test and sync its root
-   <code>render.yaml</code>.</li>
-<li>Wait for the <code>/api/healthz</code> check to pass, then use the public <code>onrender.com</code>
-   URL assigned to the <code>go-dav-os-demo</code> service.</li>
-<li>Add that URL to the README's browser-demo link after the service is live.</li>
+<li>In the Render workspace's <strong>Container Registry Credentials</strong> settings, add a
+   <strong>GitHub Container Registry</strong> credential named <code>go-dav-os-demo-ghcr</code>. Use a
+   GitHub account with read access to the private demo package and a classic
+   token with only <code>read:packages</code>.</li>
+<li>Wait for the first publish on <code>main</code>, then sync the Render Blueprint against
+   <code>main</code> using the root <code>render.yaml</code>. Manually sync again if Render tried to
+   pull the image before the credential or image was available.</li>
+<li>Wait for <code>/api/healthz</code> to pass, then open the service's <code>onrender.com</code> URL.</li>
 </ol>
-<p>The Blueprint selects the <code>demo-runtime</code> image stage and uses one free web
-instance in Singapore. Render's free service may spin down when idle; use an
-always-on plan if the demo needs uninterrupted availability. See Render's
-<a href="https://render.com/docs/blueprint-spec">Blueprint reference</a> and <a href="https://render.com/docs/free">free
-instance details</a>.</p>
+<p>The Blueprint uses one free web instance in Singapore. Render pulls the image
+from GHCR, and a free instance may spin down when idle. See the
+<a href="https://render.com/docs/deploying-an-image">Render image deploy guide</a>.</p>
+<p>To deploy after each successful publish, copy the image-backed Render service's
+deploy hook URL into the GitHub Actions repository secret <code>RENDER_DEPLOY_HOOK_URL</code>.
+The workflow then requests a deploy using the tested image's commit tag. Without
+the secret, use <strong>Manual Deploy → Deploy latest reference</strong> in Render.</p>
 <h2 id="run-locally">Run locally</h2>
 <p>Build the ISO and browser-demo image with Docker:</p>
 <pre><code class="language-sh">docker build --platform linux/amd64 \
