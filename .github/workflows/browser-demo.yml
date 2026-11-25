@@ -6,9 +6,16 @@ on:
       - 'demo/**'
       - 'Dockerfile'
       - '.dockerignore'
+      - 'docs/browser_demo.md'
       - 'render.yaml'
       - 'scripts/test_browser_demo.cjs'
       - '.github/workflows/browser-demo.yml'
+  push:
+    branches: [main]
+
+concurrency:
+  group: browser-demo-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -19,13 +26,19 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       - uses: docker/setup-buildx-action@v3
       - name: Build demo runtime image
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64
           load: true
           tags: go-dav-os-demo:ci
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: FINAL_STAGE=demo-runtime
           cache-from: |
             type=gha,scope=browser-demo
@@ -50,3 +63,49 @@ jobs:
           curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 "$url/api/healthz"
           sleep 10
           NODE_PATH="$RUNNER_TEMP/davos-browser-tests/node_modules" node scripts/test_browser_demo.cjs "$url"
+      - name: Save the tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: docker save go-dav-os-demo:ci | gzip -1 > "$RUNNER_TEMP/browser-demo.tar.gz"
+      - name: Upload the tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-demo-image
+          path: ${{ runner.temp }}/browser-demo.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: smoke
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    env:
+      IMAGE: ghcr.io/dmarro89/go-dav-os-demo
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: browser-demo-image
+          path: ${{ runner.temp }}
+      - name: Load the tested image
+        run: docker load --input "$RUNNER_TEMP/browser-demo.tar.gz"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to GitHub Container Registry
+        run: |
+          docker tag go-dav-os-demo:ci "$IMAGE:$GITHUB_SHA"
+          docker tag go-dav-os-demo:ci "$IMAGE:latest"
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:latest"
+      - name: Request a Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        if: env.RENDER_DEPLOY_HOOK_URL != ''
+        run: |
+          curl --fail --silent --show-error --max-time 30 --request POST \
+            --url-query "imgURL=$IMAGE:$GITHUB_SHA" "$RENDER_DEPLOY_HOOK_URL" >/dev/null

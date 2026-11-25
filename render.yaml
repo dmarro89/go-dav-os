@@ -1,14 +1,13 @@
 services:
   - type: web
     name: go-dav-os-demo
-    runtime: docker
+    runtime: image
     plan: free
     region: singapore
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    image:
+      url: ghcr.io/dmarro89/go-dav-os-demo:latest
+      creds:
+        fromRegistryCreds:
+          name: go-dav-os-demo-ghcr
     healthCheckPath: /api/healthz
-    autoDeployTrigger: checksPass
     numInstances: 1
-    envVars:
-      - key: FINAL_STAGE
-        value: demo-runtime
