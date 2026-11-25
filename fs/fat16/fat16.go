@@ -406,7 +406,7 @@ func ReadFile(name *[8]byte, ext *[3]byte, outBuf *[512]byte) (uint32, bool) {
 				// Found! Get cluster and size
 				cluster, size := ParseEntry(fatBuf[off : off+32])
 
-				readData, valid := CheckEntry(cluster, size)
+				readData, valid := CheckEntry(cluster, size, MaxCluster(uint32(TotSec16), dataStart, SecPerClust))
 				if !valid {
 					return 0, false
 				}

@@ -36,15 +36,32 @@ func ParseEntry(entry []byte) (cluster uint16, size uint32) {
 	return cluster, size
 }
 
+// MaxCluster returns the highest valid data cluster number for a volume.
+// FAT16 reserves 0xFFF7 and above for bad-cluster and end-of-chain markers.
+// totSec is the volume's sector count (0 when the volume uses the 32-bit
+// field, in which case only the marker limit applies).
+func MaxCluster(totSec uint32, dataStart uint32, secPerClust uint8) uint16 {
+	const markerLimit = 0xFFF6
+	if totSec == 0 || secPerClust == 0 || totSec <= dataStart {
+		return markerLimit
+	}
+	last := (totSec-dataStart)/uint32(secPerClust) + 1
+	if last > markerLimit {
+		return markerLimit
+	}
+	return uint16(last)
+}
+
 // CheckEntry decides how ReadFile should treat a matched directory entry.
-// readData is true only when a data sector must be read. ok is false when the
-// entry points at a reserved cluster (0 or 1) while claiming data.
+// readData is true only when a data sector must be read. ok is false when a
+// non-empty entry points outside the data area: a reserved cluster (0 or 1),
+// a bad-cluster or end-of-chain marker, or a cluster past maxCluster.
 // Zero-length files need no data I/O, whatever their cluster field holds.
-func CheckEntry(cluster uint16, size uint32) (readData bool, ok bool) {
+func CheckEntry(cluster uint16, size uint32, maxCluster uint16) (readData bool, ok bool) {
 	if size == 0 {
 		return false, true
 	}
-	if cluster < 2 {
+	if cluster < 2 || cluster > maxCluster {
 		return false, false
 	}
 	return true, true

@@ -64,28 +64,49 @@ func TestParseEntry(t *testing.T) {
 	}
 }
 
+func TestMaxCluster(t *testing.T) {
+	// 100 sectors of data at 4 sectors per cluster = clusters 2..26
+	if m := MaxCluster(200, 100, 4); m != 26 {
+		t.Errorf("expected 26, got %d", m)
+	}
+	// 32-bit sector count (TotSec16 == 0): only the marker limit applies
+	if m := MaxCluster(0, 100, 4); m != 0xFFF6 {
+		t.Errorf("expected 0xFFF6, got 0x%X", m)
+	}
+	// a huge volume is capped below the bad-cluster marker
+	if m := MaxCluster(0xFFFFFFFF, 100, 1); m != 0xFFF6 {
+		t.Errorf("expected 0xFFF6, got 0x%X", m)
+	}
+}
+
 func TestCheckEntry(t *testing.T) {
+	const maxCluster = 0xFFF6
 	tests := []struct {
 		name         string
 		cluster      uint16
 		size         uint32
+		max          uint16
 		wantReadData bool
 		wantOK       bool
 	}{
-		{"zero-length with cluster 0", 0, 0, false, true},
-		{"zero-length with cluster 1", 1, 0, false, true},
-		{"zero-length with valid cluster", 5, 0, false, true},
-		{"non-empty with cluster 0", 0, 10, false, false},
-		{"non-empty with cluster 1", 1, 10, false, false},
-		{"non-empty with cluster 2", 2, 10, true, true},
-		{"non-empty with high cluster", 0xFFF0, 512, true, true},
+		{"zero-length with cluster 0", 0, 0, maxCluster, false, true},
+		{"zero-length with cluster 1", 1, 0, maxCluster, false, true},
+		{"zero-length with marker cluster", 0xFFFF, 0, maxCluster, false, true},
+		{"non-empty with cluster 0", 0, 10, maxCluster, false, false},
+		{"non-empty with cluster 1", 1, 10, maxCluster, false, false},
+		{"non-empty with cluster 2", 2, 10, maxCluster, true, true},
+		{"non-empty with last data cluster", 0xFFF6, 512, maxCluster, true, true},
+		{"non-empty with bad-cluster marker", 0xFFF7, 512, maxCluster, false, false},
+		{"non-empty with end-of-chain marker", 0xFFFF, 512, maxCluster, false, false},
+		{"non-empty at volume's last cluster", 26, 512, 26, true, true},
+		{"non-empty past volume's last cluster", 27, 512, 26, false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRead, gotOK := CheckEntry(tt.cluster, tt.size)
+			gotRead, gotOK := CheckEntry(tt.cluster, tt.size, tt.max)
 			if gotRead != tt.wantReadData || gotOK != tt.wantOK {
-				t.Fatalf("CheckEntry(%d, %d) = (%v, %v), want (%v, %v)",
-					tt.cluster, tt.size, gotRead, gotOK, tt.wantReadData, tt.wantOK)
+				t.Fatalf("CheckEntry(%d, %d, %d) = (%v, %v), want (%v, %v)",
+					tt.cluster, tt.size, tt.max, gotRead, gotOK, tt.wantReadData, tt.wantOK)
 			}
 		})
 	}
