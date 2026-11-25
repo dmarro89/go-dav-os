@@ -13,17 +13,25 @@ the single-session limit and reset behavior apply globally.
 
 ## Deploy with Render
 
-1. In Render, create a Blueprint from the branch you want to test and sync its root
-   `render.yaml`.
-2. Wait for the `/api/healthz` check to pass, then use the public `onrender.com`
-   URL assigned to the `go-dav-os-demo` service.
-3. Add that URL to the README's browser-demo link after the service is live.
+The **Browser demo** workflow builds and smoke-tests the Linux AMD64 image. On
+pushes to `main`, it publishes that same image as
+`ghcr.io/dmarro89/go-dav-os-demo` with the commit SHA and `latest` tags.
 
-The Blueprint selects the `demo-runtime` image stage and uses one free web
-instance in Singapore. Render's free service may spin down when idle; use an
-always-on plan if the demo needs uninterrupted availability. See Render's
-[Blueprint reference](https://render.com/docs/blueprint-spec) and [free
-instance details](https://render.com/docs/free).
+1. Wait for the first publish on `main`. GitHub Packages starts the package as
+   private. To let Render pull it without credentials, make only the demo
+   package public in its GitHub package settings.
+2. Sync the Render Blueprint against `main`, using the root `render.yaml`.
+   Manually sync again if Render tried to pull the image before it was available.
+3. Wait for `/api/healthz` to pass, then open the service's `onrender.com` URL.
+
+The Blueprint uses one free web instance in Singapore. Render pulls the image
+from GHCR, and a free instance may spin down when idle. See the
+[Render image deploy guide](https://render.com/docs/deploying-an-image).
+
+To deploy after each successful publish, copy the image-backed Render service's
+deploy hook URL into the GitHub Actions repository secret `RENDER_DEPLOY_HOOK_URL`.
+The workflow then requests a deploy using the tested image's commit tag. Without
+the secret, use **Manual Deploy → Deploy latest reference** in Render.
 
 ## Run locally
 
