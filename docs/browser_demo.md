@@ -17,11 +17,13 @@ The **Browser demo** workflow builds and smoke-tests the Linux AMD64 image. On
 pushes to `main`, it publishes that same image as
 `ghcr.io/dmarro89/go-dav-os-demo` with the commit SHA and `latest` tags.
 
-1. Wait for the first publish on `main`. GitHub Packages starts the package as
-   private. To let Render pull it without credentials, make only the demo
-   package public in its GitHub package settings.
-2. Sync the Render Blueprint against `main`, using the root `render.yaml`.
-   Manually sync again if Render tried to pull the image before it was available.
+1. In the Render workspace's **Container Registry Credentials** settings, add a
+   **GitHub Container Registry** credential named `go-dav-os-demo-ghcr`. Use a
+   GitHub account with read access to the private demo package and a classic
+   token with only `read:packages`.
+2. Wait for the first publish on `main`, then sync the Render Blueprint against
+   `main` using the root `render.yaml`. Manually sync again if Render tried to
+   pull the image before the credential or image was available.
 3. Wait for `/api/healthz` to pass, then open the service's `onrender.com` URL.
 
 The Blueprint uses one free web instance in Singapore. Render pulls the image

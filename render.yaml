@@ -6,5 +6,8 @@ services:
     region: singapore
     image:
       url: ghcr.io/dmarro89/go-dav-os-demo:latest
+      creds:
+        fromRegistryCreds:
+          name: go-dav-os-demo-ghcr
     healthCheckPath: /api/healthz
     numInstances: 1
