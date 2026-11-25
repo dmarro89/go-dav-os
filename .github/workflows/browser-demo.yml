@@ -1,0 +1,52 @@
+name: Browser demo
+
+on:
+  pull_request:
+    paths:
+      - 'demo/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'render.yaml'
+      - 'scripts/test_browser_demo.cjs'
+      - '.github/workflows/browser-demo.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Build demo runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: go-dav-os-demo:ci
+          build-args: FINAL_STAGE=demo-runtime
+          cache-from: |
+            type=gha,scope=browser-demo
+            type=gha
+          cache-to: type=gha,scope=browser-demo,mode=max
+      - name: Install the browser test runner
+        run: npm install --prefix "$RUNNER_TEMP/davos-browser-tests" --no-audit --no-fund playwright-core@1.56.1
+      - name: Smoke test the guest, reset and browser handoff
+        run: |
+          docker run --detach --name davos-browser-demo --memory=512m --cpus=1 \
+            -p 127.0.0.1:18080:8080 go-dav-os-demo:ci
+          trap 'docker logs davos-browser-demo; docker rm --force davos-browser-demo' EXIT
+          url=http://127.0.0.1:18080
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 "$url/api/healthz"
+          curl --fail --silent --show-error "$url/novnc/core/rfb.js" >/dev/null
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            -X POST "$url/api/reset")" = 403
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            -H "Origin: $url" -X POST "$url/api/reset")" = 202
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            -H "Origin: $url" -X POST "$url/api/reset")" = 429
+          curl --fail --silent --show-error --retry 30 --retry-all-errors --retry-delay 2 "$url/api/healthz"
+          sleep 10
+          NODE_PATH="$RUNNER_TEMP/davos-browser-tests/node_modules" node scripts/test_browser_demo.cjs "$url"

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101820">
+    <title>go-dav-os browser demo</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Experimental hobby OS</p>
+          <h1>Try go-dav-os</h1>
+          <p class="intro">A live x86_64 kernel in QEMU, controlled from your browser.</p>
+        </div>
+        <div class="controls">
+          <span id="status" role="status" aria-live="polite">Connecting…</span>
+          <button id="reset" type="button">Reset machine</button>
+        </div>
+      </header>
+
+      <section class="notice" aria-label="Demo limits">
+        This is a shared demo. One visitor can control the machine at a time.
+        Reset clears guest memory and disconnects the current viewer.
+      </section>
+
+      <section class="console-frame" aria-label="go-dav-os console">
+        <div id="screen"></div>
+      </section>
+
+      <footer>
+        <div>
+          <h2>Try these commands</h2>
+          <p><code>help</code> <code>version</code> <code>ls</code> <code>write demo hello</code> <code>cat demo</code> <code>history</code></p>
+        </div>
+        <a href="https://github.com/dmarro89/go-dav-os">Source code</a>
+      </footer>
+    </main>
+    <script type="module" src="/demo.js"></script>
+  </body>
+</html>
