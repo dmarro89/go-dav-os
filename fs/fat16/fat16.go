@@ -239,9 +239,31 @@ func ListDir() {
 }
 
 // CreateFile creates a file in the root directory
+// ValidateFilename checks if a filename exceeds the 8-character FAT16 limit
+func ValidateFilename(name string) error {
+	if len(name) > 8 {
+		return fmt.Errorf("filename '%s' exceeds 8-character limit", name)
+	}
+	return nil
+}
+
 func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bool {
 	if !initialized {
 		terminal.Print("FAT16: Not initialized\n")
+		return false
+	}
+
+	// Check if filename is valid
+	var nameStr string
+	for i := 0; i < 8; i++ {
+		if name[i] == 0 {
+			break
+		}
+		nameStr += string(name[i])
+	}
+	if err := ValidateFilename(nameStr); err != nil {
+		terminal.Print(err.Error())
+		terminal.Print("\n")
 		return false
 	}
 
