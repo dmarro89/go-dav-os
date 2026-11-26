@@ -60,8 +60,8 @@ func translateScancode(sc byte) (rune, bool) {
 		return r, true
 	}
 
-	if isASCIIDigit(r) && shiftActive() {
-		if sym, ok := currentLayout.GetShiftDigitSymbol(r); ok {
+	if shiftActive() {
+		if sym, ok := currentLayout.GetShiftSymbol(r); ok {
 			return sym, true
 		}
 	}
@@ -106,10 +106,6 @@ func ReadKey() rune {
 
 func isASCIILetter(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
-}
-
-func isASCIIDigit(r rune) bool {
-	return r >= '0' && r <= '9'
 }
 
 func toUpperASCII(r rune) rune {

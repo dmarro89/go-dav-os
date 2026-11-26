@@ -10,6 +10,8 @@ func (testLayout) GetKey(sc byte) (rune, bool) {
 	switch sc {
 	case 0x02:
 		return '1', true
+	case 0x0C:
+		return '-', true
 	case 0x1E:
 		return 'a', true
 	default:
@@ -17,11 +19,15 @@ func (testLayout) GetKey(sc byte) (rune, bool) {
 	}
 }
 
-func (testLayout) GetShiftDigitSymbol(r rune) (rune, bool) {
-	if r == '1' {
+func (testLayout) GetShiftSymbol(r rune) (rune, bool) {
+	switch r {
+	case '1':
 		return '!', true
+	case '-':
+		return '_', true
+	default:
+		return 0, false
 	}
-	return 0, false
 }
 
 func resetKeyboardState() {
@@ -93,6 +99,59 @@ func TestTranslateScancodeShiftedDigitUsesLayoutSymbol(t *testing.T) {
 	}
 	if got != '!' {
 		t.Fatalf("translateScancode(0x02) = %q, want %q", got, '!')
+	}
+}
+
+func TestTranslateScancodeNonLetterModifiers(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func()
+		sc    byte
+		want  rune
+	}{
+		{name: "digit", sc: 0x02, want: '1'},
+		{
+			name: "caps digit unchanged",
+			setup: func() {
+				translateScancode(scCapsLockDown)
+			},
+			sc:   0x02,
+			want: '1',
+		},
+		{name: "hyphen", sc: 0x0C, want: '-'},
+		{
+			name: "shift hyphen underscore",
+			setup: func() {
+				translateScancode(scLeftShiftDown)
+			},
+			sc:   0x0C,
+			want: '_',
+		},
+		{
+			name: "caps hyphen unchanged",
+			setup: func() {
+				translateScancode(scCapsLockDown)
+			},
+			sc:   0x0C,
+			want: '-',
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetKeyboardState()
+			if tt.setup != nil {
+				tt.setup()
+			}
+
+			got, ok := translateScancode(tt.sc)
+			if !ok {
+				t.Fatalf("translateScancode(0x%02X) -> ok=false, want true", tt.sc)
+			}
+			if got != tt.want {
+				t.Fatalf("translateScancode(0x%02X) = %q, want %q", tt.sc, got, tt.want)
+			}
+		})
 	}
 }
 

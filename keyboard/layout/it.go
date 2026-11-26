@@ -49,6 +49,8 @@ var itLayoutData = ITLayout{
 		0x30: 'b',
 		0x31: 'n',
 		0x32: 'm',
+		0x34: '.',
+		0x35: '-',
 
 		0x39: ' ',
 		0x1C: '\n',
@@ -64,7 +66,7 @@ func (l *ITLayout) GetKey(sc byte) (rune, bool) {
 	return lookupKey(&l.keys, sc)
 }
 
-func (l *ITLayout) GetShiftDigitSymbol(r rune) (rune, bool) {
+func (l *ITLayout) GetShiftSymbol(r rune) (rune, bool) {
 	switch r {
 	case '1':
 		return '!', true
@@ -86,6 +88,8 @@ func (l *ITLayout) GetShiftDigitSymbol(r rune) (rune, bool) {
 		return ')', true
 	case '0':
 		return '=', true
+	case '-':
+		return '_', true
 	default:
 		return 0, false
 	}
