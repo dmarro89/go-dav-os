@@ -126,13 +126,13 @@ func TestUSLayout_ShiftDigitSymbols(t *testing.T) {
 		{'0', ')'},
 	}
 	for _, tc := range cases {
-		got, ok := us.GetShiftDigitSymbol(tc.in)
+		got, ok := us.GetShiftSymbol(tc.in)
 		if !ok {
-			t.Errorf("US.GetShiftDigitSymbol(%q) -> ok=false, want true", tc.in)
+			t.Errorf("US.GetShiftSymbol(%q) -> ok=false, want true", tc.in)
 			continue
 		}
 		if got != tc.want {
-			t.Errorf("US.GetShiftDigitSymbol(%q) = %q, want %q", tc.in, got, tc.want)
+			t.Errorf("US.GetShiftSymbol(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }
@@ -162,13 +162,13 @@ func TestITLayout_ShiftDigitSymbols(t *testing.T) {
 		{'0', '='},
 	}
 	for _, tc := range cases {
-		got, ok := it.GetShiftDigitSymbol(tc.in)
+		got, ok := it.GetShiftSymbol(tc.in)
 		if !ok {
-			t.Errorf("IT.GetShiftDigitSymbol(%q) -> ok=false, want true", tc.in)
+			t.Errorf("IT.GetShiftSymbol(%q) -> ok=false, want true", tc.in)
 			continue
 		}
 		if got != tc.want {
-			t.Errorf("IT.GetShiftDigitSymbol(%q) = %q, want %q", tc.in, got, tc.want)
+			t.Errorf("IT.GetShiftSymbol(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }
@@ -184,8 +184,8 @@ func TestShiftDigitSymbols_DiffBetweenLayouts(t *testing.T) {
 
 	differs := false
 	for _, d := range []rune{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'} {
-		usSym, _ := us.GetShiftDigitSymbol(d)
-		itSym, _ := it.GetShiftDigitSymbol(d)
+		usSym, _ := us.GetShiftSymbol(d)
+		itSym, _ := it.GetShiftSymbol(d)
 		if usSym != itSym {
 			differs = true
 			break
@@ -193,6 +193,38 @@ func TestShiftDigitSymbols_DiffBetweenLayouts(t *testing.T) {
 	}
 	if !differs {
 		t.Fatalf("expected at least one shifted-digit symbol to differ between US and IT layouts")
+	}
+}
+
+// TestLayouts_PunctuationScancodes verifies '.', '-' and Shift+'-' ('_') on
+// both layouts. The hyphen sits on a different physical key in IT and US.
+func TestLayouts_PunctuationScancodes(t *testing.T) {
+	usLayout, _ := GetUS()
+	itLayout, _ := GetIT()
+	cases := []struct {
+		name   string
+		layout interface {
+			GetKey(byte) (rune, bool)
+			GetShiftSymbol(rune) (rune, bool)
+		}
+		dot    byte
+		hyphen byte
+	}{
+		{"US", usLayout, 0x34, 0x0C},
+		{"IT", itLayout, 0x34, 0x35},
+	}
+	for _, tc := range cases {
+		if got, ok := tc.layout.GetKey(tc.dot); !ok || got != '.' {
+			t.Errorf("%s.GetKey(0x%02X) = (%q, %v), want ('.', true)", tc.name, tc.dot, got, ok)
+		}
+		got, ok := tc.layout.GetKey(tc.hyphen)
+		if !ok || got != '-' {
+			t.Errorf("%s.GetKey(0x%02X) = (%q, %v), want ('-', true)", tc.name, tc.hyphen, got, ok)
+			continue
+		}
+		if sym, ok := tc.layout.GetShiftSymbol(got); !ok || sym != '_' {
+			t.Errorf("%s.GetShiftSymbol('-') = (%q, %v), want ('_', true)", tc.name, sym, ok)
+		}
 	}
 }
 

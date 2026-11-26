@@ -109,10 +109,18 @@ def wait_for_boot(process, log_file):
     print("Boot successful.")
 
 
-def send_shell_command(process, cmd_text):
+# QEMU sendkey names physical US keys, so punctuation depends on the guest layout.
+PUNCTUATION_KEYS = {
+    "us": {".": "dot", "-": "minus", "_": "shift-minus"},
+    "it": {".": "dot", "-": "slash", "_": "shift-slash"},
+}
+
+
+def send_shell_command(process, cmd_text, keys=None):
     print(f"Sending '{cmd_text}' command via QEMU monitor...")
+    keys = {" ": "spc", **(keys or {})}
     for ch in cmd_text:
-        key = "spc" if ch == " " else ch
+        key = keys.get(ch, ch)
         try:
             process.stdin.write(f"sendkey {key}\n")
             process.stdin.flush()
@@ -165,9 +173,9 @@ def run_agent_transport_probe(process, log_file, serial_socket):
             probe.stderr.close()
 
 
-def run_shell_case(process, log_file, command, *expected_outputs, timeout=6):
+def run_shell_case(process, log_file, command, *expected_outputs, timeout=6, keys=None):
     offset = os.path.getsize(log_file)
-    send_shell_command(process, command)
+    send_shell_command(process, command, keys)
     for expected in expected_outputs:
         if not check_log_for(expected, log_file, timeout=timeout, offset=offset):
             fail_with_log(
@@ -309,6 +317,13 @@ def run_functional_suite(iso_path, disk_img, log_file):
 
         for cmd_text, expected_outputs in test_cases:
             run_shell_case(process, log_file, cmd_text, *expected_outputs)
+
+        for name, keys in PUNCTUATION_KEYS.items():
+            run_shell_case(process, log_file, f"layout {name}", f"layout: switched to {name}")
+            run_shell_case(process, log_file, "echo a.b-c_d", "a.b-c_d> ", keys=keys)
+            run_shell_case(process, log_file, "write notes.txt hello", "ok> ", keys=keys)
+            run_shell_case(process, log_file, "cat notes.txt", "hello> ", keys=keys)
+            run_shell_case(process, log_file, "rm notes.txt", "ok> ", keys=keys)
 
         run_agent_bridge_suite(process, log_file, serial_socket)
     finally:
