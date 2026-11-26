@@ -28,6 +28,10 @@ func Info() {}
 
 func ListDir() {}
 
+func ValidateFilename(name string) error {
+	return nil
+}
+
 func CreateFile(name *[8]byte, ext *[3]byte, data *[512]byte, dataLen uint32) bool {
 	return false
 }
