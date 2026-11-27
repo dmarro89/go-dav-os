@@ -53,12 +53,41 @@ var (
 // maxHistory defines the maximum size of the history ring buffer
 const maxHistory = 32
 
-var commandBuf = [...]string{
-	commandHelp, commandHistory, "clear", "echo", "ticks", "uptime",
-	"mem", "mmap", "mmapmax", "pfa", "alloc", "free",
-	"ls", "write", "cat", "rm", "stat",
-	"disk", "fatinit", "fatformat", "fatinfo", "fatls", "fatcreate", "fatread",
-	"layout", "version", "run", "agent",
+var helpGroups = [...]struct {
+	title    string
+	commands []string
+	example  string
+}{
+	{
+		title: "Work with temporary files",
+		commands: []string{"ls", "write", "cat", "rm", "stat"},
+		example: "write hello.txt Hello, world!",
+	},
+	{
+		title: "Save files across reboots",
+		commands: []string{"disk", "fatinit", "fatformat", "fatinfo", "fatls", "fatcreate", "fatread"},
+		example: "fatinit",
+	},
+	{
+		title: "Use the Agent",
+		commands: []string{"agent"},
+		example: "agent help",
+	},
+	{
+		title: "Try a program",
+		commands: []string{"run"},
+		example: "run hello",
+	},
+	{
+		title: "Use the shell and check system status",
+		commands: []string{"clear", "echo", "ticks", "uptime", "layout", "version"},
+		example: "echo Hello from DavOS!",
+	},
+	{
+		title: "Inspect memory and disk",
+		commands: []string{"mem", "mmap", "mmapmax", "pfa", "alloc", "free"},
+		example: "mem 0x10000 64",
+	},
 }
 
 var agentContextKindNames = [...]string{
@@ -253,7 +282,19 @@ func execute() {
 	}
 
 	if matchLiteral(cmdStart, cmdEnd, commandHelp) {
-		terminal.Print("Commands: help, history, clear, echo, ticks, uptime, mem, mmap, mmapmax, pfa, alloc, free, ls, write, cat, rm, stat, disk, fatinit, fatformat, fatinfo, fatls, fatcreate, fatread, layout, version, run, agent\n")
+		terminal.Print("DavOS Help - Commands organized by task:\n")
+		terminal.Print("=========================================\n\n")
+		
+		for _, group := range helpGroups {
+			terminal.Print(group.title + ":\n")
+			for _, cmd := range group.commands {
+				terminal.Print("  " + cmd + " ")
+			}
+			terminal.Print("\n  Example: " + group.example + "\n\n")
+		}
+		
+		terminal.Print("=========================================\n")
+		terminal.Print("For more details on agent commands, try: agent help\n")
 		return
 	}
 
