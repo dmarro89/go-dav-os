@@ -462,7 +462,7 @@ func execute() {
 			return
 		}
 
-		terminal.Print("ok\n")
+		terminal.Print("warning: file saved in memory and will be lost on reboot.\n")
 		return
 	}
 
