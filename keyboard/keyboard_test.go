@@ -28,6 +28,7 @@ func resetKeyboardState() {
 	leftShiftDown = false
 	rightShiftDown = false
 	capsLockOn = false
+	extendedPrefix = false
 	SetLayout(testLayout{})
 }
 
@@ -139,5 +140,52 @@ func TestTranslateScancodeIgnoresKeyReleasesAndUnmappedKeys(t *testing.T) {
 				t.Fatalf("translateScancode(0x%02X) = (%q, true), want (_, false)", tt.sc, r)
 			}
 		})
+	}
+}
+
+func TestKeyConstants(t *testing.T) {
+	if KeyUp != 0x1000 {
+		t.Fatalf("KeyUp = 0x%X, want 0x1000", KeyUp)
+	}
+	if KeyDown != 0x1001 {
+		t.Fatalf("KeyDown = 0x%X, want 0x1001", KeyDown)
+	}
+}
+
+func TestTranslateScancodeArrowsNeedExtendedPrefix(t *testing.T) {
+	tests := []struct {
+		name  string
+		codes []byte
+		want  rune
+		ok    bool
+	}{
+		{"extended up", []byte{0xE0, 0x48}, KeyUp, true},
+		{"extended down", []byte{0xE0, 0x50}, KeyDown, true},
+		{"bare 0x48 (keypad 8) is not history", []byte{0x48}, 0, false},
+		{"bare 0x50 (keypad 2) is not history", []byte{0x50}, 0, false},
+		{"extended up release is ignored", []byte{0xE0, 0xC8}, 0, false},
+		{"extended down release is ignored", []byte{0xE0, 0xD0}, 0, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resetKeyboardState()
+			var got rune
+			var ok bool
+			for _, sc := range tt.codes {
+				got, ok = translateScancode(sc)
+			}
+			if got != tt.want || ok != tt.ok {
+				t.Fatalf("translateScancode(% X) = (%q, %v), want (%q, %v)", tt.codes, got, ok, tt.want, tt.ok)
+			}
+		})
+	}
+}
+
+func TestTranslateScancodePrefixAppliesToOneScancode(t *testing.T) {
+	resetKeyboardState()
+	translateScancode(0xE0)
+	translateScancode(0x1E) // consumes the prefix
+	if got, ok := translateScancode(0x48); ok {
+		t.Fatalf("bare 0x48 after a consumed prefix = (%q, true), want ignored", got)
 	}
 }
