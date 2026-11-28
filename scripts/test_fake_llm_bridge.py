@@ -94,6 +94,31 @@ class FakeLLMBridgeTest(unittest.TestCase):
         forbidden = {"command", "shell", "argv", "script", "exec"}
         self.assertTrue(forbidden.isdisjoint(response.keys()))
 
+    def test_does_not_misread_targets_as_list_requests(self):
+        for input_text, action, args in (
+            ("read profile", "read_file", ["profile"]),
+            ("delete pulse", "delete_file", ["pulse"]),
+            ("show tools", "read_file", ["tools"]),
+            ("show files.txt", "read_file", ["files.txt"]),
+            ("show files", "list_files", []),
+            ("read files", "read_file", ["files"]),
+            ("delete notes_files", "delete_file", ["notes_files"]),
+            ("delete Profiles", "delete_file", ["Profiles"]),
+            ("list files in showcase", "list_files", []),
+            ("list files in deleted", "list_files", []),
+            ("show files in showcase", "list_files", []),
+            ("show me the files", "list_files", []),
+            ("list", "list_files", []),
+            ("file", "list_files", []),
+            ("show files?", "list_files", []),
+            ("list files named delete.txt", "list_files", []),
+            ("delete files", "delete_file", ["files"]),
+        ):
+            with self.subTest(input=input_text):
+                response = self.plan(input_text)
+                self.assertEqual(response["action"], action)
+                self.assertEqual(response["args"], args)
+
     def test_rejects_request_with_raw_execution_fields_safely(self):
         response = fake_llm_bridge.plan_for_request(
             {

@@ -68,7 +68,7 @@ def contains_raw_execution_field(value):
 def map_input(input_text):
     text = lower_ascii(input_text)
 
-    if contains(text, "memorymap") or (contains(text, "memory") and contains(text, "map")):
+    if contains_token(text, "memorymap") or (contains_token(text, "memory") and contains_token(text, "map")):
         return (
             "show_memory_map",
             "show_memory_map",
@@ -76,17 +76,16 @@ def map_input(input_text):
             "safe",
             "Matched request to show the memory map.",
         )
-    if contains(text, "version"):
+    if contains_token(text, "version"):
         return "show_version", "show_version", [], "safe", "Matched request to show the OS version."
-    if contains(text, "ticks"):
+    if contains_token(text, "ticks"):
         return "show_ticks", "show_ticks", [], "safe", "Matched request to show PIT ticks."
-    if contains(text, "history"):
+    if contains_token(text, "history"):
         return "show_history", "show_history", [], "safe", "Matched request to show Agent history."
-    if contains(text, "files") or contains(text, "file list") or contains(text, "list files") or contains(text, "ls"):
+    if starts_with_list(text):
         return "list_files", "list_files", [], "safe", "Matched request to list files."
-
-    if contains(text, "delete") or contains(text, "remove"):
-        target = last_token(text)
+    if contains_token(text, "delete") or contains_token(text, "remove"):
+        target = last_token(input_text)
         if target:
             return (
                 "delete_file",
@@ -95,18 +94,24 @@ def map_input(input_text):
                 "risky",
                 "Matched delete request for file " + target + ".",
             )
-    if contains(text, "read") or contains(text, "cat"):
-        target = last_token(text)
+    if contains_token(text, "read") or contains_token(text, "cat"):
+        target = last_token(input_text)
         if target:
             return "read_file", "read_file", [target], "safe", "Matched read request for file " + target + "."
-    if contains(text, "stat") or contains(text, "status"):
-        target = last_token(text)
+    if contains_token(text, "stat") or contains_token(text, "status"):
+        target = last_token(input_text)
         if target:
             return "stat_file", "stat_file", [target], "safe", "Matched stat request for file " + target + "."
-    if contains(text, "show"):
-        target = last_token(text)
-        if target and target != "show":
+    if contains_token(text, "show"):
+        # "show files" asks for a listing while "show files.txt" names a file.
+        if show_asks_for_list(text):
+            return "list_files", "list_files", [], "safe", "Matched request to list files."
+        target = last_token(input_text)
+        if target and lower_ascii(target) != "show":
             return "read_file", "read_file", [target], "safe", "Matched show request for file " + target + "."
+
+    if contains_token(text, "files") or contains_token(text, "file") or contains_token(text, "list") or contains_token(text, "file list") or contains_token(text, "list files") or contains_token(text, "ls"):
+        return "list_files", "list_files", [], "safe", "Matched request to list files."
 
     return "unknown", "unknown", [], "safe", "No supported fake bridge mapping matched the request."
 
@@ -143,14 +148,54 @@ def contains(text, token):
     return token in text
 
 
+def contains_token(text, token):
+    # Keyword matching must not fire inside longer words, otherwise file names
+    # such as "tools" or "profile" would be misread as list requests.
+    start = 0
+    while True:
+        idx = text.find(token, start)
+        if idx < 0:
+            return False
+        before_ok = idx == 0 or not _is_word_char(text[idx - 1])
+        after = idx + len(token)
+        after_ok = after == len(text) or not _is_word_char(text[after])
+        if before_ok and after_ok:
+            return True
+        start = idx + 1
+
+
+def _is_word_char(char):
+    return "a" <= char <= "z" or "A" <= char <= "Z" or "0" <= char <= "9"
+
+
 def last_token(text):
     tokens = [token for token in text.split() if token]
     if not tokens:
         return ""
     token = tokens[-1]
-    if token in {"read", "cat", "delete", "remove", "stat", "status", "show"}:
+    if lower_ascii(token) in {"read", "cat", "delete", "remove", "stat", "status", "show"}:
         return ""
     return token
+
+
+def show_asks_for_list(text):
+    # Whitespace-separated tokens keep "files" distinct from "files.txt";
+    # trailing sentence punctuation is dropped so "files?" still lists.
+    seen_show = False
+    for part in text.split():
+        while part and not part[-1].isalnum():
+            part = part[:-1]
+        if seen_show and part in {"ls", "list", "file", "files"}:
+            return True
+        if part == "show":
+            seen_show = True
+    return False
+
+
+def starts_with_list(text):
+    # A leading list command wins over action keywords inside file names.
+    parts = text.split()
+    return bool(parts) and parts[0] in {"list", "ls"}
 
 
 if __name__ == "__main__":
