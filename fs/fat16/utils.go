@@ -1,0 +1,68 @@
+package fat16
+
+// ClusterToSector converts a FAT16 cluster number to an LBA sector
+func ClusterToSector(dataStart uint32, secPerClust uint8, cluster uint16) uint32 {
+	if cluster < 2 {
+		return dataStart // Fallback for invalid cluster
+	}
+	return dataStart + uint32(cluster-2)*uint32(secPerClust)
+}
+
+// MatchName checks if a directory entry matches the requested 8.3 filename
+func MatchName(entry []byte, name *[8]byte, ext *[3]byte) bool {
+	if len(entry) < 11 {
+		return false
+	}
+	for i := 0; i < 8; i++ {
+		if entry[i] != name[i] {
+			return false
+		}
+	}
+	for i := 0; i < 3; i++ {
+		if entry[8+i] != ext[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// ParseEntry reads the cluster and size from a 32-byte FAT16 directory entry
+func ParseEntry(entry []byte) (cluster uint16, size uint32) {
+	if len(entry) < 32 {
+		return 0, 0
+	}
+	cluster = uint16(entry[26]) | uint16(entry[27])<<8
+	size = uint32(entry[28]) | uint32(entry[29])<<8 | uint32(entry[30])<<16 | uint32(entry[31])<<24
+	return cluster, size
+}
+
+// MaxCluster returns the highest valid data cluster number for a volume.
+// FAT16 reserves 0xFFF7 and above for bad-cluster and end-of-chain markers.
+// totSec is the volume's sector count (0 when the volume uses the 32-bit
+// field, in which case only the marker limit applies).
+func MaxCluster(totSec uint32, dataStart uint32, secPerClust uint8) uint16 {
+	const markerLimit = 0xFFF6
+	if totSec == 0 || secPerClust == 0 || totSec <= dataStart {
+		return markerLimit
+	}
+	last := (totSec-dataStart)/uint32(secPerClust) + 1
+	if last > markerLimit {
+		return markerLimit
+	}
+	return uint16(last)
+}
+
+// CheckEntry decides how ReadFile should treat a matched directory entry.
+// readData is true only when a data sector must be read. ok is false when a
+// non-empty entry points outside the data area: a reserved cluster (0 or 1),
+// a bad-cluster or end-of-chain marker, or a cluster past maxCluster.
+// Zero-length files need no data I/O, whatever their cluster field holds.
+func CheckEntry(cluster uint16, size uint32, maxCluster uint16) (readData bool, ok bool) {
+	if size == 0 {
+		return false, true
+	}
+	if cluster < 2 || cluster > maxCluster {
+		return false, false
+	}
+	return true, true
+}
