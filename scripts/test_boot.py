@@ -222,7 +222,7 @@ def run_agent_bridge_suite(process, log_file, serial_socket):
 
         bridge_case("agent llm status", "LLM bridge: available", "Provider: fake")
         bridge_case("agent mode llm", "Planner switched to: llm")
-        run_shell_case(process, log_file, "write notes keep", "ok> ")
+        run_shell_case(process, log_file, "write notes keep", "warning: file saved in memory and will be lost on reboot.> ")
         bridge_case("agent ask show me the files", "notes  size=4", "agent: files listed")
         bridge_case("agent ask tell me a joke", "agent: no allowed action matched")
         bridge_case("agent ask delete notes", 'Agent understood: delete file "notes"', "Confirm? type: yes")
@@ -268,8 +268,9 @@ def run_functional_suite(iso_path, disk_img, log_file):
         test_cases = [
             ("help", ["Commands:", "agent"]),
             ("version", ["DavOS 0.6.0 (64bit)"]),
-            ("write notes hi", ["ok> "]),
-            ("agent show files", ["notes  size=2", "agent: files listed"]),
+            ("write notes hello", ["warning: file saved in memory and will be lost on reboot.> "]),
+            ("cat notes", ["hello>"]),
+            ("agent show files", ["notes  size=5", "agent: files listed"]),
             (
                 "agent context",
                 [
@@ -286,8 +287,8 @@ def run_functional_suite(iso_path, disk_img, log_file):
             ("agent show version", ["DavOS 0.6.0 (64bit)", "agent: version shown"]),
             ("agent show ticks", ["agent: ticks shown"]),
             ("agent show memorymap", ["base=0x", "agent: memory map shown"]),
-            ("agent read notes", ["hi", "agent: file read"]),
-            ("agent stat notes", ["page=0x", "size=2", "agent: file stat"]),
+            ("agent read notes", ["hello", "agent: file read"]),
+            ("agent stat notes", ["page=0x", "size=5", "agent: file stat"]),
             ("agent delete notes", ["Agent understood: delete file \"notes\"", "This action may remove data.", "Confirm? type: yes"]),
             ("yes", ["ok> "]),
             ("agent show files", ["agent: no files"]),

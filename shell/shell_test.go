@@ -1453,8 +1453,8 @@ func TestExecute_BuiltinCommands(t *testing.T) {
 		terminal.ResetOutputForTesting()
 		setLineBuf("write notes.txt hello filesystem")
 		execute()
-		if got := terminal.OutputForTesting(); got != "ok\n" {
-			t.Fatalf("write output = %q, expected ok", got)
+		if got := terminal.OutputForTesting(); got != "warning: file saved in memory and will be lost on reboot.\n" {
+			t.Fatalf("write output = %q, expected `warning: file saved in memory and will be lost on reboot.`", got)
 		}
 
 		// Stat file
